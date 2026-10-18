@@ -7,6 +7,7 @@ const [core, content, art, roomArt, rooms, social, painting] = await Promise.all
   ['game-core', 'content', 'art', 'room-art', 'rooms', 'social', 'painting'].map(name => import(new URL(`${name}.${extension}`, root))));
 const connection = await import(new URL(`connection.${extension}`, root));
 const sky = await import(new URL(`sky-world.${extension}`, root));
+const dance = await import(new URL(`dance-party.${extension}`, root));
 
 // Exercise the application's real registered handlers with DOM test doubles.
 // This checks app behavior, not browser rendering or native default actions.
@@ -25,7 +26,7 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null) {
       this.hidden = false; this.open = false; this.innerHTML = ''; this.clicks = 0;
       this.parentElement = { setAttribute() {} };
       const classes = new Set();
-      this.classList = { add: (...x) => x.forEach(v => classes.add(v)), remove: (...x) => x.forEach(v => classes.delete(v)), toggle: (x, force) => force ? classes.add(x) : classes.delete(x) };
+      this.classList = { add: (...x) => x.forEach(v => classes.add(v)), remove: (...x) => x.forEach(v => classes.delete(v)), toggle: (x, force) => force ? classes.add(x) : classes.delete(x), contains: value => classes.has(value) };
     }
     addEventListener(name, cb) { add(this.handlers, name, cb); }
     append() {}
@@ -83,7 +84,7 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null) {
   const game = get('#game'), modal = get('#modal'), modalContent = get('#modal-content'), audio = get('#audio');
   Object.assign(audio, { paused: true, ended: false, pause() { this.paused = true; }, play() { this.paused = false; return Promise.resolve(); }, load() {} });
   const context = vm.createContext({
-    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky,
+    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky, ...dance,
     loadContent: async () => ({ ok: true }), document: doc,
     window: { innerWidth: 1200, matchMedia: () => ({ matches: false }), addEventListener: (n, cb) => add(windowHandlers, n, cb), open(...args) { opened.push(args); } },
     location: { search: preview ? '?preview=1' : '' }, localStorage: { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value) },
@@ -535,3 +536,39 @@ spaceFlight.game.focus(); spaceFlight.press(spaceFlight.windowHandlers, spaceFli
 assert.equal(spaceFlight.state.rocket.riding, false); assert.equal(spaceFlight.state.paintCan, 'white');
 assert.equal(spaceFlight.state.paint.path, '#ff3935');
 console.log('PASS: real Up handlers enter space after ' + firstSpace + ' ms, retain the pilot, bucket and drawing, reach every planet and return through sky to a safe landing and exit.');
+
+const dancingTrack = content.TRACKS.find(track => track.id === 'tanzen'), originalDanceAudio = dancingTrack.src;
+try {
+  dancingTrack.src = 'uploads/tanzen.mp3';
+  const h = await harness(false, 'dog'); h.enterRoom('radio');
+  h.state.position = { ...rooms.findTapeSlot(h.state.tapes, 'tanzen') }; h.game.focus();
+  h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game)); h.state.position = { ...rooms.RADIO };
+  h.press(h.windowHandlers, h.event(' ', 'Space', h.game));
+  assert.equal(h.state.tapes.loaded, 'tanzen'); assert(h.state.party.active && h.state.playing);
+  const layer = h.get('#dance-party');
+  assert(layer.innerHTML.includes('id="disco-ball"')); assert.equal(h.state.party.castKey, 'cat,horse,monkey');
+  assert(!layer.innerHTML.includes('data-party-guest="dog"')); assert(layer.classList.contains('is-dancing'));
+  assert.equal(h.get('#party-dancer-cat').getAttribute('transform'), 'translate(800.00 1040.00)');
+  let partyTick = 0;
+  for (let i = 0; i < 400; i++) h.frame(++partyTick * 16);
+  assert.equal(h.get('#party-dancer-cat').getAttribute('transform'), 'translate(700.00 620.00)');
+  assert(h.get('#party-dancer-monkey').classList.contains('has-arrived'));
+  h.get('#audio').pause(); for (const callback of h.get('#audio').handlers.get('pause')) callback({});
+  assert.equal(layer.classList.contains('is-dancing'), false, 'audio pause stops the dance and lights');
+  await h.get('#audio').play(); for (const callback of h.get('#audio').handlers.get('play')) callback({});
+  assert(layer.classList.contains('is-dancing'));
+  h.showPanel('radio-info'); h.closePanel(); assert(layer.classList.contains('is-dancing'), 'the party resumes when a menu closes');
+  h.state.position = { x: 800, y: 970 }; h.state.keys.add('ArrowDown');
+  while (h.state.scene === 'radio' && partyTick < 450) h.frame(++partyTick * 16);
+  assert.equal(h.state.scene, 'world', 'dancing guests never block the exit'); assert.equal(h.state.party.active, false);
+  h.enterRoom('radio'); assert(h.state.party.active); assert.equal(h.state.party.elapsed, 0);
+  new h.Element('horse selection', 'button', { character: 'horse' }).click();
+  assert.equal(h.state.party.castKey, 'cat,dog,monkey', 'guest images follow a changed player selection');
+  h.state.position = { ...rooms.RADIO }; h.game.focus(); h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game));
+  assert.equal(h.state.party.active, false); assert.equal(layer.getAttribute('hidden'), '');
+  h.state.position = { ...rooms.TAPE_SLOTS[1] }; h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game));
+  h.state.position = { ...rooms.TAPE_SLOTS[0] }; h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game));
+  h.state.position = { ...rooms.RADIO }; h.press(h.windowHandlers, h.event(' ', 'Space', h.game));
+  assert.notEqual(h.state.tapes.loaded, 'tanzen'); assert.equal(h.state.party.active, false, 'other songs do not keep the dance effect');
+} finally { dancingTrack.src = originalDanceAudio; }
+console.log('PASS: inserting Tanzen starts the guest entrance, dancing and disco ball; pause/resume, selection changes, cassette removal/song changes and walking out all behave correctly.');

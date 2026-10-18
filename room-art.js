@@ -92,6 +92,7 @@ export function roomMarkup(scene, shelfPage = 0, tapes = createCassetteState(), 
     ${tiles.join('')}
     <path d="M800 955V830q0-72-62-94" fill="none" stroke="#fff20b" stroke-width="75" stroke-linecap="round"/>
     ${scene === 'radio' ? radioArt(shelfPage, tapes) : scene === 'wardrobe' ? wardrobeArt(selectedAnimal, paint) : infoArt(scene)}
+    ${scene === 'radio' ? '<g id="dance-party" class="dance-party-layer" hidden="" aria-hidden="true"></g>' : ''}
     <g data-room-target="exit" class="world-station" tabindex="0" role="button" aria-label="${escape(text('back_world'))}">
       <path d="M740 1000v-42q60-38 120 0v108H740Z" fill="#40cea1" stroke="#101014" stroke-width="5"/>
       <path d="M800 975v60m-17-18 17 18 17-18" stroke="#101014" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>

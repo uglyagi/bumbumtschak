@@ -7,6 +7,7 @@ import { ROOMS, ROOM_SPAWN, EXIT, RADIO, TAPE_SLOTS, SHELF_SWITCH, ROOM_PROPS, A
 import { brandIcon, socialPads, contactLinks } from './social.js';
 import { adminURL } from './connection.js';
 import { SPACE, ROCKET_SPEED, GROUND_ROCKET, moveRocket, outsideScene, flightScene } from './sky-world.js';
+import { isDanceTrack, danceGuests, guestPose, dancePartyMarkup } from './dance-party.js';
 
 const previewMode = new URLSearchParams(location.search).get('preview') === '1';
 const contentStatus = await loadContent(previewMode);
@@ -35,6 +36,7 @@ const state = {
   near: null, modal: null, playing: false,
   paint: savedPaint, paintCan: null, paintPage: 0, paintTarget: null,
   rocket: { position: { ...GROUND_ROCKET }, riding: false, airborne: false },
+  party: { active: false, elapsed: 0, castKey: '' },
   volume: clamp(Number(storage.get('volume', '.6')) || 0, 0, 1),
   reduced: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
 };
@@ -60,6 +62,7 @@ function updateAnimal() {
   $('#rocket-pilot')?.setAttribute('href', `#animal-${animal.id}`);
   $('#player-chip').innerHTML = `${avatar(animal.id)}<span><strong>${animal.name}</strong><small>${T('character_change')}</small></span>`;
   $('#player-chip').setAttribute('aria-label', text('player_label', { tier: animal.name }));
+  if (state.scene === 'radio') refreshDanceParty();
 }
 function characterPanel() {
   return `<div class="modal-wrap welcome">${state.started ? closeButton() : ''}
@@ -148,6 +151,30 @@ function refreshCassettes() {
   const loaded = TRACKS.find(t => t.id === state.tapes.loaded), slot = $('#radio-tape');
   if (slot) { slot.toggleAttribute('hidden', !loaded); slot.innerHTML = loaded ? cassetteMarkup(loaded) : ''; slot.classList.toggle('is-playing', state.playing); }
   refreshPaint();
+  refreshDanceParty();
+}
+function refreshDanceParty() {
+  const layer = $('#dance-party'), active = state.scene === 'radio' && isDanceTrack(TRACKS.find(track => track.id === state.tapes.loaded));
+  if (!active) {
+    state.party.active = false; state.party.elapsed = 0; state.party.castKey = '';
+    layer?.setAttribute('hidden', ''); layer?.setAttribute('aria-hidden', 'true'); layer?.classList.remove('is-dancing'); return;
+  }
+  const castKey = danceGuests(ANIMALS, state.animal).map(animal => animal.id).join(',');
+  if (!state.party.active || state.party.castKey !== castKey) state.party = { active: true, elapsed: 0, castKey };
+  if (!layer) return;
+  if (layer.dataset.castKey !== castKey || !layer.innerHTML) { layer.innerHTML = dancePartyMarkup(ANIMALS, state.animal); layer.dataset.castKey = castKey; }
+  layer.removeAttribute('hidden'); layer.setAttribute('aria-hidden', 'false');
+  layer.classList.toggle('is-dancing', state.playing && !document.hidden);
+  updateDanceGuests();
+}
+function updateDanceGuests() {
+  if (!state.party.active || state.scene !== 'radio') return;
+  danceGuests(ANIMALS, state.animal).forEach((animal, i) => {
+    const node = $(`#party-dancer-${animal.id}`); if (!node) return;
+    const pose = guestPose(i, state.party.elapsed, state.reduced);
+    node.setAttribute('transform', `translate(${pose.x.toFixed(2)} ${pose.y.toFixed(2)})`);
+    node.toggleAttribute('hidden', !pose.visible); node.classList.toggle('has-arrived', pose.arrived);
+  });
 }
 function refreshPaint() {
   const color = PALETTE.find(color => color.id === state.paintCan), carried = $('#carried-paint');
@@ -222,6 +249,7 @@ function checkWorldTouch() {
 }
 function refreshPlayback() {
   state.playing = !audio.paused && !audio.ended;
+  refreshDanceParty();
   $('#radio-shortcut').setAttribute('aria-label', text('room_radio'));
   $('#radio-shortcut').style.background = state.playing ? 'var(--yellow)' : '';
   $('#radio-tape')?.classList.toggle('is-playing', state.playing);
@@ -528,7 +556,7 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => { state.keys.delete(e.code); });
 window.addEventListener('blur', clearInput);
-document.addEventListener('visibilitychange', () => { if (document.hidden) clearInput(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) clearInput(); refreshDanceParty(); });
 const padVectors = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 $('#dpad').querySelectorAll('button').forEach(btn => {
   btn.addEventListener('pointerdown', e => {
@@ -573,6 +601,7 @@ function frame(time) {
   const dt = Math.min(.05, Math.max(0, (time - (lastTime || time)) / 1000)); lastTime = time;
   let walking = false;
   if (state.started && !modal.open && !document.hidden) {
+    if (state.party.active) { state.party.elapsed += dt; updateDanceGuests(); }
     let dx = 0, dy = 0;
     for (const code of state.keys) { const v = directions.get(code); if (v) { dx += v[0]; dy += v[1]; } }
     for (const direction of state.pad.values()) { const v = padVectors[direction]; dx += v[0]; dy += v[1]; }
