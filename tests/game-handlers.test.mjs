@@ -3,16 +3,17 @@ import fs from 'node:fs/promises';
 import vm from 'node:vm';
 const root = new URL('../', import.meta.url);
 const extension = 'js';
-const [core, content, art, roomArt, rooms, social] = await Promise.all(
-  ['game-core', 'content', 'art', 'room-art', 'rooms', 'social'].map(name => import(new URL(`${name}.${extension}`, root))));
+const [core, content, art, roomArt, rooms, social, painting] = await Promise.all(
+  ['game-core', 'content', 'art', 'room-art', 'rooms', 'social', 'painting'].map(name => import(new URL(`${name}.${extension}`, root))));
 const connection = await import(new URL(`connection.${extension}`, root));
 
 // Exercise the application's real registered handlers with DOM test doubles.
 // This checks app behavior, not browser rendering or native default actions.
 const source = await fs.readFile(new URL(`app.${extension}`, root), 'utf8');
-async function harness(preview = false, savedAnimal = '') {
+async function harness(preview = false, savedAnimal = '', savedDrawing = null) {
   const opened = [];
   const stored = new Map(savedAnimal ? [['bbt-animal', savedAnimal]] : []);
+  if (savedDrawing) stored.set(preview ? 'bbt-paint-preview' : 'bbt-paint-world', JSON.stringify(savedDrawing));
   const nodes = new Map(), windowHandlers = new Map(), documentHandlers = new Map();
   const add = (map, name, callback) => map.set(name, [...(map.get(name) || []), callback]);
   const doc = { activeElement: null, hidden: false, baseURI: 'https://uglyagi.github.io/bumbumtschak/' };
@@ -48,6 +49,7 @@ async function harness(preview = false, savedAnimal = '') {
         if (part === '[data-station]' && this.dataset.station) return this;
         if (part === '[data-room-target]' && this.dataset.roomTarget) return this;
         if (part === '[data-social]' && this.dataset.social) return this;
+        if (part === '[data-paint-target]' && this.dataset.paintTarget) return this;
         if (part.startsWith('button') && this.tag === 'button' && !this.disabled) return this;
         if (part === 'a[href]' && this.tag === 'a') return this;
       }
@@ -62,7 +64,7 @@ async function harness(preview = false, savedAnimal = '') {
   const game = get('#game'), modal = get('#modal'), modalContent = get('#modal-content'), audio = get('#audio');
   Object.assign(audio, { paused: true, ended: false, pause() { this.paused = true; }, play() { this.paused = false; return Promise.resolve(); }, load() {} });
   const context = vm.createContext({
-    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...connection,
+    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection,
     loadContent: async () => ({ ok: true }), document: doc,
     window: { innerWidth: 1200, matchMedia: () => ({ matches: false }), addEventListener: (n, cb) => add(windowHandlers, n, cb), open(...args) { opened.push(args); } },
     location: { search: preview ? '?preview=1' : '' }, localStorage: { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value) },
@@ -70,7 +72,7 @@ async function harness(preview = false, savedAnimal = '') {
     fetch: async () => ({ ok: false }), clearTimeout() {}, setTimeout: () => 1,
     ResizeObserver: class { observe() {} }, requestAnimationFrame() {},
   });
-  const app = await new vm.Script(`(async () => {${source.replace(/^import .*;\n/gm, '')}\nreturn {state, enterRoom, leaveRoom, showPanel, closePanel, goToStation, frame, renderPanel, loadRecording, checkWorldTouch};})()`).runInContext(context);
+  const app = await new vm.Script(`(async () => {${source.replace(/^import .*;\n/gm, '')}\nreturn {state, enterRoom, leaveRoom, showPanel, closePanel, goToStation, frame, renderPanel, loadRecording, checkWorldTouch, currentInteraction};})()`).runInContext(context);
   const event = (key, code, target, repeat = false) => ({ key, code, target, repeat, prevented: false, stopped: false, preventDefault() { this.prevented = true; }, stopPropagation() { this.stopped = true; } });
   function press(handlers, e) { for (const cb of handlers.get('keydown') || []) cb(e); return e; }
   return { ...app, opened, stored, get, game, modal, modalContent, Element, event, press, documentHandlers, windowHandlers };
@@ -287,3 +289,60 @@ assert(core.canStand(restored.state.position.x, restored.state.position.y));
 assert.equal(core.worldTouch(restored.state.position), null, 'initial spawn does not enter a house automatically');
 assert(art.worldMarkup().includes('data-station="wardrobe"'));
 console.log('PASS: all four characters switch inside the house with Enter, Space or Numpad Enter, focused targets walk before confirming, selected sprite and saved choice update, cassette state survives, Escape exits and the initial spawn is safe.');
+
+for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'NumpadEnter']]) {
+  const h = await harness(); h.state.started = true; h.closePanel(); h.enterRoom('wardrobe');
+  assert.equal(h.currentInteraction(), null, 'the house entrance leaves all cans visible and selects no action automatically');
+  const blue = painting.paintSlots(content.PALETTE).find(color => color.id === 'blue');
+  h.state.position = { ...blue }; h.game.focus();
+  h.press(h.windowHandlers, h.event(key, code, h.game, true));
+  assert.equal(h.state.paintCan, null, 'repeated confirmation does not pick up a can');
+  h.press(h.windowHandlers, h.event(key, code, h.game));
+  assert.equal(h.state.paintCan, 'blue');
+  assert(h.get('#carried-paint').innerHTML.includes(blue.color));
+  h.leaveRoom(); h.state.position = { x: 700, y: 475 }; h.game.focus();
+  assert.equal(h.currentInteraction().id, 'path');
+  h.press(h.windowHandlers, h.event(key, code, h.game));
+  assert.equal(h.state.paint.path, blue.color);
+  assert.equal(JSON.parse(h.stored.get('bbt-paint-world')).path, blue.color);
+  const sun = new h.Element('sun', 'g', { paintTarget: 'sun' });
+  h.press(h.game.handlers, h.event(key, code, sun));
+  assert.equal(h.state.paint.sun, undefined, 'a distant surface requires walking there first');
+  let tick = 0;
+  while (h.state.path.length && tick < 1500) h.frame(++tick * 16);
+  assert.equal(h.state.scene, 'world'); assert.equal(h.state.paint.sun, undefined);
+  h.press(h.windowHandlers, h.event(key, code, h.game));
+  assert.equal(h.state.paint.sun, blue.color, 'confirmation after walking paints the selected surface');
+  for (const surface of painting.PAINT_SURFACES) {
+    h.state.position = { ...surface.walk }; h.game.focus();
+    assert(core.canStand(h.state.position.x, h.state.position.y), surface.id + ' has an accessible painting spot');
+    assert(painting.canPaintSurface(h.state.position, surface), surface.id + ' can be reached from its painting spot');
+    const target = new h.Element(surface.id, 'g', { paintTarget: surface.id });
+    h.press(h.game.handlers, h.event(key, code, target));
+    assert.equal(h.state.paint[surface.id], blue.color, surface.id + ' is painted through the real keyboard handler');
+  }
+  const drawing = JSON.parse(h.stored.get('bbt-paint-world'));
+  const reload = await harness(false, 'cat', drawing);
+  assert.equal(Object.keys(reload.state.paint).length, painting.PAINT_SURFACES.length);
+  h.press(h.windowHandlers, h.event('Escape', 'Escape', h.game));
+  assert.equal(h.state.paintCan, null); assert.equal(h.modal.open, false); assert.equal(h.state.scene, 'world');
+  h.enterRoom('wardrobe'); h.state.position = { ...painting.PAINT_RESET }; h.game.focus();
+  h.press(h.windowHandlers, h.event(key, code, h.game));
+  assert.equal(Object.keys(h.state.paint).length, 0); assert.equal(h.stored.get('bbt-paint-world'), '{}');
+  h.state.position = { ...blue }; h.game.focus();
+  h.press(h.windowHandlers, h.event(key, code, h.game));
+  h.press(h.windowHandlers, h.event(key, code, h.game));
+  assert.equal(h.state.paintCan, null, 'confirming at the same spot returns the carried can');
+}
+const basePalette = [...content.PALETTE];
+try {
+  content.PALETTE.push({ id: 'orange', name: 'Orange', color: '#ff9900' });
+  const h = await harness(); h.state.started = true; h.closePanel(); h.enterRoom('wardrobe');
+  h.state.position = { ...painting.PAINT_NEXT }; h.game.focus();
+  h.press(h.windowHandlers, h.event(' ', 'Space', h.game));
+  assert.equal(h.state.paintPage, 1); assert(h.game.innerHTML.includes('Orange'));
+  h.state.position = { ...painting.paintSlots(content.PALETTE, 1)[0] }; h.game.focus();
+  h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game));
+  assert.equal(h.state.paintCan, 'orange', 'a newly added color is usable on the next page');
+} finally { content.PALETTE.splice(0, content.PALETTE.length, ...basePalette); }
+console.log('PASS: taking, carrying and returning paint cans, walking to distant surfaces, all paintable surfaces, local save/reload, Escape, reset and newly added palette colors through the real keyboard handlers.');

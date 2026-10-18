@@ -1,5 +1,7 @@
 import { COPY_GROUPS, normalizeTexts } from '../copy-defaults.js';
 import { DEFAULT_BAND, bandMembers } from '../band-defaults.js';
+import { DEFAULT_ANIMALS, playableAnimals } from '../animal-defaults.js';
+import { paletteColors, PALETTE_LIMIT } from '../painting.js';
 import { GitHubStore, REPOSITORY } from './github-store.js';
 import { readDraft, writeDraft, clearDraft, fileReferences } from './drafts.js';
 import { validateContent, validateUpload, checkMagic } from './schema.js';
@@ -47,8 +49,15 @@ function memberEditor(member, index) {
   const path = `info.members.${index}`;
   return `<article class="card member-editor"><div class="card-top"><div class="card-title"><span class="number">${String(index + 1).padStart(2, '0')}</span><h3 data-heading="${path}.name">${esc(member.name)}</h3></div></div><div class="music-layout"><div class="cover-column"><div class="cover-frame member-frame" id="member-cover-${member.id}"><img src="${esc(fileURL(member.image))}" alt="${esc(member.name)}"></div><label class="upload">Bandgrafik auswählen<input type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" data-upload="image" data-member="${member.id}" aria-label="Grafik für ${esc(member.name)} hochladen"></label><p class="file-hint">PNG mit transparentem Hintergrund ist ideal.<br>Auch JPG / WebP · bis 12 MB.</p><p class="file-status" id="member-upload-image-${member.id}" role="status"></p><button class="button small" data-reset-member="${member.id}">Originalgrafik verwenden</button><details><summary>Grafik über einen Link angeben</summary>${field('Bildlink', `${path}.image`, member.image, { max: 2048 })}</details></div><div class="fields">${field('Name *', `${path}.name`, member.name, { max: 60, required: true })}${field('Instrument / Aufgabe', `${path}.role`, member.role, { max: 80 })}${field('Ausruf, z. B. BUM! BUM!', `${path}.sound`, member.sound, { max: 60, hint: 'Erscheint auf dem Schild und beim Bandmitglied. Ein leeres Feld blendet den Ausruf aus.' })}${field('Akzentfarbe', `${path}.color`, member.color, { type: 'color' })}${textarea('Was erzählt dieses Bandmitglied?', `${path}.intro`, member.intro, 4)}</div></div></article>`;
 }
+function animalEditor(animal, index) {
+  const path = `info.animals.${index}`;
+  return `<article class="card member-editor"><div class="card-top"><h3 data-heading="${path}.name">Spielfigur: ${esc(animal.name)}</h3></div><div class="music-layout"><div class="cover-column"><div class="cover-frame member-frame animal-frame" id="animal-cover-${animal.id}"><img src="${esc(fileURL(animal.image))}" alt="${esc(animal.name)}"></div><label class="upload">Figurengrafik auswählen<input type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" data-upload="image" data-animal="${animal.id}" aria-label="Grafik für ${esc(animal.name)} hochladen"></label><p class="file-hint">PNG mit transparentem Hintergrund ist ideal. JPG / WebP · bis 12 MB. Das ganze Tier einschließlich Schwanz soll im Bild sein; es wird ohne Verzerrung eingepasst.</p><p class="file-status" id="animal-upload-image-${animal.id}" role="status"></p><button class="button small" data-reset-animal="${animal.id}">Originalgrafik verwenden</button><details><summary>Grafik über einen Link angeben</summary>${field('Bildlink', `${path}.image`, animal.image, { max: 2048 })}</details></div><div class="fields">${field('Name *', `${path}.name`, animal.name, { max: 40, required: true })}${field('Akzentfarbe', `${path}.color`, animal.color, { type: 'color' })}${textarea('Kurzbeschreibung', `${path}.trait`, animal.trait, 2, 180)}<p class="hint">Name und Grafik werden beim Aussuchen, im Haus und für die laufende Figur verwendet. Die Akzentfarbe färbt den Auswahlplatz, nicht die hochgeladene Grafik.</p></div></div></article>`;
+}
+function paletteEditor() {
+  return `<article class="card palette-editor"><div class="card-top"><h3>Farben & Malen</h3><button class="button small primary" data-add-color>+ Farbe hinzufügen</button></div><p class="hint">Diese Farben stehen als Kanister im Haus. Ändert Farbwert und Namen oder ergänzt weitere Farben (bis ${PALETTE_LIMIT}). Je fünf Kanister werden auf einer Seite gezeigt. Die Kinder können im Haus zu den nächsten Farben wechseln. Gemalte Welten werden nur im Browser des jeweiligen Kindes gespeichert.</p><div class="palette-rows">${state.document.info.palette.map((color, index) => `<div class="palette-row">${field('Farbname *', `info.palette.${index}.name`, color.name, { max: 40, required: true })}${field('Farbe', `info.palette.${index}.color`, color.color, { type: 'color' })}<button class="button small danger" data-remove-color="${index}" aria-label="${esc(color.name)} entfernen">Entfernen</button></div>`).join('')}</div></article>`;
+}
 function textEditor() {
-  return `<article class="card homepage-copy"><h3>Texte der Homepage</h3><p class="hint">Hier ändert ihr Überschriften, Absätze, Menüs, Schilder, Anleitungen und Spielmeldungen. Titel und Beschreibungen der Songs und Bandgeschichten bearbeitet ihr weiterhin bei Musik bzw. den Bandmitgliedern. Veröffentlichen gilt auch für diese Texte.</p><label class="field copy-search">Text oder Bereich suchen<input type="search" data-copy-search placeholder="z. B. Für Große, Überschrift, Kassettenhaus" aria-label="Homepage-Texte durchsuchen"></label><div class="copy-groups">${COPY_GROUPS.map(group => `<details class="copy-group" data-copy-group ${group.id === 'grownups' ? 'open' : ''}><summary>${esc(group.label)} <span>${group.fields.length} Texte</span></summary><div class="fields">${group.fields.map(item => {
+  return `<article class="card homepage-copy"><h3>Texte der Homepage</h3><p class="hint">Hier ändert ihr Überschriften, Absätze, Menüs, Schilder, Anleitungen und Spielmeldungen. Titel und Beschreibungen der Songs und Bandgeschichten bearbeitet ihr weiterhin bei Musik bzw. den Bandmitgliedern. Veröffentlichen gilt auch für diese Texte.</p><label class="field copy-search">Text oder Bereich suchen<input type="search" data-copy-search placeholder="z. B. Eltern, Überschrift, Musikhaus" aria-label="Homepage-Texte durchsuchen"></label><div class="copy-groups">${COPY_GROUPS.map(group => ({ ...group, fields: group.fields.filter(field => !DEFAULT_ANIMALS.some(animal => [animal.id + '_name', animal.id + '_trait'].includes(field.key))) })).map(group => `<details class="copy-group" data-copy-group ${group.id === 'grownups' ? 'open' : ''}><summary>${esc(group.label)} <span>${group.fields.length} Texte</span></summary><div class="fields">${group.fields.map(item => {
     const tokens = [...new Set(item.value.match(/\{\w+\}/g) || [])];
     const hint = tokens.length ? `Diese Wörter werden beim Spielen ersetzt: ${tokens.join(', ')}. Ihr könnt sie im Text verwenden.` : '';
     return `<div class="copy-field${item.max > 500 ? ' full' : ''}" data-copy-field data-search="${esc((group.label + ' ' + item.label + ' ' + item.value).toLocaleLowerCase('de'))}">${item.max > 500 ? textarea(item.label, `info.texts.${item.key}`, state.document.info.texts[item.key], 3, item.max) : field(item.label, `info.texts.${item.key}`, state.document.info.texts[item.key], { max: item.max, full: true })}${hint ? `<p class="hint token-hint">${esc(hint)}</p>` : ''}</div>`;
@@ -56,7 +65,7 @@ function textEditor() {
 }
 function info() {
   const item = state.document.info;
-  return `<div class="section-heading"><div><h2>Das seid ihr.</h2><p>Hier ändert ihr eure Geschichte, die Bandmitglieder und Kontaktdaten. Namen, Ausrufe und Grafiken erscheinen auf der Bühne und in den Gesprächen. Alle weiteren Texte könnt ihr im Bereich „Texte der Homepage“ bearbeiten.</p></div></div><div class="info-stack"><article class="card"><h3>Band & Kontakt</h3><div class="fields">${field('Untertitel der Band', 'info.tagline', item.tagline, { max: 100 })}${field('E-Mail für Booking & Kontakt', 'info.email', item.email, { type: 'email' })}${textarea('Eure Bandgeschichte', 'info.about', item.about, 5, 6000)}</div><p class="hint" style="margin-top:16px">Die E-Mail-Adresse erscheint bei „Bleib in Kontakt“ und unter „Für Große“. Die Bandgeschichte steht bei den Bandmitgliedern. Die Texte von „Für Große“ bearbeitet ihr unten separat.</p></article>${textEditor()}${item.members.map(memberEditor).join('')}<article class="card"><h3>Bleib in Kontakt</h3><p class="hint" style="margin-bottom:20px">Diese Links öffnen sich über die Symbole in der Spielwelt. Ein leeres Feld blendet das jeweilige Symbol aus.</p><div class="fields">${item.social.map((network, index) => field(network.label, `info.social.${index}.url`, network.url, { type: 'url', max: 2048 })).join('')}</div></article></div>`;
+  return `<div class="section-heading"><div><h2>Das seid ihr.</h2><p>Hier ändert ihr eure Geschichte, die Bandmitglieder und Kontaktdaten. Namen, Ausrufe und Grafiken erscheinen auf der Bühne und in den Gesprächen. Alle weiteren Texte könnt ihr im Bereich „Texte der Homepage“ bearbeiten.</p></div></div><div class="info-stack"><article class="card"><h3>Band & Kontakt</h3><div class="fields">${field('Untertitel der Band', 'info.tagline', item.tagline, { max: 100 })}${field('E-Mail für Booking & Kontakt', 'info.email', item.email, { type: 'email' })}${textarea('Eure Bandgeschichte', 'info.about', item.about, 5, 6000)}</div><p class="hint" style="margin-top:16px">Die E-Mail-Adresse erscheint bei „Kontakt“ und unter „für Eltern und Veranstalter“. Die Bandgeschichte steht bei den Bandmitgliedern. Die Texte von „für Eltern und Veranstalter“ bearbeitet ihr unten separat.</p></article>${textEditor()}${item.members.map(memberEditor).join('')}<article class="card"><h3>Spielfiguren</h3><p class="hint">Hier ändert ihr Namen, Beschreibungen, Akzentfarben und Grafiken der vier Spielfiguren.</p></article>${item.animals.map(animalEditor).join('')}${paletteEditor()}<article class="card"><h3>Kontakt</h3><p class="hint" style="margin-bottom:20px">Diese Links öffnen sich über die Symbole in der Spielwelt. Ein leeres Feld blendet das jeweilige Symbol aus.</p><div class="fields">${item.social.map((network, index) => field(network.label, `info.social.${index}.url`, network.url, { type: 'url', max: 2048 })).join('')}</div></article></div>`;
 }
 function render() {
   $('#panel').innerHTML = state.tab === 'concerts' ? concerts() : state.tab === 'music' ? music() : info();
@@ -95,6 +104,19 @@ async function ask(title, text, action) {
 document.addEventListener('click', async event => {
   const button = event.target.closest('button'); if (!button) return;
   if (state.busy) return;
+  if (button.dataset.resetAnimal) {
+    if (state.uploads.size) return;
+    const animal = state.document.info.animals.find(item => item.id === button.dataset.resetAnimal);
+    animal.image = DEFAULT_ANIMALS.find(item => item.id === animal.id).image;
+    changed(); render(); $(`[data-reset-animal="${animal.id}"]`).focus(); return;
+  }
+  if (button.dataset.addColor !== undefined) {
+    if (state.document.info.palette.length >= PALETTE_LIMIT) { message(`Höchstens ${PALETTE_LIMIT} Farben sind möglich.`, true); return; }
+    state.document.info.palette.push({ id: `paint-${crypto.randomUUID()}`, name: 'Neue Farbe', color: '#a855f7' }); changed(); render(); return;
+  }
+  if (button.dataset.removeColor !== undefined) {
+    state.document.info.palette.splice(Number(button.dataset.removeColor), 1); changed(); render(); return;
+  }
   if (button.dataset.resetMember) {
     if (state.uploads.size) return;
     const member = state.document.info.members.find(item => item.id === button.dataset.resetMember);
@@ -173,10 +195,11 @@ $('#preview').addEventListener('click', async () => {
 $('#panel').addEventListener('change', async event => {
   const input = event.target; if (!input.dataset.upload || !input.files?.[0] || state.busy) return;
   const member = input.dataset.member ? state.document.info.members.find(item => item.id === input.dataset.member) : null;
-  const track = !member ? state.document.tracks.find(item => item.id === input.dataset.track) : null;
-  const item = member || track, key = input.dataset.upload;
+  const animal = input.dataset.animal ? state.document.info.animals.find(item => item.id === input.dataset.animal) : null;
+  const track = !member && !animal ? state.document.tracks.find(item => item.id === input.dataset.track) : null;
+  const item = member || animal || track, key = input.dataset.upload;
   if (!item) return;
-  const statusId = member ? `#member-upload-image-${member.id}` : `#upload-${key}-${track.id}`;
+  const statusId = member ? `#member-upload-image-${member.id}` : animal ? `#animal-upload-image-${animal.id}` : `#upload-${key}-${track.id}`;
   const indicator = $(statusId), file = input.files[0];
   state.uploads.add(item.id + ':' + key); input.disabled = true; status();
   try {
@@ -187,9 +210,10 @@ $('#panel').addEventListener('change', async event => {
     state.files.set(path, file); fileURLs.set(path, URL.createObjectURL(file)); item[key] = path; changed();
     indicator.textContent = 'Ausgewählt. Wird beim Veröffentlichen auf GitHub gespeichert.';
     if (member) $(`#member-cover-${member.id}`).innerHTML = `<img src="${esc(fileURL(path))}" alt="${esc(member.name)}">`;
+    else if (animal) $(`#animal-cover-${animal.id}`).innerHTML = `<img src="${esc(fileURL(path))}" alt="${esc(animal.name)}">`;
     else if (key === 'image') $(`#cover-${track.id}`).innerHTML = `<img src="${esc(fileURL(path))}" alt="Cover von ${esc(track.title)}">`;
     else $(`#audio-${track.id}`).innerHTML = `<audio controls preload="none" src="${esc(fileURL(path))}" aria-label="${esc(track.title)} probehören"></audio>`;
-    const fieldPath = member ? `info.members.${state.document.info.members.indexOf(member)}.image` : `tracks.${state.document.tracks.indexOf(track)}.${key}`;
+    const fieldPath = member ? `info.members.${state.document.info.members.indexOf(member)}.image` : animal ? `info.animals.${state.document.info.animals.indexOf(animal)}.image` : `tracks.${state.document.tracks.indexOf(track)}.${key}`;
     const linkInput = [...$('#panel').querySelectorAll('[data-path]')].find(node => node.dataset.path === fieldPath);
     if (linkInput) linkInput.value = path;
   } catch (error) { indicator.textContent = 'Die Datei wurde nicht zugeordnet.'; message(error.message, true); }
@@ -199,6 +223,8 @@ $('#panel').addEventListener('change', async event => {
 function normalize(document) {
   document.info.members = bandMembers(document.info.members);
   document.info.texts = normalizeTexts(document.info.texts);
+  document.info.animals = playableAnimals(document.info.animals, document.info.texts);
+  document.info.palette = paletteColors(document.info.palette);
   return document;
 }
 $('#login').addEventListener('submit', async event => {

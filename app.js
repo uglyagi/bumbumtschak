@@ -1,5 +1,6 @@
 import { WORLD, WORLD_SPAWN, STATIONS, clamp, move, planPath, isActionKey, HOUSE_DOORS, worldTouch } from './game-core.js';
-import { ANIMALS, BAND, TRACKS, CONCERTS, CONTACT, INFO, loadContent, text } from './content.js';
+import { ANIMALS, BAND, TRACKS, CONCERTS, CONTACT, INFO, PALETTE, loadContent, text } from './content.js';
+import { PAINT_SURFACES, PAINT_RESET, PAINT_NEXT, paintSlots, paintPages, nearbyPaintSurface, canPaintSurface, cleanPaint, paintCanMarkup } from './painting.js';
 import { icon, avatar, memberArt, worldMarkup } from './art.js';
 import { cassetteMarkup, cassetteSVG, roomMarkup, slotContents, slotDescription } from './room-art.js';
 import { ROOMS, ROOM_SPAWN, EXIT, RADIO, TAPE_SLOTS, SHELF_SWITCH, ROOM_PROPS, ANIMAL_SPOTS, slotsOnPage, tapePages, findTapeSlot, refreshBandWayfinding, roomFor, createCassetteState, tapeLocation, cassetteAction, nearbyInteraction, throughExit, nextMenuIndex } from './rooms.js';
@@ -19,6 +20,9 @@ const storage = {
   set(key, value) { try { localStorage.setItem(`bbt-${key}`, value); } catch { /* The world also works without storage. */ } },
 };
 const savedAnimal = storage.get('animal', '');
+const paintStorageKey = previewMode ? 'paint-preview' : 'paint-world';
+let savedPaint = {};
+try { savedPaint = cleanPaint(JSON.parse(storage.get(paintStorageKey, '{}'))); } catch { /* A damaged local drawing starts with the original colors. */ }
 const state = {
   animal: ANIMALS.some(a => a.id === savedAnimal) ? savedAnimal : 'cat',
   scene: 'world', returnPosition: null, tapes: createCassetteState(), shelfPage: 0,
@@ -28,6 +32,7 @@ const state = {
   viewport: { w: 1480, h: 850 },
   keys: new Set(), pad: new Map(), path: [], destination: null,
   near: null, modal: null, playing: false,
+  paint: savedPaint, paintCan: null, paintPage: 0, paintTarget: null,
   volume: clamp(Number(storage.get('volume', '.6')) || 0, 0, 1),
   reduced: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
 };
@@ -139,9 +144,16 @@ function refreshCassettes() {
   if (carried) indicator.innerHTML = `<img class="carry-cover" src="${escape(carried.image)}" alt=""><span><small>${T('carry_title')}</small><strong>${escape(carried.title)}</strong><span>${T('carry_hint')}</span></span>`;
   const loaded = TRACKS.find(t => t.id === state.tapes.loaded), slot = $('#radio-tape');
   if (slot) { slot.toggleAttribute('hidden', !loaded); slot.innerHTML = loaded ? cassetteMarkup(loaded) : ''; slot.classList.toggle('is-playing', state.playing); }
+  refreshPaint();
+}
+function refreshPaint() {
+  const color = PALETTE.find(color => color.id === state.paintCan), carried = $('#carried-paint');
+  if (carried) { carried.toggleAttribute('hidden', !color); carried.innerHTML = color ? paintCanMarkup(color.color) : ''; }
+  const indicator = $('#paint-indicator'); indicator.hidden = !color;
+  if (color) indicator.innerHTML = `<svg viewBox="0 0 80 94" aria-hidden="true">${paintCanMarkup(color.color)}</svg><span><strong>${escape(color.name)}</strong><small>${T('paint_carry_hint')}</small><button data-action="put-paint">${T('paint_put_down')}</button></span>`;
 }
 function renderScene() {
-  game.innerHTML = state.scene === 'world' ? worldMarkup() : roomMarkup(state.scene, state.shelfPage, state.tapes, state.animal);
+  game.innerHTML = state.scene === 'world' ? worldMarkup(state.paint, !!state.paintCan) : roomMarkup(state.scene, state.shelfPage, state.tapes, state.animal, { can: state.paintCan, page: state.paintPage });
   world = $('#world-svg'); player = $('#player'); playerUse = $('#player-use'); marker = $('#destination-marker');
   game.setAttribute('aria-label', state.scene === 'world' ? text('world_title') : ROOMS[state.scene].title);
   $('.wayfinder').hidden = state.scene !== 'world'; $('.exit-room').hidden = state.scene === 'world';
@@ -179,7 +191,7 @@ function enterRoom(id) {
   const room = roomFor(id); if (!room) return;
   if (!state.started) beginWorld(false);
   state.returnPosition = { ...HOUSE_DOORS.find(door => door.id === room).outside };
-  stopWalking(); closePanel(); state.scene = room; state.position = { ...ROOM_SPAWN };
+  stopWalking(); closePanel(); state.scene = room; state.position = { ...(ROOMS[room].spawn || ROOM_SPAWN) };
   renderScene(); game.focus({ preventScroll: true });
   announce(text('entered_room', { haus: ROOMS[room].title }));
 }
@@ -219,10 +231,42 @@ function loadRecording() {
 for (const event of ['play', 'pause', 'ended']) audio.addEventListener(event, refreshPlayback);
 audio.addEventListener('error', () => { refreshPlayback(); toast(text('audio_error')); });
 document.addEventListener('input', e => { if (e.target.id === 'volume') { state.volume = Number(e.target.value); audio.volume = state.volume; storage.set('volume', state.volume); } });
+function currentInteraction() {
+  const color = PALETTE.find(color => color.id === state.paintCan);
+  if (state.scene === 'world' && color) {
+    const selected = PAINT_SURFACES.find(surface => surface.id === state.paintTarget);
+    const surface = canPaintSurface(state.position, selected) ? selected : nearbyPaintSurface(state.position);
+    return { ...surface, kind: 'paint', label: text('paint_action', { flaeche: text(surface.key), farbe: color.name }) };
+  }
+  return nearbyInteraction(state.scene, state.position, state.tapes, state.shelfPage, { can: state.paintCan, page: state.paintPage });
+}
+function putPaintDown() { state.paintCan = null; state.paintTarget = null; stopWalking(); renderScene(); game.focus({ preventScroll: true }); }
+function paintSurface(id) {
+  const surface = PAINT_SURFACES.find(surface => surface.id === id), color = PALETTE.find(color => color.id === state.paintCan);
+  if (!color || !canPaintSurface(state.position, surface)) return;
+  stopWalking(); state.paint[id] = color.color; state.paintTarget = null;
+  storage.set(paintStorageKey, JSON.stringify(state.paint)); renderScene(); game.focus({ preventScroll: true });
+  announce(text('paint_done', { flaeche: text(surface.key), farbe: color.name }));
+}
+function activatePaintSurface(id) {
+  const surface = PAINT_SURFACES.find(surface => surface.id === id); if (!surface) return;
+  if (canPaintSurface(state.position, surface)) paintSurface(id);
+  else { state.paintTarget = id; navigateTo(surface.walk.x, surface.walk.y); }
+}
 function performInteraction() {
-  const near = nearbyInteraction(state.scene, state.position, state.tapes, state.shelfPage);
+  const near = currentInteraction();
   if (!near) return;
   stopWalking();
+  if (near.kind === 'paint') { paintSurface(near.id); return; }
+  if (near.kind === 'take-paint' || near.kind === 'return-paint') {
+    state.paintCan = near.kind === 'take-paint' ? near.id : null; state.paintTarget = null; renderScene();
+    announce(text(state.paintCan ? 'paint_taken' : 'paint_returned', { farbe: near.name })); return;
+  }
+  if (near.kind === 'paint-page') { state.paintPage = (state.paintPage + 1) % paintPages(PALETTE); renderScene(); return; }
+  if (near.kind === 'reset-paint') {
+    state.paint = {}; state.paintCan = null; state.paintTarget = null; storage.set(paintStorageKey, '{}'); renderScene();
+    announce(text('paint_reset_done')); return;
+  }
   if (near.kind === 'shelf') { state.shelfPage = (state.shelfPage + 1) % tapePages(state.tapes); renderScene(); toast(text('shelf_changed', { seite: state.shelfPage + 1, anzahl: tapePages(state.tapes) })); return; }
   if (['external', 'email'].includes(near.kind)) { openSocial(near.id); return; }
   if (near.kind === 'enter') { enterRoom(near.id); return; }
@@ -306,6 +350,7 @@ document.addEventListener('click', e => {
   if (btn.dataset.track) { goToTape(btn.dataset.track); return; }
   if (btn.dataset.goto) { goToStation(btn.dataset.goto); return; }
   const action = btn.dataset.action;
+  if (action === 'put-paint') { putPaintDown(); return; }
   if (action === 'close') closePanel();
   if (action === 'leave') leaveRoom();
   if (action === 'exit-walk') navigateTo(EXIT.x, 1020, { kind: 'exit' });
@@ -351,33 +396,42 @@ modalContent.addEventListener('keydown', e => {
   controls[nextMenuIndex(controls.indexOf(document.activeElement), e.key, controls.length)]?.focus();
 });
 function activateRoomTarget(id) {
+  if (id.startsWith('paint:') || ['paint-reset', 'paint-next'].includes(id)) {
+    if (state.scene !== 'wardrobe') return;
+    const target = id === 'paint-reset' ? PAINT_RESET : id === 'paint-next' ? PAINT_NEXT : paintSlots(PALETTE, state.paintPage).find(color => color.id === id.slice(6));
+    if (!target) return;
+    const near = currentInteraction(), wanted = id.startsWith('paint:') ? id.slice(6) : id;
+    if (near?.id === wanted) performInteraction(); else navigateTo(target.x, target.y); return;
+  }
   if (id === 'shelf') {
-    const near = nearbyInteraction(state.scene, state.position, state.tapes, state.shelfPage);
+    const near = currentInteraction();
     if (near?.kind === 'shelf') performInteraction(); else navigateTo(SHELF_SWITCH.x, SHELF_SWITCH.y);
     return;
   }
   if (id === 'exit') { navigateTo(EXIT.x, 1020, { kind: 'exit' }); return; }
   if (id.startsWith('animal:')) {
     const spot = ANIMAL_SPOTS.find(spot => spot.id === id.slice(7)); if (!spot) return;
-    const near = nearbyInteraction(state.scene, state.position, state.tapes, state.shelfPage);
+    const near = currentInteraction();
     if (near?.kind === 'change-character' && near.id === spot.id) performInteraction(); else navigateTo(spot.x, spot.y);
     return;
   }
   if (id.startsWith('slot:')) {
     const index = Number(id.slice(5)), slot = slotsOnPage(state.shelfPage).find(s => s.slot === index);
     if (!slot) return;
-    const near = nearbyInteraction(state.scene, state.position, state.tapes, state.shelfPage);
+    const near = currentInteraction();
     if (near?.slot === index) performInteraction(); else navigateTo(slot.x, slot.y);
     return;
   }
   const target = id === 'radio' ? RADIO : (ROOM_PROPS[state.scene] || []).find(p => p.id === id);
   if (!target) return;
-  const near = nearbyInteraction(state.scene, state.position, state.tapes, state.shelfPage);
+  const near = currentInteraction();
   if (near && (near.id === id || id === 'radio' && ['insert', 'eject', 'radio-help'].includes(near.kind))) performInteraction();
   else navigateTo(target.x, target.y);
 }
 game.addEventListener('click', e => {
   if (modal.open || !state.started) return;
+  const surface = e.target.closest('[data-paint-target]');
+  if (state.paintCan && state.scene === 'world' && surface) { activatePaintSurface(surface.dataset.paintTarget); return; }
   const social = e.target.closest('[data-social]');
   if (social) { const pad = socialPads(state.scene).find(p => p.id === social.dataset.social); if (pad) navigateTo(pad.x, pad.y); return; }
   const station = e.target.closest('[data-station]');
@@ -389,13 +443,15 @@ game.addEventListener('click', e => {
 });
 game.addEventListener('keydown', e => {
   if (!isActionKey(e)) return;
+  const surface = e.target.closest('[data-paint-target]');
+  if (state.paintCan && state.scene === 'world' && surface) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) activatePaintSurface(surface.dataset.paintTarget); return; }
   const social = e.target.closest('[data-social]');
   if (social) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) activateSocial(social.dataset.social); return; }
   const station = e.target.closest('[data-station]'), prop = e.target.closest('[data-room-target]');
   if (!station && !prop) return;
   e.preventDefault(); e.stopPropagation(); if (e.repeat) return;
   if (station) {
-    const near = nearbyInteraction(state.scene, state.position, state.tapes, state.shelfPage);
+    const near = currentInteraction();
     if (near?.kind === 'read' && near.id === station.dataset.station) performInteraction();
     else goToStation(station.dataset.station);
   } else activateRoomTarget(prop.dataset.roomTarget);
@@ -403,7 +459,7 @@ game.addEventListener('keydown', e => {
 const directions = new Map([['ArrowUp', [0, -1]], ['KeyW', [0, -1]], ['ArrowDown', [0, 1]], ['KeyS', [0, 1]], ['ArrowLeft', [-1, 0]], ['KeyA', [-1, 0]], ['ArrowRight', [1, 0]], ['KeyD', [1, 0]]]);
 window.addEventListener('keydown', e => {
   if (modal.open || !state.started) return;
-  if (e.key === 'Escape') { e.preventDefault(); if (!e.repeat) state.scene === 'world' ? showPanel('pause') : leaveRoom(); return; }
+  if (e.key === 'Escape') { e.preventDefault(); if (!e.repeat) { if (state.paintCan) putPaintDown(); else state.scene === 'world' ? showPanel('pause') : leaveRoom(); } return; }
   if (!(document.activeElement === game || game.contains(document.activeElement))) {
     if (e.key.startsWith('Arrow') && e.target.closest('.header,.footer')) {
       e.preventDefault(); const controls = [...document.querySelectorAll('.header a,.header button,.footer button')];
@@ -411,7 +467,7 @@ window.addEventListener('keydown', e => {
     }
     return;
   }
-  if (directions.has(e.code)) { e.preventDefault(); state.keys.add(e.code); state.path = []; state.destination = null; marker.setAttribute('hidden', ''); }
+  if (directions.has(e.code)) { e.preventDefault(); state.paintTarget = null; state.keys.add(e.code); state.path = []; state.destination = null; marker.setAttribute('hidden', ''); }
   else if (isActionKey(e) || e.code === 'KeyE') { e.preventDefault(); if (!e.repeat) performInteraction(); }
 });
 window.addEventListener('keyup', e => { state.keys.delete(e.code); });
@@ -429,7 +485,7 @@ $('#dpad').querySelectorAll('button').forEach(btn => {
 });
 $('#interact').addEventListener('click', performInteraction);
 function updateNear() {
-  const near = nearbyInteraction(state.scene, state.position, state.tapes, state.shelfPage);
+  const near = currentInteraction();
   if (near?.kind === state.near?.kind && near?.id === state.near?.id && near?.slot === state.near?.slot) return;
   state.near = near; const btn = $('#interact'); btn.hidden = !near;
   if (near) {

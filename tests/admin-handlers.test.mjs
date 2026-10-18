@@ -5,6 +5,8 @@ import { readFile } from 'node:fs/promises';
 import { GitHubStore } from '../verwaltung/github-store.js';
 import { COPY_GROUPS, normalizeTexts } from '../copy-defaults.js';
 import { DEFAULT_BAND, bandMembers } from '../band-defaults.js';
+import { DEFAULT_ANIMALS, playableAnimals } from '../animal-defaults.js';
+import { paletteColors, PALETTE_LIMIT } from '../painting.js';
 import { fileReferences } from '../verwaltung/drafts.js';
 import { validateContent, validateUpload, checkMagic } from '../verwaltung/schema.js';
 import { RepositoryFixture, TEST_TOKEN } from './github-fixture.mjs';
@@ -33,7 +35,7 @@ async function harness(saved = null) {
   for (const id of ['concerts', 'music', 'info']) get('#tab-' + id).dataset.tab = id;
   get('#editor').hidden = true;
   const context = vm.createContext({
-    COPY_GROUPS, normalizeTexts, DEFAULT_BAND, bandMembers, fileReferences, validateContent, validateUpload, checkMagic,
+    COPY_GROUPS, normalizeTexts, DEFAULT_BAND, bandMembers, DEFAULT_ANIMALS, playableAnimals, paletteColors, PALETTE_LIMIT, fileReferences, validateContent, validateUpload, checkMagic,
     REPOSITORY: 'uglyagi/bumbumtschak', GitHubStore: class extends GitHubStore { constructor(token) { super(token, repo.fetch); } },
     readDraft: async () => structuredClone(draft),
     writeDraft: async ({ document, contentSha, files }) => { draft = structuredClone({ document, contentSha, files, savedAt: '2026-10-18T09:00:00Z' }); },
@@ -59,6 +61,8 @@ test('login clears the password field and opens all existing editorial forms', a
   assert(h.get('#panel').innerHTML.includes('info.texts.action_change_character'));
   assert(h.get('#panel').innerHTML.includes('info.members.0.name'));
   assert(h.get('#panel').innerHTML.includes('info.members.0.image'));
+  assert(h.get('#panel').innerHTML.includes('info.animals.0.image'));
+  assert(h.get('#panel').innerHTML.includes('info.palette.0.color'));
   assert(!h.get('#panel').innerHTML.includes(TEST_TOKEN));
   assert(!JSON.stringify(h.state).includes(TEST_TOKEN));
 });
@@ -114,4 +118,35 @@ test('logout removes the key and the public world remains unchanged', async () =
   assert.equal(h.draft().document.info.tagline, 'Keep my draft');
   await assert.rejects(store.load(), { status: 401 });
   assert.equal(h.repo.document().info.tagline, defaults.info.tagline);
+});
+
+test('playable character graphics and extra paint colors publish with their editable names', async () => {
+  const h = await harness(); await h.login(); await h.click(h.get('#tab-info'));
+  const originalImage = h.repo.document().info.animals?.[3]?.image;
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aOv0AAAAASUVORK5CYII=', 'base64');
+  const input = new h.Element('monkey upload', { upload: 'image', animal: 'monkey' });
+  input.files = [new File([png], 'Affe.png', { type: 'image/png' })];
+  await h.fire('#panel', 'change', input);
+  const imagePath = h.state.document.info.animals[3].image;
+  assert(imagePath.startsWith('uploads/')); assert.equal(h.state.files.size, 1);
+  assert(fileReferences(h.state.document).has(imagePath));
+  assert.equal(h.repo.document().info.animals?.[3]?.image, originalImage);
+  const name = new h.Element('monkey name', { path: 'info.animals.3.name' }); name.value = 'Unser Affe';
+  await h.fire('#panel', 'input', name);
+  const add = new h.Element('add color', { addColor: '' }); await h.click(add);
+  assert.equal(h.state.document.info.palette.length, 6);
+  for (const [key, value] of [['name', 'Orange'], ['color', '#ff9900']]) {
+    const field = new h.Element('extra color', { path: 'info.palette.5.' + key }); field.value = value;
+    await h.fire('#panel', 'input', field);
+  }
+  assert(await h.save(true));
+  assert.equal(h.repo.document().info.animals[3].name, 'Unser Affe');
+  assert.equal(h.repo.document().info.animals[3].image, imagePath);
+  assert.deepEqual(h.repo.blobs.get(h.repo.currentTree().get(imagePath)), png);
+  assert.equal(h.repo.document().info.palette[5].name, 'Orange'); assert.equal(h.repo.document().info.palette[5].color, '#ff9900');
+  assert.equal(h.repo.requests.filter(request => request.method === 'PATCH').length, 1, 'image, character and palette publish atomically');
+  await h.click(new h.Element('original monkey', { resetAnimal: 'monkey' }));
+  assert.equal(h.state.document.info.animals[3].image, DEFAULT_ANIMALS[3].image);
+  await h.click(new h.Element('remove orange', { removeColor: '5' }));
+  assert.equal(h.state.document.info.palette.length, 5);
 });

@@ -1,5 +1,7 @@
 import { bandMembers, DEFAULT_BAND } from '../band-defaults.js';
 import { COPY_FIELDS } from '../copy-defaults.js';
+import { DEFAULT_ANIMALS, playableAnimals } from '../animal-defaults.js';
+import { paletteColors, PALETTE_LIMIT } from '../painting.js';
 export const PART_SIZE = 8 * 1024 * 1024;
 export class CMSIssue extends Error {
   constructor(message, status = 400) { super(message); this.status = status; }
@@ -65,8 +67,19 @@ export function validateContent(input) {
     if (value !== undefined && typeof value !== 'string') throw new CMSIssue(`${field.label}: Bitte einen Text eingeben.`);
     return [field.key, str(value ?? field.value, field.max, field.label)];
   }));
+  if (input.info.animals !== undefined && (!Array.isArray(input.info.animals) || input.info.animals.length !== 4 || new Set(input.info.animals.map(animal => animal?.id)).size !== 4 || input.info.animals.some(animal => !DEFAULT_ANIMALS.some(base => base.id === animal?.id)))) throw new CMSIssue('Bitte die vier Spielfiguren beibehalten.');
+  if (input.info.palette !== undefined && (!Array.isArray(input.info.palette) || input.info.palette.length > PALETTE_LIMIT)) throw new CMSIssue(`Höchstens ${PALETTE_LIMIT} Farben sind möglich.`);
+  used.clear();
+  const palette = (input.info.palette ?? paletteColors()).map(color => {
+    if (!/^#[a-f0-9]{6}$/i.test(color.color)) throw new CMSIssue('Bitte eine gültige Kanisterfarbe auswählen.');
+    return { id: unique(color.id), name: str(color.name, 40, 'Farbname', true), color: color.color };
+  });
   return { schemaVersion: 1, tracks, concerts, info: {
     tagline: str(input.info.tagline, 100, 'Untertitel'), about: str(input.info.about, 6000, 'Bandgeschichte'), email, texts,
+    animals: playableAnimals(input.info.animals, texts).map((animal, index) => ({ id: animal.id, article: DEFAULT_ANIMALS[index].article,
+      name: str(animal.name, 40, 'Name der Spielfigur', true), trait: str(animal.trait, 180, 'Beschreibung der Spielfigur'),
+      image: url(animal.image || DEFAULT_ANIMALS[index].image, true), color: /^#[a-f0-9]{6}$/i.test(animal.color) ? animal.color : DEFAULT_ANIMALS[index].color })),
+    palette,
     members: bandMembers(input.info.members).map((member, index) => ({
       id: member.id,
       name: str(member.name, 60, 'Name des Bandmitglieds', true),

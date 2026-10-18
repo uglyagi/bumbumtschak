@@ -1,5 +1,6 @@
 import { defs, mapLabel } from './art.js';
-import { TRACKS, ANIMALS, text } from './content.js';
+import { TRACKS, ANIMALS, PALETTE, text } from './content.js';
+import { paintSlots, paintPages, PAINT_RESET, PAINT_NEXT, paintCanMarkup } from './painting.js';
 import { escapeXML as escape } from './utils.js';
 import { ROOMS, ROOM_PROPS, ANIMAL_SPOTS, slotsOnPage, tapePages, createCassetteState } from './rooms.js';
 
@@ -22,7 +23,7 @@ export function cassetteMarkup(track) {
   </g>`;
 }
 export const cassetteSVG = (track, cls = '') => `<svg class="cassette-art ${cls}" viewBox="0 0 132 84" aria-hidden="true">${cassetteMarkup(track)}</svg>`;
-export const playerMarkup = `<g id="player" transform="translate(800 870)"><ellipse cx="0" cy="0" rx="25" ry="9" fill="#101014" opacity=".18"/><g id="player-body"><use id="player-use" href="#animal-cat" x="-34" y="-77" width="68" height="82"/><g id="carried-tape" transform="translate(-29 -39) scale(.44)" hidden=""></g></g><path d="m-5-91 5 6 5-6" fill="none" stroke="#101014" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>`;
+export const playerMarkup = `<g id="player" transform="translate(800 870)"><ellipse cx="0" cy="0" rx="25" ry="9" fill="#101014" opacity=".18"/><g id="player-body"><use id="player-use" href="#animal-cat" x="-34" y="-77" width="68" height="82"/><g id="carried-tape" transform="translate(-29 -39) scale(.44)" hidden=""></g><g id="carried-paint" transform="translate(12 -44) scale(.38)" hidden=""></g></g><path d="m-5-91 5 6 5-6" fill="none" stroke="#101014" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>`;
 const target = (id, name, markup, attributes = '') => `<g class="world-station" data-room-target="${id}" tabindex="0" role="button" aria-label="${escape(name)}" ${attributes}>${markup}</g>`;
 
 const fitted = (x, y, value, width, size = 17, color = '#101014') => `<text x="${x}" y="${y}" text-anchor="middle" stroke="none" fill="${color}" font-size="${size}" font-weight="900" ${value.length * size * .6 > width ? `textLength="${width}" lengthAdjust="spacingAndGlyphs"` : ''}>${escape(value)}</text>`;
@@ -58,7 +59,7 @@ function infoArt(scene) {
   return target(scene, ROOM_PROPS[scene][0].label, `<g stroke="#101014" stroke-width="5" stroke-linejoin="round"><path d="M530 463v38m540-38v38" stroke-width="12"/><rect x="500" y="280" width="600" height="200" rx="16" fill="${ROOMS[scene].color}"/><rect x="514" y="294" width="572" height="172" rx="7" fill="#1d55ff"/></g>${fitted(800, 355, text(prefix + '_board'), 535, 38, 'white')}${fitted(800, 405, text(prefix + '_board_sub'), 535, 23, '#fff20b')}${mapLabel(800, 530, text('read_hint'), 420)}`);
 }
 
-function wardrobeArt(selectedAnimal) {
+function wardrobeArt(selectedAnimal, paint) {
   return `${fitted(800, 291, text('wardrobe_board'), 1100, 31)}${fitted(800, 327, text('wardrobe_hint'), 1140, 17)}
     ${ANIMAL_SPOTS.map(spot => {
       const animal = ANIMALS.find(animal => animal.id === spot.id), selected = animal.id === selectedAnimal;
@@ -71,10 +72,13 @@ function wardrobeArt(selectedAnimal) {
         <path d="m-9 ${spot.y - 2} 7 7 12-13" fill="none" stroke="#101014" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="${selected ? 1 : 0}"/>
         ${selected ? fitted(0, 741, text('wardrobe_selected'), 230, 17) : ''}
       </g>`, `aria-pressed="${selected}"`);
-    }).join('')}`;
+    }).join('')}
+    ${paintSlots(PALETTE, paint.page || 0).map(color => target(`paint:${color.id}`, text(paint.can === color.id ? 'paint_return' : 'paint_take', { farbe: color.name }), `<g transform="translate(${color.x} 0)"><ellipse cy="850" rx="48" ry="17" fill="#fffcee" stroke="#101014" stroke-width="3" stroke-dasharray="5 4"/>${paint.can === color.id ? '' : `<g transform="translate(-36 763) scale(.9)">${paintCanMarkup(color.color)}</g>`}${fitted(0, 893, color.name, 175, 16)}</g>`)).join('')}
+    ${paintPages(PALETTE) > 1 ? target('paint-next', text('paint_next'), `<g transform="translate(${PAINT_NEXT.x} ${PAINT_NEXT.y})"><rect x="-145" y="-27" width="290" height="54" rx="13" fill="#ff87ce" stroke="#101014" stroke-width="4"/>${fitted(0, -4, text('paint_next'), 264, 15)}${fitted(0, 16, text('paint_page', { seite: (paint.page || 0) + 1, anzahl: paintPages(PALETTE) }), 264, 12)}</g>`) : ''}
+    ${target('paint-reset', text('paint_reset'), `<g transform="translate(${PAINT_RESET.x} ${PAINT_RESET.y})"><rect x="-145" y="-27" width="290" height="54" rx="13" fill="#fffcee" stroke="#101014" stroke-width="4"/>${fitted(0, 6, text('paint_reset'), 264, 17)}</g>`)}`;
 }
 
-export function roomMarkup(scene, shelfPage = 0, tapes = createCassetteState(), selectedAnimal = 'cat') {
+export function roomMarkup(scene, shelfPage = 0, tapes = createCassetteState(), selectedAnimal = 'cat', paint = {}) {
   const room = ROOMS[scene];
   const tiles = [];
   for (let x = 190; x <= 1400; x += 110) for (let y = 290; y < 1000; y += 110) tiles.push(`<path d="M${x} ${y}h35m-17-17v35" stroke="#101014" stroke-width="1.5" opacity=".1"/>`);
@@ -87,13 +91,13 @@ export function roomMarkup(scene, shelfPage = 0, tapes = createCassetteState(), 
     <text x="800" y="195" text-anchor="middle" font-size="${Math.min(40, 1100 / (room.title.length * .65 || 1))}" font-weight="900">${escape(room.title.toUpperCase())}</text>
     ${tiles.join('')}
     <path d="M800 955V830q0-72-62-94" fill="none" stroke="#fff20b" stroke-width="75" stroke-linecap="round"/>
-    ${scene === 'radio' ? radioArt(shelfPage, tapes) : scene === 'wardrobe' ? wardrobeArt(selectedAnimal) : infoArt(scene)}
+    ${scene === 'radio' ? radioArt(shelfPage, tapes) : scene === 'wardrobe' ? wardrobeArt(selectedAnimal, paint) : infoArt(scene)}
     <g data-room-target="exit" class="world-station" tabindex="0" role="button" aria-label="${escape(text('back_world'))}">
       <path d="M740 1000v-42q60-38 120 0v108H740Z" fill="#40cea1" stroke="#101014" stroke-width="5"/>
       <path d="M800 975v60m-17-18 17 18 17-18" stroke="#101014" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
       ${mapLabel(800, 934, text('exit_sign'), 420, '#fff20b')}
     </g>
     <g id="destination-marker" hidden=""><ellipse rx="17" ry="8" fill="none" stroke="#101014" stroke-width="3" stroke-dasharray="4 4"/></g>
-    ${playerMarkup}
+    ${room.spawn ? playerMarkup.replace('translate(800 870)', `translate(${room.spawn.x} ${room.spawn.y})`) : playerMarkup}
   </svg>`;
 }

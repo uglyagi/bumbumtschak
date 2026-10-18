@@ -1,11 +1,12 @@
 import { STATIONS, nearbyWorldObject } from './game-core.js';
 import { socialPads } from './social.js';
-import { TRACKS, BAND, ANIMALS, text } from './content.js';
+import { TRACKS, BAND, ANIMALS, PALETTE, text } from './content.js';
+import { paintSlots, paintPages, PAINT_RESET, PAINT_NEXT } from './painting.js';
 
 export const ROOMS = {
   radio: { color: '#ff87ce', station: 'radio' },
   concerts: { color: '#fff20b', station: 'concerts' },
-  wardrobe: { color: '#ff87ce', station: 'wardrobe' },
+  wardrobe: { color: '#ff87ce', station: 'wardrobe', spawn: { x: 800, y: 740 } },
 };
 export const ROOM_SPAWN = { x: 800, y: 870 };
 export const EXIT = { x: 800, y: 980 };
@@ -60,7 +61,7 @@ export function cassetteAction(state, action) {
   return state;
 }
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-export function nearbyInteraction(scene, position, tapes, shelfPage = 0) {
+export function nearbyInteraction(scene, position, tapes, shelfPage = 0, paint = {}) {
   const links = socialPads(scene).map(p => ({ ...p, kind: p.id === 'email' ? 'email' : 'external', distance: distance(position, p), label: p.id === 'email' ? text('action_email', { adresse: p.email }) : text('action_external', { kanal: p.label }) })).filter(p => p.distance <= p.reach);
   if (scene === 'world') {
     const choices = STATIONS.filter(s => BAND.some(member => member.id === s.id)).map(s => ({ ...s, kind: 'read', label: text('action_member', { name: s.label }), distance: distance(position, s) })).filter(s => s.distance < 110);
@@ -73,6 +74,14 @@ export function nearbyInteraction(scene, position, tapes, shelfPage = 0) {
   if (scene === 'wardrobe') for (const spot of ANIMAL_SPOTS) {
     const d = distance(position, spot), animal = ANIMALS.find(animal => animal.id === spot.id);
     if (d < 85) candidates.push({ ...spot, kind: 'change-character', label: text('action_change_character', { tier: animal.name }), distance: d });
+  }
+  if (scene === 'wardrobe') {
+    for (const color of paintSlots(PALETTE, paint.page || 0)) {
+      const d = distance(position, color);
+      if (d < 70) candidates.push({ ...color, kind: paint.can === color.id ? 'return-paint' : 'take-paint', distance: d, label: text(paint.can === color.id ? 'paint_return' : 'paint_take', { farbe: color.name }) });
+    }
+    if (distance(position, PAINT_RESET) < 75) candidates.push({ ...PAINT_RESET, id: 'paint-reset', kind: 'reset-paint', label: text('paint_reset'), distance: distance(position, PAINT_RESET) });
+    if (paintPages(PALETTE) > 1 && distance(position, PAINT_NEXT) < 75) candidates.push({ ...PAINT_NEXT, id: 'paint-next', kind: 'paint-page', label: text('paint_next'), distance: distance(position, PAINT_NEXT) });
   }
   if (scene === 'radio') {
     if (tapePages(tapes) > 1 && distance(position, SHELF_SWITCH) < 78) candidates.push({ ...SHELF_SWITCH, kind: 'shelf', label: text('action_shelf'), distance: distance(position, SHELF_SWITCH) });

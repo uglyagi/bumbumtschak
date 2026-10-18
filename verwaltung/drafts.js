@@ -31,6 +31,7 @@ export function fileReferences(document) {
   return new Set([
     ...(document.tracks || []).flatMap(track => [track.image, track.src]),
     ...(document.info?.members || []).map(member => member.image),
+    ...(document.info?.animals || []).map(animal => animal.image),
   ].filter(Boolean));
 }
 export function draftPreview(draft, createURL = file => URL.createObjectURL(file)) {
@@ -38,5 +39,6 @@ export function draftPreview(draft, createURL = file => URL.createObjectURL(file
   const urls = new Map((draft.files || []).map(item => [item.path, createURL(item.file)]));
   for (const track of document.tracks) for (const key of ['image', 'src']) track[key] = urls.get(track[key]) || track[key];
   for (const member of document.info.members || []) member.image = urls.get(member.image) || member.image;
+  for (const animal of document.info.animals || []) animal.image = urls.get(animal.image) || animal.image;
   return document;
 }

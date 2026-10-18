@@ -1,8 +1,7 @@
-// Editorial text catalog; the JSON companion is used by the standalone PHP export.
 export const COPY_GROUPS = [
   {
     "id": "grownups",
-    "label": "Für Große",
+    "label": "Eltern und Veranstalter",
     "fields": [
       {
         "key": "grown_title",
@@ -79,9 +78,10 @@ export const COPY_GROUPS = [
       {
         "key": "grown_how_body",
         "label": "Erklärung: Text",
-        "value": "Wähle ein Tier und lauf mit den Pfeiltasten durch die Musikwelt. Kassettenhaus, Konzerthaus und Figurenhaus betrittst du durch den Eingang und verlässt sie durch den Ausgang. Im Figurenhaus gehst du zu Katze, Hund, Pferd oder Affe und wechselst mit Enter oder Leertaste dein Tier. Das Hinweisschild steht neben dem Figurenhaus. Gehe zum Schreibtisch oder zum Hinweisschild und drücke Enter oder die Leertaste, um die Infos groß anzusehen. Damit sprichst du auch die Band an, nimmst Kassetten, legst sie ins Radio ein oder öffnest Kontaktsymbole. Schreibtisch, Brief und Schild schließen mit Enter, Leertaste oder Esc.",
+        "value": "Wähle ein Tier und lauf mit den Pfeiltasten durch die Musikwelt. Musikhaus, Konzertgebäude und Haus „Home sweet Home“ betrittst du durch den Eingang und verlässt sie durch den Ausgang. Im Haus „Home sweet Home“ gehst du zu Katze, Hund, Pferd oder Affe und wechselst mit Enter oder Leertaste dein Tier. Das Hinweisschild steht neben dem Haus „Home sweet Home“. Gehe zum Schreibtisch oder zum Hinweisschild und drücke Enter oder die Leertaste, um die Infos groß anzusehen. Damit sprichst du auch die Band an, nimmst Kassetten, legst sie ins Radio ein oder öffnest Kontaktsymbole. Schreibtisch, Brief und Schild schließen mit Enter, Leertaste oder Esc. Im Haus findest du auch Farbkanister: mit Enter oder Leertaste nehmen, draußen zur gewünschten Fläche gehen und damit anmalen. Die Aktion zeigt dir, welche Fläche dran ist. Mit Tab kannst du eine bestimmte Farbfläche auswählen. Esc stellt den Kanister zurück. Im Haus stellt die Schaltfläche „Originalfarben“ alles wieder her.",
         "max": 2400,
         "previousValues": [
+          "Wähle ein Tier und lauf mit den Pfeiltasten durch die Musikwelt. Kassettenhaus, Konzerthaus und Figurenhaus betrittst du durch den Eingang und verlässt sie durch den Ausgang. Im Figurenhaus gehst du zu Katze, Hund, Pferd oder Affe und wechselst mit Enter oder Leertaste dein Tier. Das Hinweisschild steht neben dem Figurenhaus. Gehe zum Schreibtisch oder zum Hinweisschild und drücke Enter oder die Leertaste, um die Infos groß anzusehen. Damit sprichst du auch die Band an, nimmst Kassetten, legst sie ins Radio ein oder öffnest Kontaktsymbole. Schreibtisch, Brief und Schild schließen mit Enter, Leertaste oder Esc.",
           "Wähle ein Tier und lauf mit den Pfeiltasten durch die Musikwelt. Ins Kassettenhaus und Konzerthaus gelangst du durch den Eingang, hinaus durch den Ausgang. Gehe zum Schreibtisch oder zum kleinen Hinweisschild und drücke Enter oder die Leertaste, um die Infos groß anzusehen. Enter oder Leertaste spricht auch die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Auf Kontaktsymbolen öffnest du damit den Link oder den Brief. Schreibtisch, Brief und Schild schließen mit Enter, Leertaste oder Esc.",
           "Wähle ein Tier und lauf mit den Pfeiltasten durch die Musikwelt. Ins Kassettenhaus und Konzerthaus gelangst du durch den Eingang, hinaus durch den Ausgang. Berühre den Schreibtisch oder das kleine Hinweisschild, um die Infos groß anzusehen. Enter oder Leertaste spricht die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Auf Kontaktsymbolen öffnest du damit den Link oder den Brief. Schreibtisch, Brief und Schild schließen mit Enter, Leertaste oder Esc.",
           "Wähle ein Tier und lauf mit den Pfeiltasten durch die Musikwelt. Enter oder Leertaste öffnet eine Tür oder ein Gespräch. Die drei Bandmitglieder lernst du direkt draußen an der Bühne kennen. Im Kassettenhaus nimmst du ein Band, trägst es zum Radio und legst es ein. Danach kannst du es auf jedem freien Platz ablegen. Jedes Haus hat unten eine Ausgangstür. Alle Inhalte erreichst du auch über das Menü."
@@ -90,8 +90,11 @@ export const COPY_GROUPS = [
       {
         "key": "grown_board",
         "label": "Tafel: Überschrift",
-        "value": "FÜR GROSSE",
-        "max": 40
+        "value": "FÜR ELTERN UND VERANSTALTER",
+        "max": 40,
+        "previousValues": [
+          "FÜR GROSSE"
+        ]
       },
       {
         "key": "grown_board_sub",
@@ -276,14 +279,20 @@ export const COPY_GROUPS = [
       {
         "key": "nav_grownups",
         "label": "Menü: Für Große",
-        "value": "Für Große",
-        "max": 32
+        "value": "für Eltern und Veranstalter",
+        "max": 32,
+        "previousValues": [
+          "Für Große"
+        ]
       },
       {
         "key": "nav_social",
         "label": "Fußzeile: Kontaktlink",
-        "value": "Bleib in Kontakt",
-        "max": 40
+        "value": "Kontakt",
+        "max": 40,
+        "previousValues": [
+          "Bleib in Kontakt"
+        ]
       },
       {
         "key": "footer",
@@ -318,9 +327,10 @@ export const COPY_GROUPS = [
       {
         "key": "world_instructions",
         "label": "Ausführlicher Tastaturhinweis",
-        "value": "Mit den Pfeiltasten bewegst du die Figur. Kassettenhaus, Konzerthaus und Figurenhaus betrittst du durch den Eingang. Unten durch den Ausgang geht es wieder hinaus. Im Figurenhaus stellst du dich vor ein Tier und wechselst mit Enter oder der Leertaste deine Figur. Das Hinweisschild steht daneben. In der Nähe des Schreibtischs oder Hinweisschilds öffnest du die große Ansicht mit Enter oder der Leertaste. Damit nimmst du auch Kassetten auf, legst sie ins Radio ein, sprichst die Band an oder öffnest ein Linksymbol unter deinen Füßen. Beim Briefsymbol erscheint unsere E-Mail-Adresse. Schreibtisch, Brief und Hinweisschild schließen mit Enter, Leertaste oder Escape. Auf freien Flächen bewirken Enter und Leertaste nichts. Mit Tab erreichst du alle Bedienelemente.",
+        "value": "Mit den Pfeiltasten bewegst du die Figur. Musikhaus, Konzertgebäude und Haus „Home sweet Home“ betrittst du durch den Eingang. Unten durch den Ausgang geht es wieder hinaus. Im Haus „Home sweet Home“ stellst du dich vor ein Tier und wechselst mit Enter oder der Leertaste deine Figur. Das Hinweisschild steht daneben. In der Nähe des Schreibtischs oder Hinweisschilds öffnest du die große Ansicht mit Enter oder der Leertaste. Damit nimmst du auch Kassetten auf, legst sie ins Radio ein, sprichst die Band an oder öffnest ein Linksymbol unter deinen Füßen. Beim Briefsymbol erscheint unsere E-Mail-Adresse. Schreibtisch, Brief und Hinweisschild schließen mit Enter, Leertaste oder Escape. Auf freien Flächen bewirken Enter und Leertaste nichts. Mit Tab erreichst du alle Bedienelemente. Im Haus findest du auch Farbkanister: mit Enter oder Leertaste nehmen, draußen zur gewünschten Fläche gehen und damit anmalen. Die Aktion zeigt dir, welche Fläche dran ist. Mit Tab kannst du eine bestimmte Farbfläche auswählen. Esc stellt den Kanister zurück. Im Haus stellt die Schaltfläche „Originalfarben“ alles wieder her.",
         "max": 2400,
         "previousValues": [
+          "Mit den Pfeiltasten bewegst du die Figur. Kassettenhaus, Konzerthaus und Figurenhaus betrittst du durch den Eingang. Unten durch den Ausgang geht es wieder hinaus. Im Figurenhaus stellst du dich vor ein Tier und wechselst mit Enter oder der Leertaste deine Figur. Das Hinweisschild steht daneben. In der Nähe des Schreibtischs oder Hinweisschilds öffnest du die große Ansicht mit Enter oder der Leertaste. Damit nimmst du auch Kassetten auf, legst sie ins Radio ein, sprichst die Band an oder öffnest ein Linksymbol unter deinen Füßen. Beim Briefsymbol erscheint unsere E-Mail-Adresse. Schreibtisch, Brief und Hinweisschild schließen mit Enter, Leertaste oder Escape. Auf freien Flächen bewirken Enter und Leertaste nichts. Mit Tab erreichst du alle Bedienelemente.",
           "Mit den Pfeiltasten bewegst du die Figur. Laufe durch den Eingang ins Kassettenhaus oder Konzerthaus und unten durch den Ausgang wieder hinaus. In der Nähe des Schreibtischs oder des kleinen Hinweisschilds öffnest du die große Ansicht mit Enter oder der Leertaste. Damit nimmst du auch Kassetten auf, legst sie ins Radio ein, sprichst die Band an oder öffnest ein Linksymbol unter deinen Füßen. Beim Briefsymbol erscheint unsere E-Mail-Adresse. Schreibtisch, Brief und Hinweisschild schließen mit Enter, Leertaste oder Escape. Auf freien Flächen bewirken Enter und Leertaste nichts. Mit Tab erreichst du alle Bedienelemente.",
           "Mit den Pfeiltasten bewegst du die Figur. Laufe durch den Eingang ins Kassettenhaus oder Konzerthaus und unten durch den Ausgang wieder hinaus. Berühre den Schreibtisch oder das kleine Hinweisschild, um es groß anzusehen. Enter oder Leertaste nimmt Kassetten auf, legt sie ins Radio ein, spricht die Band an oder öffnet ein Linksymbol unter deinen Füßen. Beim Briefsymbol erscheint unsere E-Mail-Adresse. Schreibtisch, Brief und Hinweisschild schließen mit Enter, Leertaste oder Escape. Auf freien Flächen bewirken Enter und Leertaste nichts. Mit Tab erreichst du alle Bedienelemente.",
           "Pfeiltasten bewegen die Figur und wählen Menüpunkte aus. Enter oder Leertaste bestätigt, betritt ein Haus, nimmt eine Kassette auf oder legt sie ins Radio ein. An der Bühne sprichst du die Bandmitglieder direkt an. Jeder Raum hat unten eine Ausgangstür. Escape geht zurück. Mit Tab erreichst du alle Bedienelemente."
@@ -340,27 +350,39 @@ export const COPY_GROUPS = [
       },
       {
         "key": "sign_radio",
-        "label": "Name des Kassettenhauses",
-        "value": "Kassettenhaus",
-        "max": 32
+        "label": "Name des Musikhauses",
+        "value": "Musikhaus",
+        "max": 32,
+        "previousValues": [
+          "Kassettenhaus"
+        ]
       },
       {
         "key": "sign_concerts",
         "label": "Name des Konzerthauses",
-        "value": "Konzerthaus",
-        "max": 32
+        "value": "Konzerte",
+        "max": 32,
+        "previousValues": [
+          "Konzerthaus"
+        ]
       },
       {
         "key": "sign_grownups",
         "label": "Name von Für Große",
-        "value": "Für Große",
-        "max": 32
+        "value": "für Eltern und Veranstalter",
+        "max": 32,
+        "previousValues": [
+          "Für Große"
+        ]
       },
       {
         "key": "sign_social",
         "label": "Name des Kontaktbereichs",
-        "value": "Bleib in Kontakt",
-        "max": 32
+        "value": "Kontakt",
+        "max": 32,
+        "previousValues": [
+          "Bleib in Kontakt"
+        ]
       },
       {
         "key": "station_radio_short",
@@ -388,15 +410,21 @@ export const COPY_GROUPS = [
       },
       {
         "key": "room_radio",
-        "label": "Name des Kassettenhauses",
-        "value": "Das Kassettenhaus",
-        "max": 50
+        "label": "Name des Musikhauses",
+        "value": "Das Musikhaus",
+        "max": 50,
+        "previousValues": [
+          "Das Kassettenhaus"
+        ]
       },
       {
         "key": "room_concerts",
         "label": "Name des Konzerthauses",
-        "value": "Das Konzerthaus",
-        "max": 50
+        "value": "Konzerte",
+        "max": 50,
+        "previousValues": [
+          "Das Konzerthaus"
+        ]
       },
       {
         "key": "room_social",
@@ -407,12 +435,15 @@ export const COPY_GROUPS = [
       {
         "key": "room_grownups",
         "label": "Name von Für Große",
-        "value": "Für Große",
-        "max": 50
+        "value": "für Eltern und Veranstalter",
+        "max": 50,
+        "previousValues": [
+          "Für Große"
+        ]
       },
       {
         "key": "kicker_radio",
-        "label": "Kassettenhaus: Unterzeile",
+        "label": "Musikhaus: Unterzeile",
         "value": "NEHMEN · TRAGEN · EINLEGEN",
         "max": 180
       },
@@ -468,43 +499,58 @@ export const COPY_GROUPS = [
   },
   {
     "id": "wardrobe",
-    "label": "Figurenhaus",
+    "label": "Home sweet Home",
     "fields": [
       {
         "key": "sign_wardrobe",
-        "label": "Name am Figurenhaus",
-        "value": "Figurenhaus",
-        "max": 32
+        "label": "Name am Home sweet Home",
+        "value": "Home sweet Home",
+        "max": 32,
+        "previousValues": [
+          "Figurenhaus"
+        ]
       },
       {
         "key": "station_wardrobe_short",
         "label": "Wegweiser-Menü: Beschreibung",
-        "value": "Katze, Hund, Pferd oder Affe sein",
-        "max": 180
+        "value": "Tier wechseln und die Welt anmalen",
+        "max": 180,
+        "previousValues": [
+          "Katze, Hund, Pferd oder Affe sein"
+        ]
       },
       {
         "key": "room_wardrobe",
-        "label": "Überschrift im Figurenhaus",
-        "value": "Das Figurenhaus",
-        "max": 50
+        "label": "Überschrift im Home sweet Home",
+        "value": "Home sweet Home",
+        "max": 50,
+        "previousValues": [
+          "Das Figurenhaus"
+        ]
       },
       {
         "key": "kicker_wardrobe",
-        "label": "Figurenhaus: Unterzeile",
+        "label": "Home sweet Home: Unterzeile",
         "value": "DEIN TIER · DEINE MUSIKWELT",
         "max": 180
       },
       {
         "key": "wardrobe_board",
         "label": "Innenraum: Überschrift",
-        "value": "Welches Tier möchtest du sein?",
-        "max": 180
+        "value": "Such dir ein Tier oder eine Farbe aus.",
+        "max": 180,
+        "previousValues": [
+          "Welches Tier möchtest du sein?"
+        ]
       },
       {
         "key": "wardrobe_hint",
         "label": "Innenraum: Erklärung",
-        "value": "Stelle dich vor ein Tier und drücke Enter oder die Leertaste.",
-        "max": 2400
+        "value": "Tier oder Farbkanister: hingehen und Enter / Leertaste drücken.",
+        "max": 2400,
+        "previousValues": [
+          "Stelle dich vor ein Tier und drücke Enter oder die Leertaste."
+        ]
       },
       {
         "key": "wardrobe_selected",
@@ -522,7 +568,7 @@ export const COPY_GROUPS = [
   },
   {
     "id": "radio",
-    "label": "Kassettenhaus & Radio",
+    "label": "Musikhaus & Radio",
     "fields": [
       {
         "key": "radio_kicker",
@@ -1003,15 +1049,21 @@ export const COPY_GROUPS = [
       },
       {
         "key": "pause_radio",
-        "label": "Spielmenü: Kassettenhaus",
-        "value": "Ins Kassettenhaus",
-        "max": 180
+        "label": "Spielmenü: Musikhaus",
+        "value": "Ins Musikhaus",
+        "max": 180,
+        "previousValues": [
+          "Ins Kassettenhaus"
+        ]
       },
       {
         "key": "pause_concerts",
         "label": "Spielmenü: Konzerte",
-        "value": "Ins Konzerthaus",
-        "max": 180
+        "value": "Ins Konzertgebäude",
+        "max": 180,
+        "previousValues": [
+          "Ins Konzerthaus"
+        ]
       },
       {
         "key": "pause_band",
@@ -1022,8 +1074,11 @@ export const COPY_GROUPS = [
       {
         "key": "pause_social",
         "label": "Spielmenü: Kontakt",
-        "value": "Bleib in Kontakt",
-        "max": 180
+        "value": "Kontakt",
+        "max": 180,
+        "previousValues": [
+          "Bleib in Kontakt"
+        ]
       },
       {
         "key": "read_hint",
@@ -1106,9 +1161,10 @@ export const COPY_GROUPS = [
       {
         "key": "help_step3_body",
         "label": "Schritt 3: Text",
-        "value": "Laufe durch den Eingang ins Kassettenhaus, Konzerthaus oder Figurenhaus. Hinaus geht es durch den Ausgang. Im Figurenhaus kannst du Katze, Hund, Pferd oder Affe sein: Gehe zu einem Tier und drücke Enter oder die Leertaste. Gehe zum Schreibtisch oder zum Hinweisschild neben dem Figurenhaus und bestätige, um die Infos groß anzusehen. Enter oder Leertaste spricht auch die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Auf Kontaktsymbolen öffnest du damit den Link oder den Brief mit unserer E-Mail-Adresse. Schreibtisch, Brief und dieses Hinweisschild schließen mit Enter, Leertaste oder Esc. Auf freien Flächen passiert beim Bestätigen nichts.",
+        "value": "Laufe durch den Eingang ins Musikhaus, Konzertgebäude oder Haus „Home sweet Home“. Hinaus geht es durch den Ausgang. Im Haus „Home sweet Home“ kannst du Katze, Hund, Pferd oder Affe sein: Gehe zu einem Tier und drücke Enter oder die Leertaste. Gehe zum Schreibtisch oder zum Hinweisschild neben dem Haus „Home sweet Home“ und bestätige, um die Infos groß anzusehen. Enter oder Leertaste spricht auch die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Auf Kontaktsymbolen öffnest du damit den Link oder den Brief mit unserer E-Mail-Adresse. Schreibtisch, Brief und dieses Hinweisschild schließen mit Enter, Leertaste oder Esc. Auf freien Flächen passiert beim Bestätigen nichts. Im Haus findest du auch Farbkanister: mit Enter oder Leertaste nehmen, draußen zur gewünschten Fläche gehen und damit anmalen. Die Aktion zeigt dir, welche Fläche dran ist. Mit Tab kannst du eine bestimmte Farbfläche auswählen. Esc stellt den Kanister zurück. Im Haus stellt die Schaltfläche „Originalfarben“ alles wieder her.",
         "max": 2400,
         "previousValues": [
+          "Laufe durch den Eingang ins Kassettenhaus, Konzerthaus oder Figurenhaus. Hinaus geht es durch den Ausgang. Im Figurenhaus kannst du Katze, Hund, Pferd oder Affe sein: Gehe zu einem Tier und drücke Enter oder die Leertaste. Gehe zum Schreibtisch oder zum Hinweisschild neben dem Figurenhaus und bestätige, um die Infos groß anzusehen. Enter oder Leertaste spricht auch die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Auf Kontaktsymbolen öffnest du damit den Link oder den Brief mit unserer E-Mail-Adresse. Schreibtisch, Brief und dieses Hinweisschild schließen mit Enter, Leertaste oder Esc. Auf freien Flächen passiert beim Bestätigen nichts.",
           "Laufe durch den Eingang ins Kassettenhaus oder Konzerthaus. Hinaus geht es durch den Ausgang. Gehe zum Schreibtisch oder zum Hinweisschild und drücke Enter oder die Leertaste, um die Infos groß anzusehen. Enter oder Leertaste spricht auch die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Stelle dich auf ein Kontaktsymbol und drücke Enter oder die Leertaste. Der Brief zeigt unsere E-Mail-Adresse. Schreibtisch, Brief und dieses Hinweisschild schließen mit Enter, Leertaste oder Esc. Auf freien Flächen passiert beim Bestätigen nichts.",
           "Laufe durch den Eingang ins Kassettenhaus oder Konzerthaus. Hinaus geht es durch den Ausgang. Berührst du den Schreibtisch, erscheinen seine Infos. Enter oder Leertaste spricht die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Stelle dich auf ein Kontaktsymbol und drücke Enter oder die Leertaste. Der Brief zeigt unsere E-Mail-Adresse. Schreibtisch, Brief und dieses Hinweisschild schließen mit Enter, Leertaste oder Esc. Auf freien Flächen passiert beim Bestätigen nichts.",
           "Enter oder Leertaste betritt ein Haus oder öffnet ein Gespräch. An der Bühne kannst du Panda, Papagei und Krokodil direkt ansprechen. Im Kassettenhaus nimmst du ein Band auf, trägst es zum Radio und legst es ein. Zurücklegen kannst du es auf jeden freien Platz. Alle Häuser haben einen Ausgang. In Menüs wählen die Pfeiltasten aus, Enter oder Leertaste bestätigt. Esc geht zurück."
@@ -1368,6 +1424,168 @@ export const COPY_GROUPS = [
         "label": "Link zur Verwaltung",
         "value": "Zur Bandverwaltung ↗",
         "max": 180
+      }
+    ]
+  },
+  {
+    "id": "painting",
+    "label": "Farben & Malen",
+    "fields": [
+      {
+        "key": "paint_take",
+        "label": "Kanister nehmen",
+        "value": "{farbe} nehmen",
+        "max": 500
+      },
+      {
+        "key": "paint_return",
+        "label": "Kanister zurückstellen",
+        "value": "{farbe} zurückstellen",
+        "max": 500
+      },
+      {
+        "key": "paint_taken",
+        "label": "Kanister aufgenommen",
+        "value": "Du trägst {farbe}. Geh nach draußen und male mit Enter oder Leertaste. Esc stellt den Kanister zurück.",
+        "max": 500
+      },
+      {
+        "key": "paint_returned",
+        "label": "Kanister zurückgestellt",
+        "value": "Der Kanister steht wieder im Haus.",
+        "max": 500
+      },
+      {
+        "key": "paint_carry_hint",
+        "label": "Hinweis beim Tragen",
+        "value": "Enter / Leertaste: Fläche anmalen",
+        "max": 500
+      },
+      {
+        "key": "paint_put_down",
+        "label": "Farbe abstellen",
+        "value": "Abstellen (Esc)",
+        "max": 500
+      },
+      {
+        "key": "paint_action",
+        "label": "Aktion beim Malen",
+        "value": "{flaeche} mit {farbe} füllen",
+        "max": 500
+      },
+      {
+        "key": "paint_done",
+        "label": "Gemalte Fläche",
+        "value": "{flaeche} ist jetzt {farbe}.",
+        "max": 500
+      },
+      {
+        "key": "paint_reset",
+        "label": "Schaltfläche zum Rücksetzen",
+        "value": "Originalfarben",
+        "max": 500
+      },
+      {
+        "key": "paint_reset_done",
+        "label": "Farben zurückgesetzt",
+        "value": "Die Welt strahlt wieder in ihren Originalfarben.",
+        "max": 500
+      },
+      {
+        "key": "paint_next",
+        "label": "Nächste Kanister",
+        "value": "Weitere Farben →",
+        "max": 500
+      },
+      {
+        "key": "paint_page",
+        "label": "Seite der Kanister",
+        "value": "Seite {seite} von {anzahl}",
+        "max": 500
+      },
+      {
+        "key": "paint_music_wall",
+        "label": "Fläche: Musikhaus",
+        "value": "Musikhauswand",
+        "max": 500
+      },
+      {
+        "key": "paint_music_roof",
+        "label": "Fläche: Radio oben",
+        "value": "Radiodeckel",
+        "max": 500
+      },
+      {
+        "key": "paint_concert_wall",
+        "label": "Fläche: Konzertwand",
+        "value": "Konzertwand",
+        "max": 500
+      },
+      {
+        "key": "paint_concert_roof",
+        "label": "Fläche: Konzertdach",
+        "value": "Konzertdach",
+        "max": 500
+      },
+      {
+        "key": "paint_home_wall",
+        "label": "Fläche: Bauernhofwand",
+        "value": "Hauswand",
+        "max": 500
+      },
+      {
+        "key": "paint_home_roof",
+        "label": "Fläche: Bauernhofdach",
+        "value": "Hausdach",
+        "max": 500
+      },
+      {
+        "key": "paint_stage_wall",
+        "label": "Fläche: Bühnenwand",
+        "value": "Bühnenwand",
+        "max": 500
+      },
+      {
+        "key": "paint_stage_roof",
+        "label": "Fläche: Bühnendach",
+        "value": "Bühnendach",
+        "max": 500
+      },
+      {
+        "key": "paint_sun",
+        "label": "Fläche: Sonne",
+        "value": "Sonne",
+        "max": 500
+      },
+      {
+        "key": "paint_tree",
+        "label": "Fläche: Baumkrone",
+        "value": "Baumkrone",
+        "max": 500
+      },
+      {
+        "key": "paint_flower",
+        "label": "Fläche: Blüte",
+        "value": "Blüte",
+        "max": 500
+      },
+      {
+        "key": "paint_water",
+        "label": "Fläche: Wasser",
+        "value": "Wasser",
+        "max": 500
+      },
+      {
+        "key": "paint_path",
+        "label": "Fläche: Weg",
+        "value": "Weg",
+        "max": 500
+      },
+      {
+        "key": "paint_grass",
+        "label": "Fläche: Wiese",
+        "value": "Wiese",
+        "max": 500
       }
     ]
   }

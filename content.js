@@ -1,5 +1,7 @@
 // These defaults keep the world usable if the published content file is temporarily unavailable.
 import { DEFAULT_BAND, bandMembers } from './band-defaults.js';
+import { DEFAULT_ANIMALS, playableAnimals } from './animal-defaults.js';
+import { DEFAULT_PALETTE, paletteColors } from './painting.js';
 import { DEFAULT_TEXTS, normalizeTexts, formatText } from './copy-defaults.js';
 import { contentAssetURL } from './connection.js';
 import { CONTENT_FILE } from './site-config.js';
@@ -25,12 +27,8 @@ export const SPOTIFY_ARTIST = { url: 'https://open.spotify.com/intl-de/artist/0Y
 export const CONTACT = { email: 'bumbumtschakband@gmail.com' };
 export const INFO = { tagline: 'Die Kinderliederband', about: 'Ein Panda am Schlagzeug, ein Papagei an Bass und Gesang und ein Krokodil an der E-Gitarre: Zusammen sind wir Bum Bum Tschak. Unsere Lieder erzählen vom Tanzen, von Freundschaft, vom Fahrradfahren und von einem Hut, der beim Reiten verloren geht.' };
 export const BAND = DEFAULT_BAND.map(member => ({ ...member }));
-export const ANIMALS = [
-  { id: 'cat', name: 'Katze', article: 'die', color: '#ff87ce', trait: 'Auf leisen Pfoten' },
-  { id: 'dog', name: 'Hund', article: 'der', color: '#fff20b', trait: 'Immer der Nase nach' },
-  { id: 'horse', name: 'Pferd', article: 'das', color: '#1d55ff', trait: 'Mit Schwung voraus' },
-  { id: 'monkey', name: 'Affe', article: 'der', color: '#40cea1', trait: 'Neugierig um jede Ecke' },
-];
+export const ANIMALS = DEFAULT_ANIMALS.map(animal => ({ ...animal }));
+export const PALETTE = DEFAULT_PALETTE.map(color => ({ ...color }));
 
 export function applyContent(document) {
   if (!document || !Array.isArray(document.tracks) || !Array.isArray(document.concerts) || !document.info) throw new Error('Unvollständige Inhalte');
@@ -39,7 +37,9 @@ export function applyContent(document) {
   SOCIAL_LINKS.splice(0, SOCIAL_LINKS.length, ...document.info.social.filter(link => !!link.url));
   Object.assign(TEXTS, normalizeTexts(document.info.texts));
   for (const link of SOCIAL_LINKS) link.label = text(`network_${link.id}`);
-  for (const animal of ANIMALS) { animal.name = text(`${animal.id}_name`); animal.trait = text(`${animal.id}_trait`); }
+  const animals = playableAnimals(document.info.animals, TEXTS);
+  for (const animal of ANIMALS) { const saved = animals.find(saved => saved.id === animal.id); Object.assign(animal, saved, { image: contentAssetURL(saved.image) }); }
+  PALETTE.splice(0, PALETTE.length, ...paletteColors(document.info.palette));
   CONTACT.email = document.info.email || '';
   INFO.tagline = document.info.tagline || ''; INFO.about = document.info.about || '';
   const members = bandMembers(document.info.members);

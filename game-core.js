@@ -6,7 +6,7 @@ export const OBSTACLES = [
   { x: 1150, y: 320, w: 260, h: 170 },
   { x: 1207, y: 723, w: 120, h: 87 },
   { x: 176, y: 742, w: 247, h: 77 },
-  { x: 710, y: 600, w: 180, h: 140 },
+  { x: 722, y: 610, w: 156, h: 108 },
   { x: 985, y: 726, w: 30, h: 30 },
   { x: 55, y: 110, w: 112, h: 140 },
   { x: 1420, y: 140, w: 110, h: 150 },
@@ -15,20 +15,20 @@ export const OBSTACLES = [
   { x: 520, y: 830, w: 75, h: 100 },
 ];
 export const STATIONS = [
-  { id: 'radio', label: 'Kassettenradio', short: 'Musik hören', x: 305, y: 526, color: '#ff87ce' },
-  { id: 'concerts', label: 'Konzerttafel', short: 'Konzerte entdecken', x: 1280, y: 526, color: '#fff20b' },
+  { id: 'radio', label: 'Musikhaus', short: 'Musik hören', x: 305, y: 526, color: '#ff87ce' },
+  { id: 'concerts', label: 'Konzerte', short: 'Konzerte entdecken', x: 1280, y: 526, color: '#fff20b' },
   { id: 'panda', label: 'Der Panda', short: 'Schlagzeug · BUM!', x: 640, y: 382, color: '#1d55ff' },
   { id: 'parrot', label: 'Der Papagei', short: 'Bass & Gesang', x: 815, y: 382, color: '#ff3935' },
   { id: 'croc', label: 'Das Krokodil', short: 'E-Gitarre · TSCHAK!', x: 1005, y: 382, color: '#40cea1' },
-  { id: 'social', label: 'Social Media', short: 'Mit uns verbunden bleiben', x: 1265, y: 867, color: '#ff87ce' },
-  { id: 'grownups', label: 'Für Große', short: 'Eltern & Veranstalter', x: 300, y: 840, color: '#fff20b' },
-  { id: 'wardrobe', label: 'Figurenhaus', short: 'Dein Tier wechseln', x: 800, y: 774, color: '#ff87ce' },
+  { id: 'social', label: 'Kontakt', short: 'Mit uns verbunden bleiben', x: 1265, y: 867, color: '#ff87ce' },
+  { id: 'grownups', label: 'für Eltern und Veranstalter', short: 'Eltern & Veranstalter', x: 300, y: 840, color: '#fff20b' },
+  { id: 'wardrobe', label: 'Home sweet Home', short: 'Dein Tier wechseln und malen', x: 800, y: 752, color: '#ff87ce' },
   { id: 'help', label: 'So geht’s', short: 'Die Steuerung entdecken', x: 1000, y: 705, color: '#fff20b' },
 ];
 export const HOUSE_DOORS = [
   { id: 'radio', x: 305, y: 526, halfWidth: 24, top: 506, bottom: 535, outside: { x: 305, y: 565 } },
   { id: 'concerts', x: 1280, y: 526, halfWidth: 23, top: 506, bottom: 535, outside: { x: 1280, y: 565 } },
-  { id: 'wardrobe', x: 800, y: 774, halfWidth: 23, top: 756, bottom: 785, outside: { x: 800, y: 825 } },
+  { id: 'wardrobe', x: 800, y: 752, halfWidth: 19, top: 733, bottom: 763, outside: { x: 800, y: 803 } },
 ];
 const WORLD_OBJECTS = [
   { id: 'grownups', x: 176, y: 742, w: 247, h: 77 },

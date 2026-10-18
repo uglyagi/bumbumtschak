@@ -1,0 +1,83 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile, access } from 'node:fs/promises';
+import { DEFAULT_ANIMALS, playableAnimals } from '../animal-defaults.js';
+import { PAINT_SURFACES, DEFAULT_PALETTE, PALETTE_LIMIT, PAINT_RESET, PAINT_NEXT, paintSlots, cleanPaint, canPaintSurface } from '../painting.js';
+import { worldMarkup } from '../art.js';
+import { roomMarkup } from '../room-art.js';
+import { ANIMALS, PALETTE, applyContent, text } from '../content.js';
+import { validateContent } from '../verwaltung/schema.js';
+import { draftPreview, fileReferences } from '../verwaltung/drafts.js';
+import { WORLD, WORLD_SPAWN, canStand, planPath, move } from '../game-core.js';
+import { ROOM_SPAWN, refreshBandWayfinding } from '../rooms.js';
+const document = JSON.parse(await readFile(new URL('../data/content.json', import.meta.url)));
+
+test('every requested color surface changes while all black outlines and their geometry stay identical', () => {
+  const original = worldMarkup(), paint = Object.fromEntries(PAINT_SURFACES.map(surface => [surface.id, '#ff3935']));
+  const painted = worldMarkup(paint);
+  const blackEdges = svg => [...svg.matchAll(/<([a-z]+)\b([^>]*\bstroke="#101014"[^>]*)>/g)].map(match => {
+    const attrs = Object.fromEntries([...match[2].matchAll(/([\w-]+)="([^"]*)"/g)].map(attr => [attr[1], attr[2]]));
+    return [match[1], ...['stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'd', 'x', 'y', 'width', 'height', 'rx', 'ry', 'transform'].map(key => attrs[key])];
+  });
+  assert.deepEqual(blackEdges(painted), blackEdges(original));
+  for (const surface of PAINT_SURFACES) {
+    const matches = [...painted.matchAll(new RegExp('data-paint-target="' + surface.id + '"[^>]*', 'g'))];
+    assert(matches.length, surface.id + ' exists in the rendered world');
+    for (const match of matches) assert(match[0].includes('#ff3935'), surface.id + ' receives its new color');
+  }
+  assert(!original.includes('M800 755v65')); assert(!original.includes('Kassettenhaus')); assert(!original.includes('Konzerthaus'));
+  assert(original.includes('Musikhaus')); assert(original.includes('Home sweet Home')); assert(original.includes('für Eltern und Veranstalter'));
+  assert(!original.includes('mapLabel(1280'));
+});
+
+test('all painting positions and house color controls can be reached by walking', () => {
+  function walk(start, end, scene) {
+    const path = planPath(start, end, scene); assert(path.length, scene + ': ' + JSON.stringify(end));
+    let position = { ...start }, frames = 0;
+    while (path.length && frames++ < 3000) {
+      const point = path[0], distance = Math.hypot(point.x - position.x, point.y - position.y);
+      if (distance < 5) { path.shift(); continue; }
+      position = move(position, point.x - position.x, point.y - position.y, Math.min(.05, distance / WORLD.speed), scene);
+    }
+    assert.equal(path.length, 0, 'reach ' + JSON.stringify(end));
+  }
+  for (const surface of PAINT_SURFACES) {
+    assert(canStand(surface.walk.x, surface.walk.y)); assert(canPaintSurface(surface.walk, surface));
+    walk(WORLD_SPAWN, surface.walk, 'world');
+  }
+  for (const control of [...paintSlots(DEFAULT_PALETTE), PAINT_RESET, PAINT_NEXT]) walk(ROOM_SPAWN, control, 'wardrobe');
+});
+
+test('legacy content gains editable characters and palette while custom names survive', async () => {
+  const legacy = structuredClone(document); legacy.info.texts.cat_name = 'Meine Katze';
+  const valid = validateContent(legacy);
+  assert.equal(valid.info.animals.length, 4); assert.equal(valid.info.animals[0].name, 'Meine Katze');
+  assert.equal(valid.info.palette.length, 5);
+  for (const animal of DEFAULT_ANIMALS) await access(new URL('../' + animal.image, import.meta.url));
+  valid.info.palette.push({ id: 'orange', name: 'Orange', color: '#ff9900' });
+  assert.equal(validateContent(valid).info.palette.length, 6);
+  valid.info.palette[5].id = valid.info.palette[0].id; assert.throws(() => validateContent(valid), /doppelt/);
+  valid.info.palette = Array.from({ length: PALETTE_LIMIT + 1 }, (_, i) => ({ id: 'paint-' + i, name: 'Farbe', color: '#abcdef' }));
+  assert.throws(() => validateContent(valid), /Farben/);
+  valid.info.palette = [{ id: 'bad', name: 'Bad', color: 'url(javascript:bad)' }]; assert.throws(() => validateContent(valid), /Kanisterfarbe/);
+});
+
+test('custom character images and names reach every avatar and staged previews', () => {
+  const custom = structuredClone(document); custom.info.animals = playableAnimals(); custom.info.animals[0].name = 'Unsere Katze'; custom.info.animals[0].image = 'uploads/cat.png';
+  custom.info.palette = [...DEFAULT_PALETTE, { id: 'orange', name: 'Orange', color: '#ff9900' }];
+  const staged = draftPreview({ document: custom, files: [{ path: 'uploads/cat.png', file: new Blob(['image']) }] }, () => 'blob:local-cat');
+  assert.equal(staged.info.animals[0].image, 'blob:local-cat'); assert.equal(custom.info.animals[0].image, 'uploads/cat.png');
+  assert(fileReferences(custom).has('uploads/cat.png'));
+  try {
+    applyContent(staged); refreshBandWayfinding();
+    const world = worldMarkup(), room = roomMarkup('wardrobe', 0, undefined, 'cat', { page: 1 });
+    assert(world.includes('href="blob:local-cat" width="100" height="120" preserveAspectRatio="xMidYMax meet"'));
+    assert(room.includes('Unsere Katze')); assert(room.includes('Orange')); assert.equal(PALETTE.length, 6); assert.equal(ANIMALS[0].name, 'Unsere Katze');
+    assert.equal(text('sign_radio'), 'Musikhaus'); assert.equal(text('sign_social'), 'Kontakt');
+  } finally { applyContent(document); refreshBandWayfinding(); }
+});
+
+test('saved drawings accept only known surfaces and hexadecimal colors', () => {
+  assert.deepEqual(cleanPaint({ path: '#ff9900', sun: '#abcdef', 'unknown-world': '#123456', grass: 'url(javascript:bad)' }), { path: '#ff9900', sun: '#abcdef' });
+  assert.deepEqual(cleanPaint(null), {}); assert.deepEqual(cleanPaint([]), {});
+});
