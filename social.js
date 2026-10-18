@@ -17,7 +17,6 @@ export function contactLinks() {
 export function socialPads(scene) {
   const links = contactLinks();
   if (scene === 'world') return links.map((l, i) => ({ ...l, x: 1170 + i * 70, y: 935, radius: 31, reach: 30 }));
-  if (scene === 'social') return links.map((l, i) => l.id === 'email' ? { ...l, x: 800, y: 670, radius: 60, reach: 52 } : { ...l, x: i % 2 ? 1120 : 480, y: i < 2 ? 590 : 800, radius: 75, reach: 62 });
   return [];
 }
 export function socialPadsMarkup(scene) {

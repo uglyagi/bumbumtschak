@@ -5,6 +5,7 @@ export const OBSTACLES = [
   { x: 1150, y: 320, w: 260, h: 170 },
   { x: 1207, y: 723, w: 120, h: 87 },
   { x: 176, y: 742, w: 247, h: 77 },
+  { x: 785, y: 726, w: 30, h: 30 },
   { x: 55, y: 110, w: 112, h: 140 },
   { x: 1420, y: 140, w: 110, h: 150 },
   { x: 1460, y: 745, w: 85, h: 135 },
@@ -12,14 +13,29 @@ export const OBSTACLES = [
   { x: 520, y: 830, w: 75, h: 100 },
 ];
 export const STATIONS = [
-  { id: 'radio', label: 'Kassettenradio', short: 'Musik hören', x: 305, y: 543, color: '#ff87ce' },
-  { id: 'concerts', label: 'Konzerttafel', short: 'Konzerte entdecken', x: 1280, y: 548, color: '#fff20b' },
+  { id: 'radio', label: 'Kassettenradio', short: 'Musik hören', x: 305, y: 526, color: '#ff87ce' },
+  { id: 'concerts', label: 'Konzerttafel', short: 'Konzerte entdecken', x: 1280, y: 526, color: '#fff20b' },
   { id: 'panda', label: 'Der Panda', short: 'Schlagzeug · BUM!', x: 640, y: 382, color: '#1d55ff' },
   { id: 'parrot', label: 'Der Papagei', short: 'Bass & Gesang', x: 815, y: 382, color: '#ff3935' },
   { id: 'croc', label: 'Das Krokodil', short: 'E-Gitarre · TSCHAK!', x: 1005, y: 382, color: '#40cea1' },
   { id: 'social', label: 'Social Media', short: 'Mit uns verbunden bleiben', x: 1265, y: 867, color: '#ff87ce' },
-  { id: 'grownups', label: 'Für Große', short: 'Eltern & Veranstalter', x: 300, y: 875, color: '#fff20b' },
+  { id: 'grownups', label: 'Für Große', short: 'Eltern & Veranstalter', x: 300, y: 840, color: '#fff20b' },
+  { id: 'help', label: 'So geht’s', short: 'Die Steuerung entdecken', x: 800, y: 705, color: '#fff20b' },
 ];
+export const HOUSE_DOORS = [
+  { id: 'radio', x: 305, y: 526, halfWidth: 24, top: 506, bottom: 535, outside: { x: 305, y: 565 } },
+  { id: 'concerts', x: 1280, y: 526, halfWidth: 23, top: 506, bottom: 535, outside: { x: 1280, y: 565 } },
+];
+const TOUCH_OBJECTS = [
+  { id: 'grownups', x: 176, y: 742, w: 247, h: 77 },
+  { id: 'help', x: 785, y: 726, w: 30, h: 30 },
+];
+export function worldTouch(position) {
+  const door = HOUSE_DOORS.find(door => Math.abs(position.x - door.x) <= door.halfWidth && position.y >= door.top && position.y <= door.bottom);
+  if (door) return { id: door.id, kind: 'enter' };
+  const object = TOUCH_OBJECTS.find(rect => Math.hypot(position.x - Math.max(rect.x, Math.min(rect.x + rect.w, position.x)), position.y - Math.max(rect.y, Math.min(rect.y + rect.h, position.y))) <= WORLD.radius + 7);
+  return object ? { id: object.id, kind: 'inspect' } : null;
+}
 export const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 export const isActionKey = event => event.key === 'Enter' || event.key === ' ' || event.code === 'Space';
 const WALLS = [{ x: 125, y: 100, w: 1350, h: 145 }, { x: 125, y: 210, w: 35, h: 860 }, { x: 1440, y: 210, w: 35, h: 860 }, { x: 125, y: 1000, w: 615, h: 80 }, { x: 860, y: 1000, w: 615, h: 80 }];

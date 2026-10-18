@@ -1,4 +1,3 @@
-import { socialPadsMarkup } from './social.js';
 import { defs, mapLabel } from './art.js';
 import { TRACKS, text } from './content.js';
 import { escapeXML as escape } from './utils.js';
@@ -54,11 +53,8 @@ function radioArt(shelfPage, tapes) {
     </g>
     ${tapePages(tapes) > 1 ? target('shelf', text('action_shelf'), `<g transform="translate(800 740)"><rect x="-135" y="-37" width="270" height="74" rx="14" fill="#40cea1" stroke="#101014" stroke-width="4"/>${fitted(0, -7, text('radio_shelf_page', { seite: shelfPage + 1, anzahl: tapePages(tapes) }), 240, 17)}${fitted(0, 18, text('radio_next_shelf'), 240, 14)}</g>`) : ''}`;
 }
-function socialArt() {
-  return `<rect x="500" y="280" width="600" height="200" rx="16" fill="#ff87ce" stroke="#101014" stroke-width="5"/>${fitted(800, 353, text('social_board'), 558, 35)}${fitted(800, 402, text('social_board_sub'), 558, 21)}${fitted(800, 437, text('social_board_note'), 558, 15)}${socialPadsMarkup('social')}`;
-}
 function infoArt(scene) {
-  const prefix = scene === 'concerts' ? 'concert' : 'grown';
+  const prefix = 'concert';
   return target(scene, ROOM_PROPS[scene][0].label, `<g stroke="#101014" stroke-width="5" stroke-linejoin="round"><path d="M530 463v38m540-38v38" stroke-width="12"/><rect x="500" y="280" width="600" height="200" rx="16" fill="${ROOMS[scene].color}"/><rect x="514" y="294" width="572" height="172" rx="7" fill="#1d55ff"/></g>${fitted(800, 355, text(prefix + '_board'), 535, 38, 'white')}${fitted(800, 405, text(prefix + '_board_sub'), 535, 23, '#fff20b')}${mapLabel(800, 530, text('read_hint'), 420)}`);
 }
 
@@ -75,7 +71,7 @@ export function roomMarkup(scene, shelfPage = 0, tapes = createCassetteState()) 
     <text x="800" y="195" text-anchor="middle" font-size="${Math.min(40, 1100 / (room.title.length * .65 || 1))}" font-weight="900">${escape(room.title.toUpperCase())}</text>
     ${tiles.join('')}
     <path d="M800 955V830q0-72-62-94" fill="none" stroke="#fff20b" stroke-width="75" stroke-linecap="round"/>
-    ${scene === 'radio' ? radioArt(shelfPage, tapes) : scene === 'social' ? socialArt() : infoArt(scene)}
+    ${scene === 'radio' ? radioArt(shelfPage, tapes) : infoArt(scene)}
     <g data-room-target="exit" class="world-station" tabindex="0" role="button" aria-label="${escape(text('back_world'))}">
       <path d="M740 1000v-42q60-38 120 0v108H740Z" fill="#40cea1" stroke="#101014" stroke-width="5"/>
       <path d="M800 975v60m-17-18 17 18 17-18" stroke="#101014" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>

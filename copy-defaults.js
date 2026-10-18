@@ -79,8 +79,11 @@ export const COPY_GROUPS = [
       {
         "key": "grown_how_body",
         "label": "Erklärung: Text",
-        "value": "Wähle ein Tier und lauf mit den Pfeiltasten durch die Musikwelt. Enter oder Leertaste öffnet eine Tür oder ein Gespräch. Die drei Bandmitglieder lernst du direkt draußen an der Bühne kennen. Im Kassettenhaus nimmst du ein Band, trägst es zum Radio und legst es ein. Danach kannst du es auf jedem freien Platz ablegen. Jedes Haus hat unten eine Ausgangstür. Alle Inhalte erreichst du auch über das Menü.",
-        "max": 2400
+        "value": "Wähle ein Tier und lauf mit den Pfeiltasten durch die Musikwelt. Ins Kassettenhaus und Konzerthaus gelangst du durch den Eingang, hinaus durch den Ausgang. Berühre den Schreibtisch oder das kleine Hinweisschild, um die Infos groß anzusehen. Enter oder Leertaste spricht die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Auf Kontaktsymbolen öffnest du damit den Link oder den Brief. Schreibtisch, Brief und Schild schließen mit Enter, Leertaste oder Esc.",
+        "max": 2400,
+        "previousValues": [
+          "Wähle ein Tier und lauf mit den Pfeiltasten durch die Musikwelt. Enter oder Leertaste öffnet eine Tür oder ein Gespräch. Die drei Bandmitglieder lernst du direkt draußen an der Bühne kennen. Im Kassettenhaus nimmst du ein Band, trägst es zum Radio und legst es ein. Danach kannst du es auf jedem freien Platz ablegen. Jedes Haus hat unten eine Ausgangstür. Alle Inhalte erreichst du auch über das Menü."
+        ]
       },
       {
         "key": "grown_board",
@@ -313,8 +316,11 @@ export const COPY_GROUPS = [
       {
         "key": "world_instructions",
         "label": "Ausführlicher Tastaturhinweis",
-        "value": "Pfeiltasten bewegen die Figur und wählen Menüpunkte aus. Enter oder Leertaste bestätigt, betritt ein Haus, nimmt eine Kassette auf oder legt sie ins Radio ein. An der Bühne sprichst du die Bandmitglieder direkt an. Jeder Raum hat unten eine Ausgangstür. Escape geht zurück. Mit Tab erreichst du alle Bedienelemente.",
-        "max": 2400
+        "value": "Mit den Pfeiltasten bewegst du die Figur. Laufe durch den Eingang ins Kassettenhaus oder Konzerthaus und unten durch den Ausgang wieder hinaus. Berühre den Schreibtisch oder das kleine Hinweisschild, um es groß anzusehen. Enter oder Leertaste nimmt Kassetten auf, legt sie ins Radio ein, spricht die Band an oder öffnet ein Linksymbol unter deinen Füßen. Beim Briefsymbol erscheint unsere E-Mail-Adresse. Schreibtisch, Brief und Hinweisschild schließen mit Enter, Leertaste oder Escape. Auf freien Flächen bewirken Enter und Leertaste nichts. Mit Tab erreichst du alle Bedienelemente.",
+        "max": 2400,
+        "previousValues": [
+          "Pfeiltasten bewegen die Figur und wählen Menüpunkte aus. Enter oder Leertaste bestätigt, betritt ein Haus, nimmt eine Kassette auf oder legt sie ins Radio ein. An der Bühne sprichst du die Bandmitglieder direkt an. Jeder Raum hat unten eine Ausgangstür. Escape geht zurück. Mit Tab erreichst du alle Bedienelemente."
+        ]
       },
       {
         "key": "keys_move",
@@ -441,6 +447,18 @@ export const COPY_GROUPS = [
         "label": "Wegweiser-Menü: Erklärung",
         "value": "Wähle mit den Pfeiltasten ein Ziel und bestätige mit Enter oder Leertaste. Dein Tier läuft zum Haus oder zu einem Bandmitglied. Die drei Bandfreunde lernst du direkt draußen an der Bühne kennen. Jedes Haus hat eine Ausgangstür.",
         "max": 2400
+      },
+      {
+        "key": "sign_help",
+        "label": "Wegweiser-Menü: Hinweisschild",
+        "value": "Hinweisschild",
+        "max": 180
+      },
+      {
+        "key": "station_help_short",
+        "label": "Wegweiser-Menü: Steuerung",
+        "value": "So bewegst du dich durch die Welt",
+        "max": 180
       }
     ]
   },
@@ -781,8 +799,11 @@ export const COPY_GROUPS = [
       {
         "key": "email_label",
         "label": "Name des Briefumschlags",
-        "value": "E-Mail schreiben",
-        "max": 40
+        "value": "Brief ansehen",
+        "max": 40,
+        "previousValues": [
+          "E-Mail schreiben"
+        ]
       },
       {
         "key": "email_title",
@@ -825,6 +846,12 @@ export const COPY_GROUPS = [
         "label": "Beschriftung Spotify",
         "value": "Spotify",
         "max": 40
+      },
+      {
+        "key": "email_letter_body",
+        "label": "Text auf dem aufgeklappten Brief",
+        "value": "Fragen, Konzertanfragen oder ein lieber Gruß? Schreibt uns an:",
+        "max": 2400
       }
     ]
   },
@@ -963,6 +990,12 @@ export const COPY_GROUPS = [
         "label": "Fehlende Aufnahme",
         "value": "Audioaufnahme noch nicht verfügbar",
         "max": 180
+      },
+      {
+        "key": "inspect_close_hint",
+        "label": "Schreibtisch, Brief und Schild: Schließhinweis",
+        "value": "Enter · Leertaste · Esc: zurück in die Spielwelt",
+        "max": 180
       }
     ]
   },
@@ -1015,14 +1048,23 @@ export const COPY_GROUPS = [
       {
         "key": "help_step3_body",
         "label": "Schritt 3: Text",
-        "value": "Enter oder Leertaste betritt ein Haus oder öffnet ein Gespräch. An der Bühne kannst du Panda, Papagei und Krokodil direkt ansprechen. Im Kassettenhaus nimmst du ein Band auf, trägst es zum Radio und legst es ein. Zurücklegen kannst du es auf jeden freien Platz. Alle Häuser haben einen Ausgang. In Menüs wählen die Pfeiltasten aus, Enter oder Leertaste bestätigt. Esc geht zurück.",
-        "max": 2400
+        "value": "Laufe durch den Eingang ins Kassettenhaus oder Konzerthaus. Hinaus geht es durch den Ausgang. Berührst du den Schreibtisch, erscheinen seine Infos. Enter oder Leertaste spricht die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Stelle dich auf ein Kontaktsymbol und drücke Enter oder die Leertaste. Der Brief zeigt unsere E-Mail-Adresse. Schreibtisch, Brief und dieses Hinweisschild schließen mit Enter, Leertaste oder Esc. Auf freien Flächen passiert beim Bestätigen nichts.",
+        "max": 2400,
+        "previousValues": [
+          "Enter oder Leertaste betritt ein Haus oder öffnet ein Gespräch. An der Bühne kannst du Panda, Papagei und Krokodil direkt ansprechen. Im Kassettenhaus nimmst du ein Band auf, trägst es zum Radio und legst es ein. Zurücklegen kannst du es auf jeden freien Platz. Alle Häuser haben einen Ausgang. In Menüs wählen die Pfeiltasten aus, Enter oder Leertaste bestätigt. Esc geht zurück."
+        ]
       },
       {
         "key": "help_confirm",
         "label": "Schaltfläche zum Schließen",
         "value": "Alles klar, los geht’s!",
         "max": 180
+      },
+      {
+        "key": "help_board_label",
+        "label": "Aufschrift des kleinen Hinweisschilds",
+        "value": "SO GEHT’S",
+        "max": 30
       }
     ]
   },
@@ -1051,8 +1093,11 @@ export const COPY_GROUPS = [
       {
         "key": "action_email",
         "label": "E-Mail schreiben",
-        "value": "E-Mail an {adresse} schreiben",
-        "max": 180
+        "value": "Brief mit {adresse} ansehen",
+        "max": 180,
+        "previousValues": [
+          "E-Mail an {adresse} schreiben"
+        ]
       },
       {
         "key": "action_concerts",
@@ -1270,7 +1315,7 @@ export const COPY_GROUPS = [
 export const COPY_FIELDS = COPY_GROUPS.flatMap(group => group.fields);
 export const DEFAULT_TEXTS = Object.fromEntries(COPY_FIELDS.map(field => [field.key, field.value]));
 export function normalizeTexts(saved) {
-  return Object.fromEntries(COPY_FIELDS.map(field => [field.key, typeof saved?.[field.key] === "string" ? saved[field.key] : field.value]));
+  return Object.fromEntries(COPY_FIELDS.map(field => [field.key, typeof saved?.[field.key] === "string" && !field.previousValues?.includes(saved[field.key]) ? saved[field.key] : field.value]));
 }
 export function formatText(value, variables = {}) {
   return String(value).replace(/\{(\w+)\}/g, (match, key) => Object.hasOwn(variables, key) ? String(variables[key]) : match);

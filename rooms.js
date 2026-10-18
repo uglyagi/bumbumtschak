@@ -5,8 +5,6 @@ import { TRACKS, BAND, text } from './content.js';
 export const ROOMS = {
   radio: { color: '#ff87ce', station: 'radio' },
   concerts: { color: '#fff20b', station: 'concerts' },
-  social: { color: '#ff87ce', station: 'social' },
-  grownups: { color: '#fff20b', station: 'grownups' },
 };
 export const ROOM_SPAWN = { x: 800, y: 870 };
 export const EXIT = { x: 800, y: 980 };
@@ -30,7 +28,6 @@ export function findTapeSlot(tapes, id) {
 export function roomFor(id) { return ROOMS[id] ? id : null; }
 export const ROOM_PROPS = {
   radio: [], concerts: [{ id: 'concerts', x: 800, y: 570 }],
-  social: [], grownups: [{ id: 'grownups', x: 800, y: 570 }],
 };
 export function refreshBandWayfinding() {
   for (const [id, room] of Object.entries(ROOMS)) { room.title = text(`room_${id}`); room.kicker = text(`kicker_${id}`); }
@@ -40,7 +37,6 @@ export function refreshBandWayfinding() {
     else { station.label = text(`sign_${station.id}`); station.short = text(`station_${station.id}_short`); }
   }
   ROOM_PROPS.concerts[0].label = text('action_concerts');
-  ROOM_PROPS.grownups[0].label = text('action_grownups');
 }
 refreshBandWayfinding();
 export function createCassetteState() {
@@ -65,10 +61,7 @@ const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 export function nearbyInteraction(scene, position, tapes, shelfPage = 0) {
   const links = socialPads(scene).map(p => ({ ...p, kind: p.id === 'email' ? 'email' : 'external', distance: distance(position, p), label: p.id === 'email' ? text('action_email', { adresse: p.email }) : text('action_external', { kanal: p.label }) })).filter(p => p.distance <= p.reach);
   if (scene === 'world') {
-    const choices = STATIONS.map(s => {
-      const room = roomFor(s.id);
-      return { ...s, kind: room ? 'enter' : 'read', label: room ? text('action_enter', { ziel: ROOMS[room].title }) : text('action_member', { name: s.label }), distance: distance(position, s) };
-    }).filter(s => s.distance < 110);
+    const choices = STATIONS.filter(s => BAND.some(member => member.id === s.id)).map(s => ({ ...s, kind: 'read', label: text('action_member', { name: s.label }), distance: distance(position, s) })).filter(s => s.distance < 110);
     return [...links, ...choices].sort((a, b) => a.distance - b.distance)[0] || null;
   }
   const candidates = [...links];

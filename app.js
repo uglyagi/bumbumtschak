@@ -1,5 +1,5 @@
-import { WORLD, STATIONS, clamp, move, planPath, isActionKey } from './game-core.js';
-import { ANIMALS, BAND, TRACKS, CONCERTS, SOCIAL_LINKS, CONTACT, INFO, loadContent, text } from './content.js';
+import { WORLD, STATIONS, clamp, move, planPath, isActionKey, HOUSE_DOORS, worldTouch } from './game-core.js';
+import { ANIMALS, BAND, TRACKS, CONCERTS, CONTACT, INFO, loadContent, text } from './content.js';
 import { icon, avatar, memberArt, worldMarkup } from './art.js';
 import { cassetteMarkup, cassetteSVG, roomMarkup, slotContents, slotDescription } from './room-art.js';
 import { ROOMS, ROOM_SPAWN, EXIT, RADIO, TAPE_SLOTS, SHELF_SWITCH, ROOM_PROPS, slotsOnPage, tapePages, findTapeSlot, refreshBandWayfinding, roomFor, createCassetteState, tapeLocation, cassetteAction, nearbyInteraction, throughExit, nextMenuIndex } from './rooms.js';
@@ -27,7 +27,7 @@ const state = {
   camera: { x: 800, y: 520 },
   viewport: { w: 1480, h: 850 },
   keys: new Set(), pad: new Map(), path: [], destination: null,
-  near: null, modal: null, playing: false,
+  near: null, modal: null, playing: false, touchLatch: null,
   volume: clamp(Number(storage.get('volume', '.6')) || 0, 0, 1),
   reduced: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
 };
@@ -60,10 +60,11 @@ function characterPanel() {
     <div class="modal-actions"><button class="primary-button" data-action="start">${T(state.started ? 'welcome_resume' : 'welcome_start')} ${icon('arrow')}</button><button class="text-button" data-action="start-radio">${T('welcome_radio')}</button></div>
     ${state.started ? exitWay() : ''}<div class="welcome-foot"><span>${T('welcome_keys')}</span><span>${icon('music')} ${T('welcome_music')}</span></div></div>`;
 }
+const inspectionPanels = new Set(['grownups', 'letter', 'help']);
 const backLabel = () => text(state.scene === 'world' ? 'back_world' : 'back_room');
 const closeButton = () => `<button class="modal-close" data-action="close" aria-label="${escape(backLabel())}">${icon('close')}</button>`;
 function exitWay() {
-  return `<div class="modal-exitway"><button class="secondary-button" data-action="close">↩ ${escape(backLabel())}</button>${state.scene !== 'world' ? `<button class="text-button" data-action="leave">${T('back_direct')}</button>` : ''}<small>${T('menu_keys')}</small></div>`;
+  return `<div class="modal-exitway"><button class="secondary-button" data-action="close">↩ ${escape(backLabel())}</button>${state.scene !== 'world' ? `<button class="text-button" data-action="leave">${T('back_direct')}</button>` : ''}<small>${T(inspectionPanels.has(state.modal) ? 'inspect_close_hint' : 'menu_keys')}</small></div>`;
 }
 function wrap(kicker, title, contents, className = '') {
   return `<div class="modal-wrap ${className}">${closeButton()}<div class="modal-kicker">${kicker}</div><h2 id="modal-title">${escape(title)}</h2>${contents}${exitWay()}</div>`;
@@ -90,19 +91,23 @@ function bandPanel(id) {
     <div id="member-panel" class="band-layout" role="tabpanel" aria-labelledby="tab-${member.id}"><div class="member-portrait" style="--member-color:${member.color}">${memberArt(member.id)}${member.sound ? `<span class="sound-sticker">${escape(member.sound)}</span>` : ''}</div><div class="member-story"><div class="member-role">${escape(member.role)}</div><h3>${escape(member.name)}</h3><p class="editable-prose">${escape(member.intro)}</p></div></div>
     <div class="band-story"><h3>${T('band_story_title')}</h3><p class="editable-prose">${escape(INFO.about)}</p></div><div class="modal-actions"><button class="secondary-button" data-open="radio">${T('band_radio')} ${icon('arrow')}</button><button class="text-button" data-open="concerts">${T('band_concert')}</button></div>`);
 }
-function socialPanel() {
-  const email = contactLinks().find(l => l.id === 'email');
-  return wrap(T('social_kicker'), text('social_title'), `<p class="modal-intro editable-prose">${T('social_intro')}</p><div class="social-links">${SOCIAL_LINKS.filter(l => safeURL(l.url)).map(l => `<a class="secondary-button" href="${escape(safeURL(l.url))}" target="_blank" rel="noopener noreferrer">${brandIcon(l.id)} ${escape(l.label)} ${icon('external')}</a>`).join('')}</div>${email ? `<div class="email-contact"><h3>${brandIcon('email')} ${T('email_title')}</h3><p class="editable-prose">${T('email_body')}</p><a class="secondary-button" href="${escape(email.url)}">${escape(email.email)}</a><small>${T('email_note')}</small></div>` : ''}<p class="radio-note editable-prose">${T('social_note')}</p>`);
-}
 function grownupsPanel() {
   const email = contactLinks().find(l => l.id === 'email');
-  return wrap(T('grown_kicker'), text('grown_title'), `<p class="modal-intro editable-prose">${T('grown_intro')}</p><div class="info-grid"><div class="info-block accent"><h3>${T('grown_music_title')}</h3><p class="editable-prose">${T('grown_music_body')}</p><button class="text-button" data-open="radio">${T('grown_music_link')}</button><br><button class="text-button" data-open="concerts">${T('grown_concert_link')}</button></div><div class="info-block"><h3>${T('grown_contact_title')}</h3><p class="editable-prose">${T(email ? 'grown_contact_body' : 'grown_contact_empty')}</p>${email ? `<a class="text-button" href="${escape(email.url)}">${escape(email.email)}</a>` : ''}<button class="text-button" data-open="social">${T('grown_social_link')}</button></div></div><div class="band-story"><h3>${T('grown_how_title')}</h3><p class="editable-prose">${T('grown_how_body')}</p></div>`);
+  return wrap(T('grown_kicker'), text('grown_title'), `<div class="desk-surface"><div class="desk-pencil" aria-hidden="true"></div><div class="desk-cup" aria-hidden="true"></div>
+    <article class="desk-paper desk-intro"><p class="editable-prose">${T('grown_intro')}</p></article>
+    <article class="desk-paper desk-music"><h3>${T('grown_music_title')}</h3><p class="editable-prose">${T('grown_music_body')}</p></article>
+    <article class="desk-paper desk-contact"><h3>${T('grown_contact_title')}</h3><p class="editable-prose">${T(email ? 'grown_contact_body' : 'grown_contact_empty')}</p>${email ? `<strong class="desk-address">${escape(email.email)}</strong>` : ''}</article>
+    <article class="desk-paper desk-how"><h3>${T('grown_how_title')}</h3><p class="editable-prose">${T('grown_how_body')}</p></article></div>`, 'desk-view');
+}
+function letterPanel() {
+  const email = contactLinks().find(l => l.id === 'email');
+  return wrap(brandIcon('email'), text('email_title'), `<div class="letter-envelope"><div class="letter-sheet"><span class="letter-stamp" aria-hidden="true">♥</span><p class="editable-prose">${T('email_letter_body')}</p><address>${email ? escape(email.email) : T('grown_contact_empty')}</address></div></div>`, 'letter-view');
 }
 function mapPanel() {
   return wrap(`${icon('map')} ${T('map_kicker')}`, text('map_title'), `<p class="modal-intro editable-prose">${T('map_intro')}</p><div class="map-grid">${STATIONS.map((s, i) => `<button class="map-destination" data-goto="${s.id}" style="--station-color:${s.color}"><span class="destination-dot">${i + 1}</span><span><strong>${escape(s.label)}</strong><small>${escape(s.short)}</small></span>${icon('arrow')}</button>`).join('')}</div>`);
 }
 function helpPanel() {
-  return wrap(`${icon('help')} ${T('help_kicker')}`, text('help_title'), `<div class="help-list">${[1, 2, 3].map(i => `<div class="help-row"><span class="help-number">${i}</span><div><strong>${T('help_step' + i + '_title')}</strong><p class="editable-prose">${T('help_step' + i + '_body')}</p></div></div>`).join('')}</div><div class="modal-actions"><button class="primary-button" data-action="close">${T('help_confirm')} ${icon('arrow')}</button><button class="text-button" data-open="map">${T('map_open')}</button></div>`);
+  return wrap(`${icon('help')} ${T('help_kicker')}`, text('help_title'), `<div class="help-board"><div class="help-list">${[1, 2, 3].map(i => `<div class="help-row"><span class="help-number">${i}</span><div><strong>${T('help_step' + i + '_title')}</strong><p class="editable-prose">${T('help_step' + i + '_body')}</p></div></div>`).join('')}</div></div>`, 'help-sign-view');
 }
 function renderPanel(id) {
   if (id === 'characters') return characterPanel();
@@ -110,7 +115,7 @@ function renderPanel(id) {
   if (id === 'pause') return pausePanel();
   if (id === 'concerts') return concertsPanel();
   if (BAND.some(b => b.id === id)) return bandPanel(id);
-  if (id === 'social') return socialPanel();
+  if (id === 'letter') return letterPanel();
   if (id === 'grownups') return grownupsPanel();
   if (id === 'map') return mapPanel();
   return helpPanel();
@@ -139,8 +144,6 @@ function renderScene() {
   game.innerHTML = state.scene === 'world' ? worldMarkup() : roomMarkup(state.scene, state.shelfPage, state.tapes);
   world = $('#world-svg'); player = $('#player'); playerUse = $('#player-use'); marker = $('#destination-marker');
   game.setAttribute('aria-label', state.scene === 'world' ? text('world_title') : ROOMS[state.scene].title);
-  $('#scene-title-text').textContent = state.scene === 'world' ? text('world_title') : ROOMS[state.scene].title;
-  $('#scene-kicker').textContent = state.scene === 'world' ? text('world_kicker') : ROOMS[state.scene].kicker;
   $('.wayfinder').hidden = state.scene !== 'world'; $('.exit-room').hidden = state.scene === 'world';
   game.classList.toggle('in-room', state.scene !== 'world');
   state.near = null; updateAnimal(); refreshCassettes(); resize(); updateNear();
@@ -148,6 +151,7 @@ function renderScene() {
 }
 function showPanel(id, focusSelector = '') {
   stopWalking(); state.modal = id; game.classList.add('paused');
+  if (state.scene === 'world' && worldTouch(state.position)?.id === id) state.touchLatch = id;
   modalContent.innerHTML = renderPanel(id);
   if (!modal.open) modal.showModal();
   if (focusSelector) modalContent.querySelector(focusSelector)?.focus();
@@ -161,6 +165,7 @@ modal.addEventListener('close', () => {
   if (!state.started) beginWorld(false);
   game.focus({ preventScroll: true });
 });
+modal.addEventListener('cancel', e => { e.preventDefault(); closePanel(); });
 modal.addEventListener('click', e => {
   if (e.target !== modal) return;
   const b = modal.getBoundingClientRect();
@@ -174,7 +179,7 @@ function beginWorld(close = true) {
 function enterRoom(id) {
   const room = roomFor(id); if (!room) return;
   if (!state.started) beginWorld(false);
-  if (state.scene === 'world') state.returnPosition = { ...state.position };
+  state.returnPosition = { ...HOUSE_DOORS.find(door => door.id === room).outside };
   stopWalking(); closePanel(); state.scene = room; state.position = { ...ROOM_SPAWN };
   renderScene(); game.focus({ preventScroll: true });
   announce(text('entered_room', { haus: ROOMS[room].title }));
@@ -186,7 +191,15 @@ function leaveRoom() {
   }
   game.focus({ preventScroll: true }); announce(text('left_room'));
 }
-function visit(id) { if (roomFor(id)) enterRoom(id); else showPanel(id); }
+function visit(id) { if (id === 'social') goToStation('social'); else if (roomFor(id)) enterRoom(id); else showPanel(id); }
+function checkWorldTouch() {
+  if (state.scene !== 'world' || modal.open || !state.started) return;
+  const touch = worldTouch(state.position);
+  if (!touch) { state.touchLatch = null; return; }
+  if (state.touchLatch === touch.id) return;
+  state.touchLatch = touch.id;
+  if (touch.kind === 'enter') enterRoom(touch.id); else showPanel(touch.id);
+}
 function refreshPlayback() {
   state.playing = !audio.paused && !audio.ended;
   $('#radio-shortcut').setAttribute('aria-label', text('room_radio'));
@@ -212,7 +225,7 @@ audio.addEventListener('error', () => { refreshPlayback(); toast(text('audio_err
 document.addEventListener('input', e => { if (e.target.id === 'volume') { state.volume = Number(e.target.value); audio.volume = state.volume; storage.set('volume', state.volume); } });
 function performInteraction() {
   const near = nearbyInteraction(state.scene, state.position, state.tapes, state.shelfPage);
-  if (!near) { showPanel('pause'); return; }
+  if (!near) return;
   stopWalking();
   if (near.kind === 'shelf') { state.shelfPage = (state.shelfPage + 1) % tapePages(state.tapes); renderScene(); toast(text('shelf_changed', { seite: state.shelfPage + 1, anzahl: tapePages(state.tapes) })); return; }
   if (['external', 'email'].includes(near.kind)) { openSocial(near.id); return; }
@@ -239,7 +252,8 @@ function openSocial(id) {
   const link = contactLinks().find(l => l.id === id), url = link?.id === 'email' ? link.url : safeURL(link?.url || '');
   if (!url) return;
   stopWalking();
-  window.open(url, id === 'email' ? '_self' : '_blank', 'noopener,noreferrer');
+  if (id === 'email') { showPanel('letter'); return; }
+  window.open(url, '_blank', 'noopener,noreferrer');
   announce(id === 'email' ? text('email_note') : text('social_opened', { kanal: link.label }));
 }
 function activateSocial(id) {
@@ -257,7 +271,7 @@ function goToStation(id) {
   const s = STATIONS.find(s => s.id === id); if (!s) return;
   if (!state.started) beginWorld(false);
   if (state.scene !== 'world') leaveRoom(); else closePanel();
-  navigateTo(s.x, s.y, { kind: 'station', id }); announce(text('walk_target', { ziel: s.label }));
+  navigateTo(s.x, s.y, BAND.some(member => member.id === id) ? { kind: 'station', id } : null); announce(text('walk_target', { ziel: s.label }));
 }
 function goToTape(id) {
   if (!TRACKS.some(t => t.id === id)) return;
@@ -278,6 +292,7 @@ function goToTape(id) {
 // including links whose native Space action would otherwise scroll the page.
 document.addEventListener('keydown', e => {
   if (!isActionKey(e)) return;
+  if (modal.open && inspectionPanels.has(state.modal)) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) closePanel(); return; }
   const control = e.target.closest('button:not([disabled]),a[href]');
   if (!control) return;
   e.preventDefault(); e.stopPropagation();
@@ -305,6 +320,16 @@ function chooseAnimal(id) {
   modalContent.querySelectorAll('[data-character]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.character === id)));
 }
 modalContent.addEventListener('keydown', e => {
+  if (inspectionPanels.has(state.modal)) {
+    if (isActionKey(e)) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) closePanel(); return; }
+    if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) {
+      e.preventDefault(); e.stopPropagation();
+      if (e.key === 'Home') modal.scrollTop = 0;
+      else if (e.key === 'End') modal.scrollTop = modal.scrollHeight;
+      else modal.scrollBy({ top: (['ArrowUp', 'PageUp'].includes(e.key) ? -1 : 1) * (e.key.startsWith('Page') ? modal.clientHeight * .8 : 55) });
+      return;
+    }
+  }
   const animal = e.target.closest('[data-character]');
   if (animal && isActionKey(e)) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) { chooseAnimal(animal.dataset.character); beginWorld(); } return; }
   if (animal && e.key.startsWith('Arrow')) {
@@ -348,9 +373,9 @@ function activateRoomTarget(id) {
 game.addEventListener('click', e => {
   if (modal.open || !state.started) return;
   const social = e.target.closest('[data-social]');
-  if (social) { activateSocial(social.dataset.social); return; }
+  if (social) { const pad = socialPads(state.scene).find(p => p.id === social.dataset.social); if (pad) navigateTo(pad.x, pad.y); return; }
   const station = e.target.closest('[data-station]');
-  if (station) { const s = STATIONS.find(s => s.id === station.dataset.station); if (Math.hypot(s.x - state.position.x, s.y - state.position.y) < 110) visit(s.id); else navigateTo(s.x, s.y, { kind: 'station', id: s.id }); return; }
+  if (station) { const s = STATIONS.find(s => s.id === station.dataset.station); if (BAND.some(member => member.id === s.id) && Math.hypot(s.x - state.position.x, s.y - state.position.y) < 110) visit(s.id); else goToStation(s.id); return; }
   const prop = e.target.closest('[data-room-target]');
   if (prop) { activateRoomTarget(prop.dataset.roomTarget); return; }
   const matrix = world.getScreenCTM(); if (!matrix) return;
@@ -441,6 +466,7 @@ function frame(time) {
       }
     }
     if (throughExit(state.scene, state.position)) leaveRoom();
+    checkWorldTouch();
     updateNear(); updateCamera(dt);
   }
   player.classList.toggle('is-moving', walking); player.setAttribute('transform', `translate(${state.position.x.toFixed(2)} ${state.position.y.toFixed(2)})`); requestAnimationFrame(frame);

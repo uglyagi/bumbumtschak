@@ -8,7 +8,7 @@ Verwaltung: https://uglyagi.github.io/bumbumtschak/verwaltung/
 
 Die Spielwelt, die Verwaltungsoberfläche, die Inhaltsdatei data/content.json und hochgeladene Dateien im Ordner uploads liegen in diesem Repository. Die Homepage benötigt keinen weiteren Server. Die bisherige Verwaltung wird nicht mehr verwendet.
 
-Die Inhalte der Spielwelt werden beim Öffnen aus data/content.json geladen. Alle Menüs, Tastaturfunktionen, Kassetten und Bandgrafiken bleiben erhalten.
+Die Inhalte der Spielwelt werden beim Öffnen aus data/content.json geladen. Die Häuser Kassettenhaus und Konzerthaus werden beim Hineinlaufen durch den Eingang automatisch betreten und durch den Ausgang wieder verlassen. Der Schreibtisch für Große und das Hinweisschild auf dem mittleren Platz öffnen sich bei Berührung als vergrößerte Ansichten über der Spielwelt. Der Kontaktbereich bleibt draußen: Auf einem Symbol stehen und Enter oder Leertaste drücken öffnet den Link; beim Briefsymbol erscheint ein Brief mit der E-Mail-Adresse. Schreibtisch, Brief und Hinweisschild schließen mit Enter, Leertaste, Escape oder der sichtbaren Zurück-Schaltfläche. Auf freien Flächen bewirkt Bestätigen nichts. Nach dem Schließen einer berührten Ansicht muss die Figur sich erst entfernen, bevor dieselbe Berührung sie erneut öffnet. Die bisherigen Texte oben links und die feste Steuerungserklärung unten links sind entfernt.
 
 ## Verwaltung öffnen
 

@@ -36,3 +36,12 @@ test('all browser imports resolve within the project and the old service is abse
   assert(!/script[^>]+src="https?:/.test(admin));
   await access(new URL('.nojekyll', root));
 });
+
+test('updated control instructions replace only former defaults and keep custom text', async () => {
+  const { COPY_FIELDS, normalizeTexts } = await import('../copy-defaults.js');
+  const help = COPY_FIELDS.find(field => field.key === 'help_step3_body');
+  const normalized = normalizeTexts({ help_step3_body: help.previousValues[0], grown_intro: 'Unsere selbst geschriebene Geschichte', help_board_label: 'SPIELTIPPS' });
+  assert.equal(normalized.help_step3_body, help.value);
+  assert.equal(normalized.grown_intro, 'Unsere selbst geschriebene Geschichte');
+  assert.equal(normalized.help_board_label, 'SPIELTIPPS');
+});
