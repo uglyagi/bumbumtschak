@@ -78,9 +78,11 @@ export const COPY_GROUPS = [
       {
         "key": "grown_how_body",
         "label": "Erklärung: Text",
-        "value": "Wähle ein Tier und lauf mit den Pfeiltasten durch die Musikwelt. Musikhaus, Konzertgebäude und Haus „Home sweet Home“ betrittst du durch den Eingang und verlässt sie durch den Ausgang. Im Haus „Home sweet Home“ gehst du zu Katze, Hund, Pferd oder Affe und wechselst mit Enter oder Leertaste dein Tier. Das Hinweisschild steht neben dem Haus „Home sweet Home“. Gehe zum Schreibtisch oder zum Hinweisschild und drücke Enter oder die Leertaste, um die Infos groß anzusehen. Damit sprichst du auch die Band an, nimmst Kassetten, legst sie ins Radio ein oder öffnest Kontaktsymbole. Schreibtisch, Brief und Schild schließen mit Enter, Leertaste oder Esc. Im Haus findest du auch Farbkanister: mit Enter oder Leertaste nehmen, draußen zur gewünschten Fläche gehen und damit anmalen. Die Aktion zeigt dir, welche Fläche dran ist. Mit Tab kannst du eine bestimmte Farbfläche auswählen. Esc stellt den Kanister zurück. Im Haus stellt die Schaltfläche „Originalfarben“ alles wieder her.",
+        "value": "Wähle ein Tier und lauf mit den Pfeiltasten durch die Musikwelt. Musikhaus, Konzertgebäude und Haus „Home sweet Home“ betrittst du durch den Eingang und verlässt sie durch den Ausgang. Im Haus „Home sweet Home“ gehst du zu Katze, Hund, Pferd oder Affe und wechselst mit Enter oder Leertaste dein Tier. Das Hinweisschild steht neben dem Haus „Home sweet Home“. Gehe zum Schreibtisch oder zum Hinweisschild und drücke Enter oder die Leertaste, um die Infos groß anzusehen. Damit sprichst du auch die Band an, nimmst Kassetten, legst sie ins Radio ein oder öffnest Kontaktsymbole. Schreibtisch, Brief und Schild schließen mit Enter, Leertaste oder Esc. Im Haus findest du auch Farbkanister: mit Enter oder Leertaste nehmen, draußen zur gewünschten Fläche gehen und damit anmalen. Die Aktion zeigt dir, welche Fläche dran ist. Mit Tab kannst du eine bestimmte Farbfläche auswählen. Esc stellt den Kanister zurück. Im Haus stellt die Schaltfläche „Originalfarben“ alles wieder her. Die Farbe erscheint zuerst nur als Vorschau. Erst Enter oder Leertaste übernimmt sie. Sonne und Wolken stehen oben am hellblauen Himmel. Gehe rechts neben der Bühne zur Rakete. Enter oder Leertaste setzt dich mit deinem Farbkübel hinein. Pfeil nach oben startet, die Richtungstasten steuern den Flug. Oben färbst du Himmel, Wolken und Sonne mit Enter oder Leertaste. Fliege nach unten zur Wiese. Nach der Landung steigt dein Tier mit Enter oder Leertaste wieder aus.",
         "max": 2400,
         "previousValues": [
+          "Wähle ein Tier und lauf mit den Pfeiltasten durch die Musikwelt. Musikhaus, Konzertgebäude und Haus „Home sweet Home“ betrittst du durch den Eingang und verlässt sie durch den Ausgang. Im Haus „Home sweet Home“ gehst du zu Katze, Hund, Pferd oder Affe und wechselst mit Enter oder Leertaste dein Tier. Das Hinweisschild steht neben dem Haus „Home sweet Home“. Gehe zum Schreibtisch oder zum Hinweisschild und drücke Enter oder die Leertaste, um die Infos groß anzusehen. Damit sprichst du auch die Band an, nimmst Kassetten, legst sie ins Radio ein oder öffnest Kontaktsymbole. Schreibtisch, Brief und Schild schließen mit Enter, Leertaste oder Esc. Im Haus findest du auch Farbkanister: mit Enter oder Leertaste nehmen, draußen zur gewünschten Fläche gehen und damit anmalen. Die Aktion zeigt dir, welche Fläche dran ist. Mit Tab kannst du eine bestimmte Farbfläche auswählen. Esc stellt den Kanister zurück. Im Haus stellt die Schaltfläche „Originalfarben“ alles wieder her. Die Farbe erscheint zuerst nur als Vorschau. Erst Enter oder Leertaste übernimmt sie. Auch Wolken lassen sich färben.",
+          "Wähle ein Tier und lauf mit den Pfeiltasten durch die Musikwelt. Musikhaus, Konzertgebäude und Haus „Home sweet Home“ betrittst du durch den Eingang und verlässt sie durch den Ausgang. Im Haus „Home sweet Home“ gehst du zu Katze, Hund, Pferd oder Affe und wechselst mit Enter oder Leertaste dein Tier. Das Hinweisschild steht neben dem Haus „Home sweet Home“. Gehe zum Schreibtisch oder zum Hinweisschild und drücke Enter oder die Leertaste, um die Infos groß anzusehen. Damit sprichst du auch die Band an, nimmst Kassetten, legst sie ins Radio ein oder öffnest Kontaktsymbole. Schreibtisch, Brief und Schild schließen mit Enter, Leertaste oder Esc. Im Haus findest du auch Farbkanister: mit Enter oder Leertaste nehmen, draußen zur gewünschten Fläche gehen und damit anmalen. Die Aktion zeigt dir, welche Fläche dran ist. Mit Tab kannst du eine bestimmte Farbfläche auswählen. Esc stellt den Kanister zurück. Im Haus stellt die Schaltfläche „Originalfarben“ alles wieder her.",
           "Wähle ein Tier und lauf mit den Pfeiltasten durch die Musikwelt. Kassettenhaus, Konzerthaus und Figurenhaus betrittst du durch den Eingang und verlässt sie durch den Ausgang. Im Figurenhaus gehst du zu Katze, Hund, Pferd oder Affe und wechselst mit Enter oder Leertaste dein Tier. Das Hinweisschild steht neben dem Figurenhaus. Gehe zum Schreibtisch oder zum Hinweisschild und drücke Enter oder die Leertaste, um die Infos groß anzusehen. Damit sprichst du auch die Band an, nimmst Kassetten, legst sie ins Radio ein oder öffnest Kontaktsymbole. Schreibtisch, Brief und Schild schließen mit Enter, Leertaste oder Esc.",
           "Wähle ein Tier und lauf mit den Pfeiltasten durch die Musikwelt. Ins Kassettenhaus und Konzerthaus gelangst du durch den Eingang, hinaus durch den Ausgang. Gehe zum Schreibtisch oder zum kleinen Hinweisschild und drücke Enter oder die Leertaste, um die Infos groß anzusehen. Enter oder Leertaste spricht auch die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Auf Kontaktsymbolen öffnest du damit den Link oder den Brief. Schreibtisch, Brief und Schild schließen mit Enter, Leertaste oder Esc.",
           "Wähle ein Tier und lauf mit den Pfeiltasten durch die Musikwelt. Ins Kassettenhaus und Konzerthaus gelangst du durch den Eingang, hinaus durch den Ausgang. Berühre den Schreibtisch oder das kleine Hinweisschild, um die Infos groß anzusehen. Enter oder Leertaste spricht die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Auf Kontaktsymbolen öffnest du damit den Link oder den Brief. Schreibtisch, Brief und Schild schließen mit Enter, Leertaste oder Esc.",
@@ -327,9 +329,11 @@ export const COPY_GROUPS = [
       {
         "key": "world_instructions",
         "label": "Ausführlicher Tastaturhinweis",
-        "value": "Mit den Pfeiltasten bewegst du die Figur. Musikhaus, Konzertgebäude und Haus „Home sweet Home“ betrittst du durch den Eingang. Unten durch den Ausgang geht es wieder hinaus. Im Haus „Home sweet Home“ stellst du dich vor ein Tier und wechselst mit Enter oder der Leertaste deine Figur. Das Hinweisschild steht daneben. In der Nähe des Schreibtischs oder Hinweisschilds öffnest du die große Ansicht mit Enter oder der Leertaste. Damit nimmst du auch Kassetten auf, legst sie ins Radio ein, sprichst die Band an oder öffnest ein Linksymbol unter deinen Füßen. Beim Briefsymbol erscheint unsere E-Mail-Adresse. Schreibtisch, Brief und Hinweisschild schließen mit Enter, Leertaste oder Escape. Auf freien Flächen bewirken Enter und Leertaste nichts. Mit Tab erreichst du alle Bedienelemente. Im Haus findest du auch Farbkanister: mit Enter oder Leertaste nehmen, draußen zur gewünschten Fläche gehen und damit anmalen. Die Aktion zeigt dir, welche Fläche dran ist. Mit Tab kannst du eine bestimmte Farbfläche auswählen. Esc stellt den Kanister zurück. Im Haus stellt die Schaltfläche „Originalfarben“ alles wieder her.",
+        "value": "Mit den Pfeiltasten bewegst du die Figur. Musikhaus, Konzertgebäude und Haus „Home sweet Home“ betrittst du durch den Eingang. Unten durch den Ausgang geht es wieder hinaus. Im Haus „Home sweet Home“ stellst du dich vor ein Tier und wechselst mit Enter oder der Leertaste deine Figur. Das Hinweisschild steht daneben. In der Nähe des Schreibtischs oder Hinweisschilds öffnest du die große Ansicht mit Enter oder der Leertaste. Damit nimmst du auch Kassetten auf, legst sie ins Radio ein, sprichst die Band an oder öffnest ein Linksymbol unter deinen Füßen. Beim Briefsymbol erscheint unsere E-Mail-Adresse. Schreibtisch, Brief und Hinweisschild schließen mit Enter, Leertaste oder Escape. Auf freien Flächen bewirken Enter und Leertaste nichts. Mit Tab erreichst du alle Bedienelemente. Im Haus findest du auch Farbkanister: mit Enter oder Leertaste nehmen, draußen zur gewünschten Fläche gehen und damit anmalen. Die Aktion zeigt dir, welche Fläche dran ist. Mit Tab kannst du eine bestimmte Farbfläche auswählen. Esc stellt den Kanister zurück. Im Haus stellt die Schaltfläche „Originalfarben“ alles wieder her. Die Farbe erscheint zuerst nur als Vorschau. Erst Enter oder Leertaste übernimmt sie. Sonne und Wolken stehen oben am hellblauen Himmel. Gehe rechts neben der Bühne zur Rakete. Enter oder Leertaste setzt dich mit deinem Farbkübel hinein. Pfeil nach oben startet, die Richtungstasten steuern den Flug. Oben färbst du Himmel, Wolken und Sonne mit Enter oder Leertaste. Fliege nach unten zur Wiese. Nach der Landung steigt dein Tier mit Enter oder Leertaste wieder aus.",
         "max": 2400,
         "previousValues": [
+          "Mit den Pfeiltasten bewegst du die Figur. Musikhaus, Konzertgebäude und Haus „Home sweet Home“ betrittst du durch den Eingang. Unten durch den Ausgang geht es wieder hinaus. Im Haus „Home sweet Home“ stellst du dich vor ein Tier und wechselst mit Enter oder der Leertaste deine Figur. Das Hinweisschild steht daneben. In der Nähe des Schreibtischs oder Hinweisschilds öffnest du die große Ansicht mit Enter oder der Leertaste. Damit nimmst du auch Kassetten auf, legst sie ins Radio ein, sprichst die Band an oder öffnest ein Linksymbol unter deinen Füßen. Beim Briefsymbol erscheint unsere E-Mail-Adresse. Schreibtisch, Brief und Hinweisschild schließen mit Enter, Leertaste oder Escape. Auf freien Flächen bewirken Enter und Leertaste nichts. Mit Tab erreichst du alle Bedienelemente. Im Haus findest du auch Farbkanister: mit Enter oder Leertaste nehmen, draußen zur gewünschten Fläche gehen und damit anmalen. Die Aktion zeigt dir, welche Fläche dran ist. Mit Tab kannst du eine bestimmte Farbfläche auswählen. Esc stellt den Kanister zurück. Im Haus stellt die Schaltfläche „Originalfarben“ alles wieder her. Die Farbe erscheint zuerst nur als Vorschau. Erst Enter oder Leertaste übernimmt sie. Auch Wolken lassen sich färben.",
+          "Mit den Pfeiltasten bewegst du die Figur. Musikhaus, Konzertgebäude und Haus „Home sweet Home“ betrittst du durch den Eingang. Unten durch den Ausgang geht es wieder hinaus. Im Haus „Home sweet Home“ stellst du dich vor ein Tier und wechselst mit Enter oder der Leertaste deine Figur. Das Hinweisschild steht daneben. In der Nähe des Schreibtischs oder Hinweisschilds öffnest du die große Ansicht mit Enter oder der Leertaste. Damit nimmst du auch Kassetten auf, legst sie ins Radio ein, sprichst die Band an oder öffnest ein Linksymbol unter deinen Füßen. Beim Briefsymbol erscheint unsere E-Mail-Adresse. Schreibtisch, Brief und Hinweisschild schließen mit Enter, Leertaste oder Escape. Auf freien Flächen bewirken Enter und Leertaste nichts. Mit Tab erreichst du alle Bedienelemente. Im Haus findest du auch Farbkanister: mit Enter oder Leertaste nehmen, draußen zur gewünschten Fläche gehen und damit anmalen. Die Aktion zeigt dir, welche Fläche dran ist. Mit Tab kannst du eine bestimmte Farbfläche auswählen. Esc stellt den Kanister zurück. Im Haus stellt die Schaltfläche „Originalfarben“ alles wieder her.",
           "Mit den Pfeiltasten bewegst du die Figur. Kassettenhaus, Konzerthaus und Figurenhaus betrittst du durch den Eingang. Unten durch den Ausgang geht es wieder hinaus. Im Figurenhaus stellst du dich vor ein Tier und wechselst mit Enter oder der Leertaste deine Figur. Das Hinweisschild steht daneben. In der Nähe des Schreibtischs oder Hinweisschilds öffnest du die große Ansicht mit Enter oder der Leertaste. Damit nimmst du auch Kassetten auf, legst sie ins Radio ein, sprichst die Band an oder öffnest ein Linksymbol unter deinen Füßen. Beim Briefsymbol erscheint unsere E-Mail-Adresse. Schreibtisch, Brief und Hinweisschild schließen mit Enter, Leertaste oder Escape. Auf freien Flächen bewirken Enter und Leertaste nichts. Mit Tab erreichst du alle Bedienelemente.",
           "Mit den Pfeiltasten bewegst du die Figur. Laufe durch den Eingang ins Kassettenhaus oder Konzerthaus und unten durch den Ausgang wieder hinaus. In der Nähe des Schreibtischs oder des kleinen Hinweisschilds öffnest du die große Ansicht mit Enter oder der Leertaste. Damit nimmst du auch Kassetten auf, legst sie ins Radio ein, sprichst die Band an oder öffnest ein Linksymbol unter deinen Füßen. Beim Briefsymbol erscheint unsere E-Mail-Adresse. Schreibtisch, Brief und Hinweisschild schließen mit Enter, Leertaste oder Escape. Auf freien Flächen bewirken Enter und Leertaste nichts. Mit Tab erreichst du alle Bedienelemente.",
           "Mit den Pfeiltasten bewegst du die Figur. Laufe durch den Eingang ins Kassettenhaus oder Konzerthaus und unten durch den Ausgang wieder hinaus. Berühre den Schreibtisch oder das kleine Hinweisschild, um es groß anzusehen. Enter oder Leertaste nimmt Kassetten auf, legt sie ins Radio ein, spricht die Band an oder öffnet ein Linksymbol unter deinen Füßen. Beim Briefsymbol erscheint unsere E-Mail-Adresse. Schreibtisch, Brief und Hinweisschild schließen mit Enter, Leertaste oder Escape. Auf freien Flächen bewirken Enter und Leertaste nichts. Mit Tab erreichst du alle Bedienelemente.",
@@ -1137,8 +1141,11 @@ export const COPY_GROUPS = [
       {
         "key": "help_step1_body",
         "label": "Schritt 1: Text",
-        "value": "Katze, Hund, Pferd oder Affe? Unten rechts kannst du deine Figur jederzeit wechseln.",
-        "max": 2400
+        "value": "Katze, Hund, Pferd oder Affe? Im kleinen Haus „Home sweet Home“ kannst du deine Figur wechseln.",
+        "max": 2400,
+        "previousValues": [
+          "Katze, Hund, Pferd oder Affe? Unten rechts kannst du deine Figur jederzeit wechseln."
+        ]
       },
       {
         "key": "help_step2_title",
@@ -1161,9 +1168,11 @@ export const COPY_GROUPS = [
       {
         "key": "help_step3_body",
         "label": "Schritt 3: Text",
-        "value": "Laufe durch den Eingang ins Musikhaus, Konzertgebäude oder Haus „Home sweet Home“. Hinaus geht es durch den Ausgang. Im Haus „Home sweet Home“ kannst du Katze, Hund, Pferd oder Affe sein: Gehe zu einem Tier und drücke Enter oder die Leertaste. Gehe zum Schreibtisch oder zum Hinweisschild neben dem Haus „Home sweet Home“ und bestätige, um die Infos groß anzusehen. Enter oder Leertaste spricht auch die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Auf Kontaktsymbolen öffnest du damit den Link oder den Brief mit unserer E-Mail-Adresse. Schreibtisch, Brief und dieses Hinweisschild schließen mit Enter, Leertaste oder Esc. Auf freien Flächen passiert beim Bestätigen nichts. Im Haus findest du auch Farbkanister: mit Enter oder Leertaste nehmen, draußen zur gewünschten Fläche gehen und damit anmalen. Die Aktion zeigt dir, welche Fläche dran ist. Mit Tab kannst du eine bestimmte Farbfläche auswählen. Esc stellt den Kanister zurück. Im Haus stellt die Schaltfläche „Originalfarben“ alles wieder her.",
+        "value": "Laufe durch den Eingang ins Musikhaus, Konzertgebäude oder Haus „Home sweet Home“. Hinaus geht es durch den Ausgang. Im Haus „Home sweet Home“ kannst du Katze, Hund, Pferd oder Affe sein: Gehe zu einem Tier und drücke Enter oder die Leertaste. Gehe zum Schreibtisch oder zum Hinweisschild neben dem Haus „Home sweet Home“ und bestätige, um die Infos groß anzusehen. Enter oder Leertaste spricht auch die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Auf Kontaktsymbolen öffnest du damit den Link oder den Brief mit unserer E-Mail-Adresse. Schreibtisch, Brief und dieses Hinweisschild schließen mit Enter, Leertaste oder Esc. Auf freien Flächen passiert beim Bestätigen nichts. Im Haus findest du auch Farbkanister: mit Enter oder Leertaste nehmen, draußen zur gewünschten Fläche gehen und damit anmalen. Die Aktion zeigt dir, welche Fläche dran ist. Mit Tab kannst du eine bestimmte Farbfläche auswählen. Esc stellt den Kanister zurück. Im Haus stellt die Schaltfläche „Originalfarben“ alles wieder her. Die Farbe erscheint zuerst nur als Vorschau. Erst Enter oder Leertaste übernimmt sie. Sonne und Wolken stehen oben am hellblauen Himmel. Gehe rechts neben der Bühne zur Rakete. Enter oder Leertaste setzt dich mit deinem Farbkübel hinein. Pfeil nach oben startet, die Richtungstasten steuern den Flug. Oben färbst du Himmel, Wolken und Sonne mit Enter oder Leertaste. Fliege nach unten zur Wiese. Nach der Landung steigt dein Tier mit Enter oder Leertaste wieder aus.",
         "max": 2400,
         "previousValues": [
+          "Laufe durch den Eingang ins Musikhaus, Konzertgebäude oder Haus „Home sweet Home“. Hinaus geht es durch den Ausgang. Im Haus „Home sweet Home“ kannst du Katze, Hund, Pferd oder Affe sein: Gehe zu einem Tier und drücke Enter oder die Leertaste. Gehe zum Schreibtisch oder zum Hinweisschild neben dem Haus „Home sweet Home“ und bestätige, um die Infos groß anzusehen. Enter oder Leertaste spricht auch die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Auf Kontaktsymbolen öffnest du damit den Link oder den Brief mit unserer E-Mail-Adresse. Schreibtisch, Brief und dieses Hinweisschild schließen mit Enter, Leertaste oder Esc. Auf freien Flächen passiert beim Bestätigen nichts. Im Haus findest du auch Farbkanister: mit Enter oder Leertaste nehmen, draußen zur gewünschten Fläche gehen und damit anmalen. Die Aktion zeigt dir, welche Fläche dran ist. Mit Tab kannst du eine bestimmte Farbfläche auswählen. Esc stellt den Kanister zurück. Im Haus stellt die Schaltfläche „Originalfarben“ alles wieder her. Die Farbe erscheint zuerst nur als Vorschau. Erst Enter oder Leertaste übernimmt sie. Auch Wolken lassen sich färben.",
+          "Laufe durch den Eingang ins Musikhaus, Konzertgebäude oder Haus „Home sweet Home“. Hinaus geht es durch den Ausgang. Im Haus „Home sweet Home“ kannst du Katze, Hund, Pferd oder Affe sein: Gehe zu einem Tier und drücke Enter oder die Leertaste. Gehe zum Schreibtisch oder zum Hinweisschild neben dem Haus „Home sweet Home“ und bestätige, um die Infos groß anzusehen. Enter oder Leertaste spricht auch die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Auf Kontaktsymbolen öffnest du damit den Link oder den Brief mit unserer E-Mail-Adresse. Schreibtisch, Brief und dieses Hinweisschild schließen mit Enter, Leertaste oder Esc. Auf freien Flächen passiert beim Bestätigen nichts. Im Haus findest du auch Farbkanister: mit Enter oder Leertaste nehmen, draußen zur gewünschten Fläche gehen und damit anmalen. Die Aktion zeigt dir, welche Fläche dran ist. Mit Tab kannst du eine bestimmte Farbfläche auswählen. Esc stellt den Kanister zurück. Im Haus stellt die Schaltfläche „Originalfarben“ alles wieder her.",
           "Laufe durch den Eingang ins Kassettenhaus, Konzerthaus oder Figurenhaus. Hinaus geht es durch den Ausgang. Im Figurenhaus kannst du Katze, Hund, Pferd oder Affe sein: Gehe zu einem Tier und drücke Enter oder die Leertaste. Gehe zum Schreibtisch oder zum Hinweisschild neben dem Figurenhaus und bestätige, um die Infos groß anzusehen. Enter oder Leertaste spricht auch die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Auf Kontaktsymbolen öffnest du damit den Link oder den Brief mit unserer E-Mail-Adresse. Schreibtisch, Brief und dieses Hinweisschild schließen mit Enter, Leertaste oder Esc. Auf freien Flächen passiert beim Bestätigen nichts.",
           "Laufe durch den Eingang ins Kassettenhaus oder Konzerthaus. Hinaus geht es durch den Ausgang. Gehe zum Schreibtisch oder zum Hinweisschild und drücke Enter oder die Leertaste, um die Infos groß anzusehen. Enter oder Leertaste spricht auch die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Stelle dich auf ein Kontaktsymbol und drücke Enter oder die Leertaste. Der Brief zeigt unsere E-Mail-Adresse. Schreibtisch, Brief und dieses Hinweisschild schließen mit Enter, Leertaste oder Esc. Auf freien Flächen passiert beim Bestätigen nichts.",
           "Laufe durch den Eingang ins Kassettenhaus oder Konzerthaus. Hinaus geht es durch den Ausgang. Berührst du den Schreibtisch, erscheinen seine Infos. Enter oder Leertaste spricht die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Stelle dich auf ein Kontaktsymbol und drücke Enter oder die Leertaste. Der Brief zeigt unsere E-Mail-Adresse. Schreibtisch, Brief und dieses Hinweisschild schließen mit Enter, Leertaste oder Esc. Auf freien Flächen passiert beim Bestätigen nichts.",
@@ -1446,8 +1455,11 @@ export const COPY_GROUPS = [
       {
         "key": "paint_taken",
         "label": "Kanister aufgenommen",
-        "value": "Du trägst {farbe}. Geh nach draußen und male mit Enter oder Leertaste. Esc stellt den Kanister zurück.",
-        "max": 500
+        "value": "Du trägst {farbe}. Draußen siehst du zuerst die Farbvorschau. Enter oder Leertaste übernimmt die Farbe; Esc stellt den Kübel zurück.",
+        "max": 500,
+        "previousValues": [
+          "Du trägst {farbe}. Geh nach draußen und male mit Enter oder Leertaste. Esc stellt den Kanister zurück."
+        ]
       },
       {
         "key": "paint_returned",
@@ -1458,8 +1470,11 @@ export const COPY_GROUPS = [
       {
         "key": "paint_carry_hint",
         "label": "Hinweis beim Tragen",
-        "value": "Enter / Leertaste: Fläche anmalen",
-        "max": 500
+        "value": "Vorschau · Enter / Leertaste: übernehmen",
+        "max": 500,
+        "previousValues": [
+          "Enter / Leertaste: Fläche anmalen"
+        ]
       },
       {
         "key": "paint_put_down",
@@ -1470,8 +1485,11 @@ export const COPY_GROUPS = [
       {
         "key": "paint_action",
         "label": "Aktion beim Malen",
-        "value": "{flaeche} mit {farbe} füllen",
-        "max": 500
+        "value": "{flaeche}: {farbe} übernehmen",
+        "max": 500,
+        "previousValues": [
+          "{flaeche} mit {farbe} füllen"
+        ]
       },
       {
         "key": "paint_done",
@@ -1585,6 +1603,108 @@ export const COPY_GROUPS = [
         "key": "paint_grass",
         "label": "Fläche: Wiese",
         "value": "Wiese",
+        "max": 500
+      },
+      {
+        "key": "paint_cloud",
+        "label": "Fläche: Wolke",
+        "value": "Wolke",
+        "max": 500
+      },
+      {
+        "key": "paint_sky",
+        "label": "Fläche: Himmel",
+        "value": "Himmel",
+        "max": 500
+      }
+    ]
+  },
+  {
+    "id": "rocket",
+    "label": "Rakete & Himmel",
+    "fields": [
+      {
+        "key": "sign_rocket",
+        "label": "Ziel im Weltplan",
+        "value": "Zum Himmel",
+        "max": 500
+      },
+      {
+        "key": "station_rocket_short",
+        "label": "Beschreibung im Weltplan",
+        "value": "Mit der Rakete hinauffliegen",
+        "max": 500
+      },
+      {
+        "key": "sky_title",
+        "label": "Vorlesetitel des Himmels",
+        "value": "Der Himmel über der Bum Bum Welt",
+        "max": 500
+      },
+      {
+        "key": "back_flight",
+        "label": "Flug fortsetzen",
+        "value": "Zurück zum Flug",
+        "max": 500
+      },
+      {
+        "key": "rocket_board",
+        "label": "In die Rakete setzen",
+        "value": "In die Rakete steigen",
+        "max": 500
+      },
+      {
+        "key": "rocket_boarded",
+        "label": "Nach dem Einsteigen",
+        "value": "Du sitzt in der Rakete. Pfeil nach oben startet. Richtungstasten steuern. Dein Farbkübel fliegt mit!",
+        "max": 500
+      },
+      {
+        "key": "rocket_flying",
+        "label": "Beim Start",
+        "value": "Los geht’s! Fliege mit den Richtungstasten nach oben in den Himmel. Enter oder Leertaste übernimmt dort deine Farbe. Nach unten geht es zur Wiese zurück.",
+        "max": 500
+      },
+      {
+        "key": "rocket_exit",
+        "label": "Nach der Landung aussteigen",
+        "value": "Rakete verlassen",
+        "max": 500
+      },
+      {
+        "key": "rocket_landed",
+        "label": "Landung",
+        "value": "Gelandet! Mit Enter oder Leertaste steigst du aus. Pfeil nach oben startet wieder.",
+        "max": 500
+      },
+      {
+        "key": "rocket_exited",
+        "label": "Nach dem Aussteigen",
+        "value": "Du stehst wieder auf der Wiese. Dein Farbkübel bleibt bei dir.",
+        "max": 500
+      },
+      {
+        "key": "rocket_land_button",
+        "label": "Schaltfläche im Flug",
+        "value": "Zur Wiese ↓",
+        "max": 500
+      },
+      {
+        "key": "rocket_returning",
+        "label": "Rückflug zur Wiese",
+        "value": "Du fliegst zurück zur Wiese. Nach der Landung kannst du mit Enter oder Leertaste aussteigen.",
+        "max": 500
+      },
+      {
+        "key": "rocket_first",
+        "label": "Himmel vom Boden aus gewählt",
+        "value": "Zum Himmel kommst du mit der Rakete rechts neben der Bühne. Steig mit Enter oder Leertaste ein und fliege mit Pfeil nach oben los.",
+        "max": 500
+      },
+      {
+        "key": "rocket_land_first",
+        "label": "Anderes Ziel während des Flugs",
+        "value": "Lande zuerst auf der Wiese und steige mit Enter oder Leertaste aus der Rakete aus.",
         "max": 500
       }
     ]

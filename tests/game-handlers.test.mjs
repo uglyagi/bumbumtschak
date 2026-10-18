@@ -6,6 +6,7 @@ const extension = 'js';
 const [core, content, art, roomArt, rooms, social, painting] = await Promise.all(
   ['game-core', 'content', 'art', 'room-art', 'rooms', 'social', 'painting'].map(name => import(new URL(`${name}.${extension}`, root))));
 const connection = await import(new URL(`connection.${extension}`, root));
+const sky = await import(new URL(`sky-world.${extension}`, root));
 
 // Exercise the application's real registered handlers with DOM test doubles.
 // This checks app behavior, not browser rendering or native default actions.
@@ -30,12 +31,29 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null) {
     append() {}
     scrollBy() {}
     setAttribute(name, value) { this.attrs.set(name, value); }
+    getAttribute(name) { return this.attrs.get(name) ?? null; }
     removeAttribute(name) { this.attrs.delete(name); }
     toggleAttribute(name, value) { value ? this.attrs.set(name, '') : this.attrs.delete(name); }
     focus() { doc.activeElement = this; }
     contains(other) { return other === this || other?.parent === this; }
     querySelector(selector) { return get(`${this.name} ${selector}`); }
-    querySelectorAll() { return []; }
+    get innerHTML() { return this.markup || ''; }
+    set innerHTML(value) {
+      this.markup = value;
+      if (this.name !== '#game') return;
+      this.paintNodes = [];
+      for (const match of value.matchAll(/<([a-z]+)\b([^>]*\bdata-paint-(?:target|ink)="[^"]+"[^>]*)>/g)) {
+        const attributes = [...match[2].matchAll(/([\w-]+)="([^"]*)"/g)].map(attribute => [attribute[1], attribute[2]]);
+        const node = new Element('paint node', match[1]); node.attrs = new Map(attributes);
+        node.dataset = { paintTarget: node.getAttribute('data-paint-target'), paintProperty: node.getAttribute('data-paint-property'), paintInk: node.getAttribute('data-paint-ink') };
+        node.style.color = node.getAttribute('style')?.match(/color:([^;]+)/)?.[1] || '';
+        this.paintNodes.push(node);
+      }
+    }
+    querySelectorAll(selector) {
+      const match = selector?.match(/^\[data-paint-(target|ink)="([^"]+)"\]$/);
+      return this.name === '#game' && match ? (this.paintNodes || []).filter(node => node.dataset[match[1] === 'target' ? 'paintTarget' : 'paintInk'] === match[2]) : [];
+    }
     getBoundingClientRect() { return { width: 1200, height: 700 }; }
     getClientRects() { return [{}]; }
     showModal() { this.open = true; }
@@ -64,7 +82,7 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null) {
   const game = get('#game'), modal = get('#modal'), modalContent = get('#modal-content'), audio = get('#audio');
   Object.assign(audio, { paused: true, ended: false, pause() { this.paused = true; }, play() { this.paused = false; return Promise.resolve(); }, load() {} });
   const context = vm.createContext({
-    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection,
+    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky,
     loadContent: async () => ({ ok: true }), document: doc,
     window: { innerWidth: 1200, matchMedia: () => ({ matches: false }), addEventListener: (n, cb) => add(windowHandlers, n, cb), open(...args) { opened.push(args); } },
     location: { search: preview ? '?preview=1' : '' }, localStorage: { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value) },
@@ -76,6 +94,27 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null) {
   const event = (key, code, target, repeat = false) => ({ key, code, target, repeat, prevented: false, stopped: false, preventDefault() { this.prevented = true; }, stopPropagation() { this.stopped = true; } });
   function press(handlers, e) { for (const cb of handlers.get('keydown') || []) cb(e); return e; }
   return { ...app, opened, stored, get, game, modal, modalContent, Element, event, press, documentHandlers, windowHandlers };
+}
+
+function flyIntoSky(h, key = 'Enter', code = 'Enter', clock = 1000) {
+  h.state.position = { ...h.state.rocket.position }; h.game.focus();
+  h.press(h.windowHandlers, h.event(key, code, h.game));
+  assert(h.state.rocket.riding && !h.state.rocket.airborne, 'confirmation seats the selected animal in the parked rocket');
+  assert(h.game.innerHTML.includes(`href="#animal-${h.state.animal}"`));
+  assert.equal(h.state.scene, 'world', 'boarding is not a teleport');
+  h.state.keys.add('ArrowUp');
+  while (h.state.position.y > -180 && clock < 3000) h.frame(++clock * 16);
+  h.state.keys.clear();
+  assert.equal(h.state.scene, 'sky'); assert(h.state.rocket.riding && h.state.rocket.airborne);
+  return clock;
+}
+function landAndExit(h, key = 'Enter', code = 'Enter', clock = 3100) {
+  const button = new h.Element('land', 'button', { action: 'exit-walk' }); button.click();
+  while (h.state.rocket.airborne && clock < 5000) h.frame(++clock * 16);
+  assert.equal(h.state.scene, 'world'); assert(h.state.rocket.riding && !h.state.rocket.airborne);
+  h.game.focus(); h.press(h.windowHandlers, h.event(key, code, h.game));
+  assert.equal(h.state.rocket.riding, false); assert.equal(h.state.scene, 'world');
+  return clock;
 }
 
 for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'NumpadEnter']]) {
@@ -305,15 +344,15 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
   h.press(h.windowHandlers, h.event(key, code, h.game));
   assert.equal(h.state.paint.path, blue.color);
   assert.equal(JSON.parse(h.stored.get('bbt-paint-world')).path, blue.color);
-  const sun = new h.Element('sun', 'g', { paintTarget: 'sun' });
-  h.press(h.game.handlers, h.event(key, code, sun));
-  assert.equal(h.state.paint.sun, undefined, 'a distant surface requires walking there first');
+  const water = new h.Element('water', 'g', { paintTarget: 'water' });
+  h.press(h.game.handlers, h.event(key, code, water));
+  assert.equal(h.state.paint.water, undefined, 'a distant ground surface requires walking there first');
   let tick = 0;
   while (h.state.path.length && tick < 1500) h.frame(++tick * 16);
-  assert.equal(h.state.scene, 'world'); assert.equal(h.state.paint.sun, undefined);
+  assert.equal(h.state.scene, 'world'); assert.equal(h.state.paint.water, undefined);
   h.press(h.windowHandlers, h.event(key, code, h.game));
-  assert.equal(h.state.paint.sun, blue.color, 'confirmation after walking paints the selected surface');
-  for (const surface of painting.PAINT_SURFACES) {
+  assert.equal(h.state.paint.water, blue.color, 'confirmation after walking paints the selected surface');
+  for (const surface of painting.PAINT_SURFACES.filter(surface => !surface.sky)) {
     h.state.position = { ...surface.walk }; h.game.focus();
     assert(core.canStand(h.state.position.x, h.state.position.y), surface.id + ' has an accessible painting spot');
     assert(painting.canPaintSurface(h.state.position, surface), surface.id + ' can be reached from its painting spot');
@@ -321,6 +360,19 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
     h.press(h.game.handlers, h.event(key, code, target));
     assert.equal(h.state.paint[surface.id], blue.color, surface.id + ' is painted through the real keyboard handler');
   }
+  const sun = new h.Element('sun', 'g', { paintTarget: 'sun' });
+  h.press(h.game.handlers, h.event(key, code, sun));
+  assert.equal(h.state.path.length, 0, 'a focused sky target cannot bypass the rocket');
+  assert.equal(h.state.paint.sun, undefined);
+  flyIntoSky(h, key, code);
+  assert.equal(h.state.paintCan, 'blue', 'the paint can stays with the pilot');
+  for (const surface of painting.PAINT_SURFACES.filter(surface => surface.sky)) {
+    h.state.position = { ...surface.walk }; h.state.rocket.position = { ...surface.walk }; h.game.focus();
+    const target = new h.Element(surface.id, 'g', { paintTarget: surface.id });
+    h.press(h.game.handlers, h.event(key, code, target));
+    assert.equal(h.state.paint[surface.id], blue.color, surface.id + ' can be painted from inside the flying rocket');
+  }
+  landAndExit(h, key, code); assert.equal(h.state.paintCan, 'blue');
   const drawing = JSON.parse(h.stored.get('bbt-paint-world'));
   const reload = await harness(false, 'cat', drawing);
   assert.equal(Object.keys(reload.state.paint).length, painting.PAINT_SURFACES.length);
@@ -346,3 +398,86 @@ try {
   assert.equal(h.state.paintCan, 'orange', 'a newly added color is usable on the next page');
 } finally { content.PALETTE.splice(0, content.PALETTE.length, ...basePalette); }
 console.log('PASS: taking, carrying and returning paint cans, walking to distant surfaces, all paintable surfaces, local save/reload, Escape, reset and newly added palette colors through the real keyboard handlers.');
+
+for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space']]) {
+  const h = await harness(false, 'cat', { path: '#ff3935' });
+  const node = id => h.game.querySelectorAll(`[data-paint-target="${id}"]`)[0];
+  const pick = id => {
+    h.enterRoom('wardrobe'); h.state.position = { ...painting.paintSlots(content.PALETTE).find(color => color.id === id) }; h.game.focus();
+    h.press(h.windowHandlers, h.event(key, code, h.game)); h.leaveRoom();
+  };
+  pick('yellow'); h.state.position = { x: 700, y: 475 }; h.frame(16);
+  assert.equal(node('path').getAttribute('stroke'), '#fff20b', 'standing on the path previews the held yellow color');
+  assert.equal(h.state.paint.path, '#ff3935'); assert.equal(JSON.parse(h.stored.get('bbt-paint-world')).path, '#ff3935');
+  h.state.position = { x: 1000, y: 600 }; h.frame(32);
+  assert.equal(node('path').getAttribute('stroke'), '#ff3935', 'leaving the path restores its last confirmed color');
+  assert.equal(node('grass').getAttribute('fill'), '#fff20b'); assert.equal(h.state.paint.grass, undefined);
+  h.showPanel('help'); assert.equal(node('grass').getAttribute('fill'), '#40cea1', 'opening a panel clears the temporary preview');
+  h.closePanel(); h.frame(48); assert.equal(node('grass').getAttribute('fill'), '#fff20b');
+  h.press(h.windowHandlers, h.event('Escape', 'Escape', h.game));
+  assert.equal(node('grass').getAttribute('fill'), '#40cea1'); assert.equal(h.state.paint.path, '#ff3935');
+  pick('yellow'); h.state.position = { x: 700, y: 475 }; h.frame(64);
+  const path = new h.Element('path', 'path', { paintTarget: 'path' });
+  for (const callback of h.game.handlers.get('click')) callback({ target: path });
+  assert.equal(h.state.paint.path, '#ff3935', 'clicking only selects the preview and never commits a color');
+  h.press(h.windowHandlers, h.event(key, code, h.game, true)); assert.equal(h.state.paint.path, '#ff3935');
+  h.press(h.windowHandlers, h.event(key, code, h.game));
+  assert.equal(h.state.paint.path, '#fff20b'); assert.equal(JSON.parse(h.stored.get('bbt-paint-world')).path, '#fff20b');
+  pick('blue'); h.state.position = { x: 700, y: 475 }; h.frame(80);
+  assert.equal(node('path').getAttribute('stroke'), '#1d55ff');
+  flyIntoSky(h, key, code);
+  h.state.position = { ...painting.PAINT_SURFACES.find(surface => surface.id === 'cloud-0').walk }; h.frame(48000);
+  assert.equal(node('cloud-0').style.color, '#1d55ff'); assert.equal(h.state.paint['cloud-0'], undefined);
+  h.press(h.windowHandlers, h.event('Escape', 'Escape', h.game));
+  assert.equal(node('cloud-0').style.color, '#ffffff', 'unconfirmed cloud colors are restored when the can is put down');
+  assert.equal(node('path').getAttribute('stroke'), '#fff20b', 'discarding a later preview keeps the previously confirmed yellow');
+  assert.equal(JSON.parse(h.stored.get('bbt-paint-world')).path, '#fff20b');
+  landAndExit(h, key, code);
+  pick('white'); flyIntoSky(h, key, code);
+  h.state.position = { ...painting.PAINT_SURFACES.find(surface => surface.id === 'cloud-0').walk }; h.frame(48000);
+  assert.equal(node('cloud-0').style.color, '#ffffff'); assert.equal(h.state.paint['cloud-0'], undefined);
+  h.press(h.windowHandlers, h.event(key, code, h.game)); assert.equal(h.state.paint['cloud-0'], '#ffffff');
+}
+console.log('PASS: temporary color previews follow movement, restore confirmed colors, do not save on click or key repeat, commit only on Enter/Space, clear on Escape and panels, and include white clouds.');
+
+for (const animal of ['cat', 'dog', 'horse', 'monkey']) {
+  const h = await harness(false, animal), can = painting.paintSlots(content.PALETTE).find(color => color.id === 'red');
+  h.enterRoom('wardrobe'); h.state.position = { ...can }; h.game.focus();
+  h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game)); h.leaveRoom();
+  let clock = flyIntoSky(h);
+  assert(h.game.innerHTML.includes(`<use id="rocket-pilot" href="#animal-${animal}"`));
+  assert(h.get('#rocket-paint').innerHTML.includes(can.color), 'the carried bucket is visible on the rocket');
+  const inAir = { ...h.state.position };
+  new h.Element('music shortcut', 'button', { open: 'radio' }).click();
+  assert.equal(h.state.scene, 'sky'); assert(h.state.rocket.riding && h.state.rocket.airborne);
+  assert.deepEqual({ ...h.state.position }, inAir, 'house shortcuts cannot make the pilot leave a rocket in the air');
+  h.game.focus(); h.press(h.windowHandlers, h.event(' ', 'Space', h.game));
+  assert(h.state.rocket.riding && h.state.rocket.airborne, 'confirmation in the air paints rather than exiting');
+  assert.equal(h.state.paintCan, 'red');
+  h.state.keys.add('ArrowLeft');
+  for (let i = 0; i < 15; i++) h.frame(++clock * 16);
+  h.state.keys.clear(); assert(h.state.position.x < inAir.x - 40, 'direction keys steer the flying rocket');
+  h.state.keys.add('ArrowRight');
+  for (let i = 0; i < 15; i++) h.frame(++clock * 16);
+  h.state.keys.clear(); h.state.keys.add('ArrowDown');
+  while (h.state.rocket.airborne && clock < 3000) h.frame(++clock * 16);
+  assert.equal(h.state.scene, 'world'); assert(h.state.rocket.riding && !h.state.rocket.airborne);
+  assert(h.state.position.y >= 63, 'touching the grass lands the rocket without teleporting');
+  assert.equal(h.currentInteraction().kind, 'rocket-exit');
+  h.game.focus(); h.press(h.windowHandlers, h.event(' ', 'Space', h.game));
+  assert.equal(h.state.rocket.riding, false); assert.equal(h.state.paintCan, 'red');
+  assert(core.canStand(h.state.position.x, h.state.position.y, core.WORLD.radius, 'world', h.state.rocket.position));
+  assert.equal(h.state.animal, animal);
+  assert.equal(h.currentInteraction().kind, 'rocket-board', 'the rocket stays at its landing site and can be boarded again');
+  h.press(h.windowHandlers, h.event('Enter', 'NumpadEnter', h.game));
+  assert(h.state.rocket.riding && !h.state.rocket.airborne);
+}
+console.log('PASS: all four animals sit visibly inside, fly with their bucket using direction keys, cannot exit through house shortcuts while airborne, land on grass, step out and reboard at the landing site.');
+
+const returning = await harness(false, 'cat');
+returning.state.rocket.riding = true; returning.state.rocket.airborne = true;
+returning.state.position = { x: 1100, y: 650 }; returning.state.rocket.position = { ...returning.state.position };
+new returning.Element('return from a flight over the meadow', 'button', { action: 'exit-walk' }).click();
+let returnClock = 0;
+while (returning.state.rocket.airborne && returnClock < 500) returning.frame(++returnClock * 16);
+assert(!returning.state.rocket.airborne && returning.state.rocket.riding, 'the return button also lands when approaching its destination from below');

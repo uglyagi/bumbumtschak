@@ -1,11 +1,12 @@
-import { WORLD, WORLD_SPAWN, STATIONS, clamp, move, planPath, isActionKey, HOUSE_DOORS, worldTouch } from './game-core.js';
+import { WORLD, WORLD_SPAWN, STATIONS, clamp, move, planPath, isActionKey, HOUSE_DOORS, worldTouch, canLandRocket, rocketExitPosition } from './game-core.js';
 import { ANIMALS, BAND, TRACKS, CONCERTS, CONTACT, INFO, PALETTE, loadContent, text } from './content.js';
-import { PAINT_SURFACES, PAINT_RESET, PAINT_NEXT, paintSlots, paintPages, nearbyPaintSurface, canPaintSurface, cleanPaint, paintCanMarkup } from './painting.js';
+import { PAINT_SURFACES, PAINT_RESET, PAINT_NEXT, paintSlots, paintPages, nearbyPaintSurface, canPaintSurface, cleanPaint, paintCanMarkup, createPaintPreview } from './painting.js';
 import { icon, avatar, memberArt, worldMarkup } from './art.js';
 import { cassetteMarkup, cassetteSVG, roomMarkup, slotContents, slotDescription } from './room-art.js';
 import { ROOMS, ROOM_SPAWN, EXIT, RADIO, TAPE_SLOTS, SHELF_SWITCH, ROOM_PROPS, ANIMAL_SPOTS, slotsOnPage, tapePages, findTapeSlot, refreshBandWayfinding, roomFor, createCassetteState, tapeLocation, cassetteAction, nearbyInteraction, throughExit, nextMenuIndex } from './rooms.js';
 import { brandIcon, socialPads, contactLinks } from './social.js';
 import { adminURL } from './connection.js';
+import { SKY, GROUND_ROCKET, moveRocket, outsideScene } from './sky-world.js';
 
 const previewMode = new URLSearchParams(location.search).get('preview') === '1';
 const contentStatus = await loadContent(previewMode);
@@ -33,6 +34,7 @@ const state = {
   keys: new Set(), pad: new Map(), path: [], destination: null,
   near: null, modal: null, playing: false,
   paint: savedPaint, paintCan: null, paintPage: 0, paintTarget: null,
+  rocket: { position: { ...GROUND_ROCKET }, riding: false, airborne: false },
   volume: clamp(Number(storage.get('volume', '.6')) || 0, 0, 1),
   reduced: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
 };
@@ -48,13 +50,14 @@ for (const node of document.querySelectorAll('[data-copy-aria]')) node.setAttrib
 document.title = text('page_title');
 document.querySelector('meta[name=description]')?.setAttribute('content', text('page_description'));
 audio.volume = state.volume;
-let previousFocus = null, toastTimer, lastTime = 0, stuckTime = 0;
+let previousFocus = null, toastTimer, lastTime = 0, stuckTime = 0, paintPreview = null;
 
 function announce(message) { $('#announcement').textContent = message; }
 function toast(message) { clearTimeout(toastTimer); const el = $('#toast'); el.textContent = message; el.hidden = false; toastTimer = setTimeout(() => { el.hidden = true; }, 3500); }
 function updateAnimal() {
   const animal = ANIMALS.find(a => a.id === state.animal);
   playerUse.setAttribute('href', `#animal-${animal.id}`);
+  $('#rocket-pilot')?.setAttribute('href', `#animal-${animal.id}`);
   $('#player-chip').innerHTML = `${avatar(animal.id)}<span><strong>${animal.name}</strong><small>${T('character_change')}</small></span>`;
   $('#player-chip').setAttribute('aria-label', text('player_label', { tier: animal.name }));
 }
@@ -66,7 +69,7 @@ function characterPanel() {
     ${state.started ? exitWay() : ''}<div class="welcome-foot"><span>${T('welcome_keys')}</span><span>${icon('music')} ${T('welcome_music')}</span></div></div>`;
 }
 const inspectionPanels = new Set(['grownups', 'letter', 'help']);
-const backLabel = () => text(state.scene === 'world' ? 'back_world' : 'back_room');
+const backLabel = () => text(state.scene === 'sky' ? 'back_flight' : state.scene === 'world' ? 'back_world' : 'back_room');
 const closeButton = () => `<button class="modal-close" data-action="close" aria-label="${escape(backLabel())}">${icon('close')}</button>`;
 function exitWay() {
   return `<div class="modal-exitway"><button class="secondary-button" data-action="close">↩ ${escape(backLabel())}</button>${state.scene !== 'world' ? `<button class="text-button" data-action="leave">${T('back_direct')}</button>` : ''}<small>${T(inspectionPanels.has(state.modal) ? 'inspect_close_hint' : 'menu_keys')}</small></div>`;
@@ -149,20 +152,26 @@ function refreshCassettes() {
 function refreshPaint() {
   const color = PALETTE.find(color => color.id === state.paintCan), carried = $('#carried-paint');
   if (carried) { carried.toggleAttribute('hidden', !color); carried.innerHTML = color ? paintCanMarkup(color.color) : ''; }
+  const rocketPaint = $('#rocket-paint');
+  if (rocketPaint) { rocketPaint.toggleAttribute('hidden', !color || !state.rocket.riding); rocketPaint.innerHTML = color ? paintCanMarkup(color.color) : ''; }
   const indicator = $('#paint-indicator'); indicator.hidden = !color;
   if (color) indicator.innerHTML = `<svg viewBox="0 0 80 94" aria-hidden="true">${paintCanMarkup(color.color)}</svg><span><strong>${escape(color.name)}</strong><small>${T('paint_carry_hint')}</small><button data-action="put-paint">${T('paint_put_down')}</button></span>`;
 }
 function renderScene() {
-  game.innerHTML = state.scene === 'world' ? worldMarkup(state.paint, !!state.paintCan) : roomMarkup(state.scene, state.shelfPage, state.tapes, state.animal, { can: state.paintCan, page: state.paintPage });
+  clearPaintPreview();
+  game.innerHTML = outsideScene(state.scene) ? worldMarkup(state.paint, !!state.paintCan, state.scene, state.rocket, state.animal) : roomMarkup(state.scene, state.shelfPage, state.tapes, state.animal, { can: state.paintCan, page: state.paintPage });
   world = $('#world-svg'); player = $('#player'); playerUse = $('#player-use'); marker = $('#destination-marker');
-  game.setAttribute('aria-label', state.scene === 'world' ? text('world_title') : ROOMS[state.scene].title);
-  $('.wayfinder').hidden = state.scene !== 'world'; $('.exit-room').hidden = state.scene === 'world';
-  game.classList.toggle('in-room', state.scene !== 'world');
+  game.setAttribute('aria-label', state.scene === 'sky' ? text('sky_title') : state.scene === 'world' ? text('world_title') : ROOMS[state.scene].title);
+  $('.wayfinder').hidden = state.scene !== 'world' || state.rocket.riding;
+  $('.exit-room').hidden = state.scene === 'world' && !state.rocket.riding;
+  $('.exit-room').textContent = text(state.rocket.riding ? state.rocket.airborne ? 'rocket_land_button' : 'rocket_exit' : 'exit_button');
+  game.classList.toggle('in-room', !outsideScene(state.scene));
+  player.toggleAttribute('hidden', state.rocket.riding);
   state.near = null; updateAnimal(); refreshCassettes(); resize(); updateNear();
   player.setAttribute('transform', `translate(${state.position.x} ${state.position.y})`);
 }
 function showPanel(id, focusSelector = '') {
-  stopWalking(); state.modal = id; game.classList.add('paused');
+  stopWalking(); clearPaintPreview(); state.modal = id; game.classList.add('paused');
   modalContent.innerHTML = renderPanel(id);
   if (!modal.open) modal.showModal();
   if (focusSelector) modalContent.querySelector(focusSelector)?.focus();
@@ -189,13 +198,16 @@ function beginWorld(close = true) {
 }
 function enterRoom(id) {
   const room = roomFor(id); if (!room) return;
+  if (state.rocket.riding) { closePanel(); toast(text('rocket_land_first')); return false; }
   if (!state.started) beginWorld(false);
   state.returnPosition = { ...HOUSE_DOORS.find(door => door.id === room).outside };
-  stopWalking(); closePanel(); state.scene = room; state.position = { ...(ROOMS[room].spawn || ROOM_SPAWN) };
+  stopWalking(); closePanel(); state.paintTarget = null; state.scene = room; state.position = { ...(ROOMS[room].spawn || ROOM_SPAWN) };
   renderScene(); game.focus({ preventScroll: true });
   announce(text('entered_room', { haus: ROOMS[room].title }));
+  return true;
 }
 function leaveRoom() {
+  if (state.rocket.riding) { closePanel(); if (state.rocket.airborne) returnToGround(); else exitRocket(); return; }
   stopWalking(); closePanel();
   if (state.scene !== 'world') {
     state.scene = 'world'; state.position = { ...(state.returnPosition || WORLD_SPAWN) }; renderScene();
@@ -204,7 +216,7 @@ function leaveRoom() {
 }
 function visit(id) { if (id === 'social') goToStation('social'); else if (roomFor(id)) enterRoom(id); else showPanel(id); }
 function checkWorldTouch() {
-  if (state.scene !== 'world' || modal.open || !state.started) return;
+  if (state.scene !== 'world' || state.rocket.riding || modal.open || !state.started) return;
   const touch = worldTouch(state.position);
   if (touch) enterRoom(touch.id);
 }
@@ -232,31 +244,69 @@ for (const event of ['play', 'pause', 'ended']) audio.addEventListener(event, re
 audio.addEventListener('error', () => { refreshPlayback(); toast(text('audio_error')); });
 document.addEventListener('input', e => { if (e.target.id === 'volume') { state.volume = Number(e.target.value); audio.volume = state.volume; storage.set('volume', state.volume); } });
 function currentInteraction() {
+  if (state.rocket.riding && !state.rocket.airborne) return { id: 'rocket', kind: 'rocket-exit', label: text('rocket_exit') };
+  if (state.rocket.riding && state.scene !== 'sky') return null;
+  const interaction = nearbyInteraction(state.scene, state.position, state.tapes, state.shelfPage, { can: state.paintCan, page: state.paintPage }, state.rocket.position);
+  if (interaction?.kind === 'rocket-board') return interaction;
   const color = PALETTE.find(color => color.id === state.paintCan);
-  if (state.scene === 'world' && color) {
+  if (outsideScene(state.scene) && color) {
     const selected = PAINT_SURFACES.find(surface => surface.id === state.paintTarget);
     const surface = canPaintSurface(state.position, selected) ? selected : nearbyPaintSurface(state.position);
     return { ...surface, kind: 'paint', label: text('paint_action', { flaeche: text(surface.key), farbe: color.name }) };
   }
-  return nearbyInteraction(state.scene, state.position, state.tapes, state.shelfPage, { can: state.paintCan, page: state.paintPage });
+  return interaction;
+}
+function boardRocket() {
+  stopWalking(); state.paintTarget = null; state.rocket.riding = true; state.rocket.airborne = false;
+  state.position = { ...state.rocket.position }; renderScene(); game.focus({ preventScroll: true });
+  toast(text('rocket_boarded')); announce(text('rocket_boarded'));
+}
+function exitRocket() {
+  if (!state.rocket.riding || state.rocket.airborne) return;
+  const exit = rocketExitPosition(state.rocket.position); if (!exit) return;
+  stopWalking(); state.rocket.riding = false; state.scene = 'world'; state.position = exit; state.paintTarget = null;
+  renderScene(); game.focus({ preventScroll: true }); announce(text('rocket_exited'));
+}
+function returnToGround() {
+  if (!state.rocket.riding) return;
+  if (!state.rocket.airborne) { exitRocket(); return; }
+  navigateTo(GROUND_ROCKET.x, GROUND_ROCKET.y, { kind: 'land-rocket' }); announce(text('rocket_returning'));
+}
+function landRocket() {
+  stopWalking(); state.rocket.airborne = false; state.scene = 'world'; state.paintTarget = null;
+  renderScene(); toast(text('rocket_landed')); announce(text('rocket_landed'));
 }
 function putPaintDown() { state.paintCan = null; state.paintTarget = null; stopWalking(); renderScene(); game.focus({ preventScroll: true }); }
+function clearPaintPreview() { paintPreview?.restore(); paintPreview = null; }
+function refreshPaintPreview(near) {
+  const color = state.started && outsideScene(state.scene) && !modal.open && near?.kind === 'paint' ? PALETTE.find(color => color.id === state.paintCan) : null;
+  if (color && paintPreview?.id === near.id && paintPreview.color === color.color) return;
+  clearPaintPreview();
+  if (color) paintPreview = { id: near.id, color: color.color, restore: createPaintPreview(game, near.id, color.color) };
+}
 function paintSurface(id) {
   const surface = PAINT_SURFACES.find(surface => surface.id === id), color = PALETTE.find(color => color.id === state.paintCan);
-  if (!color || !canPaintSurface(state.position, surface)) return;
-  stopWalking(); state.paint[id] = color.color; state.paintTarget = null;
+  if (!color || !outsideScene(state.scene) || state.rocket.riding && state.scene !== 'sky' || !canPaintSurface(state.position, surface)) return;
+  stopWalking(); state.paint[id] = color.color; state.paintTarget = id;
   storage.set(paintStorageKey, JSON.stringify(state.paint)); renderScene(); game.focus({ preventScroll: true });
   announce(text('paint_done', { flaeche: text(surface.key), farbe: color.name }));
 }
-function activatePaintSurface(id) {
+function activatePaintSurface(id, confirm = true) {
   const surface = PAINT_SURFACES.find(surface => surface.id === id); if (!surface) return;
-  if (canPaintSurface(state.position, surface)) paintSurface(id);
-  else { state.paintTarget = id; navigateTo(surface.walk.x, surface.walk.y); }
+  if (!!surface.sky !== (state.scene === 'sky')) { toast(text(surface.sky ? 'rocket_first' : 'rocket_land_first')); return; }
+  if (state.rocket.riding && state.scene !== 'sky') return;
+  if (confirm && canPaintSurface(state.position, surface)) paintSurface(id);
+  else {
+    state.paintTarget = id;
+    if (canPaintSurface(state.position, surface)) updateNear(); else navigateTo(surface.walk.x, surface.walk.y);
+  }
 }
 function performInteraction() {
   const near = currentInteraction();
   if (!near) return;
   stopWalking();
+  if (near.kind === 'rocket-board') { boardRocket(); return; }
+  if (near.kind === 'rocket-exit') { exitRocket(); return; }
   if (near.kind === 'paint') { paintSurface(near.id); return; }
   if (near.kind === 'take-paint' || near.kind === 'return-paint') {
     state.paintCan = near.kind === 'take-paint' ? near.id : null; state.paintTarget = null; renderScene();
@@ -306,19 +356,22 @@ function activateSocial(id) {
   else navigateTo(p.x, p.y);
 }
 function navigateTo(x, y, destination = null) {
-  const path = planPath(state.position, { x, y }, state.scene);
+  const path = state.rocket.riding ? [{ x: clamp(x, 65, 1535), y: clamp(y, SKY.top + 160, 1040) }] : planPath(state.position, { x, y }, state.scene, state.rocket.position);
   if (!path.length) { toast(text('walk_blocked')); return; }
   state.path = path; state.destination = destination; stuckTime = 0;
   marker.removeAttribute('hidden'); marker.setAttribute('transform', `translate(${x} ${y})`); game.focus({ preventScroll: true });
 }
 function goToStation(id) {
-  const s = STATIONS.find(s => s.id === id); if (!s) return;
+  const station = STATIONS.find(s => s.id === id); if (!station) return;
+  if (state.rocket.riding) { closePanel(); toast(text('rocket_land_first')); return; }
+  const s = id === 'rocket' ? { ...station, ...state.rocket.position } : station;
   if (!state.started) beginWorld(false);
   if (state.scene !== 'world') leaveRoom(); else closePanel();
   navigateTo(s.x, s.y, BAND.some(member => member.id === id) ? { kind: 'station', id } : null); announce(text('walk_target', { ziel: s.label }));
 }
 function goToTape(id) {
   if (!TRACKS.some(t => t.id === id)) return;
+  if (state.rocket.riding) { closePanel(); toast(text('rocket_land_first')); return; }
   if (state.scene !== 'radio') enterRoom('radio'); else closePanel();
   if (state.tapes.loaded === id) { navigateTo(RADIO.x, RADIO.y); toast(text('tape_already_loaded')); return; }
   let target = findTapeSlot(state.tapes, id);
@@ -353,7 +406,7 @@ document.addEventListener('click', e => {
   if (action === 'put-paint') { putPaintDown(); return; }
   if (action === 'close') closePanel();
   if (action === 'leave') leaveRoom();
-  if (action === 'exit-walk') navigateTo(EXIT.x, 1020, { kind: 'exit' });
+  if (action === 'exit-walk') { if (state.rocket.riding) returnToGround(); else navigateTo(EXIT.x, 1020, { kind: 'exit' }); }
   if (action === 'start') beginWorld();
   if (action === 'start-radio') { beginWorld(false); enterRoom('radio'); }
   if (action === 'world') { if (state.scene !== 'world') leaveRoom(); else { closePanel(); if (!state.started) showPanel('characters'); else game.focus(); } }
@@ -431,20 +484,26 @@ function activateRoomTarget(id) {
 game.addEventListener('click', e => {
   if (modal.open || !state.started) return;
   const surface = e.target.closest('[data-paint-target]');
-  if (state.paintCan && state.scene === 'world' && surface) { activatePaintSurface(surface.dataset.paintTarget); return; }
+  if (state.paintCan && outsideScene(state.scene) && surface) { activatePaintSurface(surface.dataset.paintTarget, false); return; }
   const social = e.target.closest('[data-social]');
   if (social) { const pad = socialPads(state.scene).find(p => p.id === social.dataset.social); if (pad) navigateTo(pad.x, pad.y); return; }
   const station = e.target.closest('[data-station]');
-  if (station) { const s = STATIONS.find(s => s.id === station.dataset.station); if (BAND.some(member => member.id === s.id) && Math.hypot(s.x - state.position.x, s.y - state.position.y) < 110) visit(s.id); else goToStation(s.id); return; }
+  if (station) { const s = STATIONS.find(s => s.id === station.dataset.station); if (!s) return; if (BAND.some(member => member.id === s.id) && Math.hypot(s.x - state.position.x, s.y - state.position.y) < 110) visit(s.id); else goToStation(s.id); return; }
   const prop = e.target.closest('[data-room-target]');
   if (prop) { activateRoomTarget(prop.dataset.roomTarget); return; }
   const matrix = world.getScreenCTM(); if (!matrix) return;
   const point = new DOMPoint(e.clientX, e.clientY).matrixTransform(matrix.inverse()); navigateTo(point.x, point.y);
 });
+game.addEventListener('focusin', e => {
+  const surface = e.target.closest('[data-paint-target]');
+  if (state.paintCan && outsideScene(state.scene) && !modal.open && surface && canPaintSurface(state.position, PAINT_SURFACES.find(item => item.id === surface.dataset.paintTarget))) {
+    state.paintTarget = surface.dataset.paintTarget; updateNear();
+  }
+});
 game.addEventListener('keydown', e => {
   if (!isActionKey(e)) return;
   const surface = e.target.closest('[data-paint-target]');
-  if (state.paintCan && state.scene === 'world' && surface) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) activatePaintSurface(surface.dataset.paintTarget); return; }
+  if (state.paintCan && outsideScene(state.scene) && surface) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) activatePaintSurface(surface.dataset.paintTarget); return; }
   const social = e.target.closest('[data-social]');
   if (social) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) activateSocial(social.dataset.social); return; }
   const station = e.target.closest('[data-station]'), prop = e.target.closest('[data-room-target]');
@@ -452,14 +511,14 @@ game.addEventListener('keydown', e => {
   e.preventDefault(); e.stopPropagation(); if (e.repeat) return;
   if (station) {
     const near = currentInteraction();
-    if (near?.kind === 'read' && near.id === station.dataset.station) performInteraction();
+    if (['read', 'rocket-board'].includes(near?.kind) && near.id === station.dataset.station) performInteraction();
     else goToStation(station.dataset.station);
   } else activateRoomTarget(prop.dataset.roomTarget);
 });
 const directions = new Map([['ArrowUp', [0, -1]], ['KeyW', [0, -1]], ['ArrowDown', [0, 1]], ['KeyS', [0, 1]], ['ArrowLeft', [-1, 0]], ['KeyA', [-1, 0]], ['ArrowRight', [1, 0]], ['KeyD', [1, 0]]]);
 window.addEventListener('keydown', e => {
   if (modal.open || !state.started) return;
-  if (e.key === 'Escape') { e.preventDefault(); if (!e.repeat) { if (state.paintCan) putPaintDown(); else state.scene === 'world' ? showPanel('pause') : leaveRoom(); } return; }
+  if (e.key === 'Escape') { e.preventDefault(); if (!e.repeat) { if (state.paintCan) putPaintDown(); else outsideScene(state.scene) ? showPanel('pause') : leaveRoom(); } return; }
   if (!(document.activeElement === game || game.contains(document.activeElement))) {
     if (e.key.startsWith('Arrow') && e.target.closest('.header,.footer')) {
       e.preventDefault(); const controls = [...document.querySelectorAll('.header a,.header button,.footer button')];
@@ -477,7 +536,7 @@ const padVectors = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 $('#dpad').querySelectorAll('button').forEach(btn => {
   btn.addEventListener('pointerdown', e => {
     if (!state.started || modal.open) return;
-    e.preventDefault(); btn.setPointerCapture(e.pointerId); state.pad.set(e.pointerId, btn.dataset.direction); btn.classList.add('pressed'); state.path = []; state.destination = null; marker.setAttribute('hidden', ''); game.focus({ preventScroll: true });
+    e.preventDefault(); btn.setPointerCapture(e.pointerId); state.paintTarget = null; state.pad.set(e.pointerId, btn.dataset.direction); btn.classList.add('pressed'); state.path = []; state.destination = null; marker.setAttribute('hidden', ''); game.focus({ preventScroll: true });
   });
   const release = e => { state.pad.delete(e.pointerId); btn.classList.remove('pressed'); };
   btn.addEventListener('pointerup', release); btn.addEventListener('pointercancel', release); btn.addEventListener('lostpointercapture', release);
@@ -486,6 +545,7 @@ $('#dpad').querySelectorAll('button').forEach(btn => {
 $('#interact').addEventListener('click', performInteraction);
 function updateNear() {
   const near = currentInteraction();
+  refreshPaintPreview(near);
   if (near?.kind === state.near?.kind && near?.id === state.near?.id && near?.slot === state.near?.slot) return;
   state.near = near; const btn = $('#interact'); btn.hidden = !near;
   if (near) {
@@ -501,10 +561,11 @@ function resize() {
 }
 function updateCamera(dt, snap = false) {
   const { w, h } = state.viewport;
-  const tx = clamp(state.position.x, w / 2, WORLD.width - w / 2), ty = clamp(state.position.y - 130, h / 2, WORLD.height - h / 2);
+  const top = outsideScene(state.scene) ? WORLD.top : 0;
+  const tx = clamp(state.position.x, w / 2, WORLD.width - w / 2), ty = clamp(state.position.y - (outsideScene(state.scene) ? 240 : 130), top + h / 2, WORLD.height - h / 2);
   const amount = snap || state.reduced ? 1 : Math.min(1, dt * 9);
   state.camera.x += (tx - state.camera.x) * amount; state.camera.y += (ty - state.camera.y) * amount;
-  world.setAttribute('viewBox', `${clamp(state.camera.x - w / 2, 0, WORLD.width - w).toFixed(2)} ${clamp(state.camera.y - h / 2, 0, WORLD.height - h).toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)}`);
+  world.setAttribute('viewBox', `${clamp(state.camera.x - w / 2, 0, WORLD.width - w).toFixed(2)} ${clamp(state.camera.y - h / 2, top, WORLD.height - h).toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)}`);
 }
 function frame(time) {
   const dt = Math.min(.05, Math.max(0, (time - (lastTime || time)) / 1000)); lastTime = time;
@@ -521,11 +582,23 @@ function frame(time) {
         marker.setAttribute('hidden', ''); const destination = state.destination; state.destination = null;
         if (destination?.kind === 'station') visit(destination.id);
         if (destination?.kind === 'exit') leaveRoom();
+        if (destination?.kind === 'land-rocket' && state.rocket.riding && canLandRocket(state.position)) landRocket();
       }
     }
     if (dx || dy) {
-      const old = state.position, stepTime = state.path.length ? Math.min(dt, Math.hypot(dx, dy) / WORLD.speed) : dt;
-      state.position = move(old, dx, dy, stepTime, state.scene); walking = Math.hypot(state.position.x - old.x, state.position.y - old.y) > .05;
+      const old = state.position, stepTime = state.path.length ? Math.min(dt, Math.hypot(dx, dy) / (state.rocket.riding ? 255 : WORLD.speed)) : dt;
+      if (state.rocket.riding) {
+        if (!state.rocket.airborne && dy < 0) { state.rocket.airborne = true; renderScene(); announce(text('rocket_flying')); }
+        if (state.rocket.airborne) {
+          state.position = moveRocket(old, dx, dy, stepTime); state.rocket.position = { ...state.position };
+          const scene = state.position.y < 0 ? 'sky' : 'world';
+          if (scene !== state.scene) { state.scene = scene; state.paintTarget = null; renderScene(); }
+          if (dy > 0 && canLandRocket(state.position)) {
+            landRocket();
+          }
+        }
+      } else state.position = move(old, dx, dy, stepTime, state.scene, state.rocket.position);
+      walking = Math.hypot(state.position.x - old.x, state.position.y - old.y) > .05;
       if (state.path.length) {
         stuckTime = walking ? 0 : stuckTime + dt;
         if (stuckTime > .8) { state.path = []; state.destination = null; marker.setAttribute('hidden', ''); toast(text('walk_stuck')); }
@@ -535,7 +608,9 @@ function frame(time) {
     checkWorldTouch();
     updateNear(); updateCamera(dt);
   }
-  player.classList.toggle('is-moving', walking); player.setAttribute('transform', `translate(${state.position.x.toFixed(2)} ${state.position.y.toFixed(2)})`); requestAnimationFrame(frame);
+  player.classList.toggle('is-moving', walking); player.setAttribute('transform', `translate(${state.position.x.toFixed(2)} ${state.position.y.toFixed(2)})`);
+  if (outsideScene(state.scene) && state.rocket.riding) $('#rocket')?.setAttribute('transform', `translate(${state.position.x.toFixed(2)} ${state.position.y.toFixed(2)})`);
+  requestAnimationFrame(frame);
 }
 renderScene(); new ResizeObserver(resize).observe(game); requestAnimationFrame(frame);
 if (previewMode) {

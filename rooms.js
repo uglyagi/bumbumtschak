@@ -2,6 +2,7 @@ import { STATIONS, nearbyWorldObject } from './game-core.js';
 import { socialPads } from './social.js';
 import { TRACKS, BAND, ANIMALS, PALETTE, text } from './content.js';
 import { paintSlots, paintPages, PAINT_RESET, PAINT_NEXT } from './painting.js';
+import { GROUND_ROCKET, ROCKET_REACH } from './sky-world.js';
 
 export const ROOMS = {
   radio: { color: '#ff87ce', station: 'radio' },
@@ -61,9 +62,11 @@ export function cassetteAction(state, action) {
   return state;
 }
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-export function nearbyInteraction(scene, position, tapes, shelfPage = 0, paint = {}) {
+export function nearbyInteraction(scene, position, tapes, shelfPage = 0, paint = {}, rocketPosition = GROUND_ROCKET) {
+  if (scene === 'sky') return null;
   const links = socialPads(scene).map(p => ({ ...p, kind: p.id === 'email' ? 'email' : 'external', distance: distance(position, p), label: p.id === 'email' ? text('action_email', { adresse: p.email }) : text('action_external', { kanal: p.label }) })).filter(p => p.distance <= p.reach);
   if (scene === 'world') {
+    if (distance(position, rocketPosition) < ROCKET_REACH) return { id: 'rocket', kind: 'rocket-board', label: text('rocket_board') };
     const choices = STATIONS.filter(s => BAND.some(member => member.id === s.id)).map(s => ({ ...s, kind: 'read', label: text('action_member', { name: s.label }), distance: distance(position, s) })).filter(s => s.distance < 110);
     const object = nearbyWorldObject(position);
     if (object) choices.push({ ...object, kind: 'read', label: text(object.id === 'grownups' ? 'action_grownups' : 'sign_help') });
@@ -96,7 +99,7 @@ export function nearbyInteraction(scene, position, tapes, shelfPage = 0, paint =
   for (const p of ROOM_PROPS[scene] || []) if (distance(position, p) < 105) candidates.push({ kind: 'read', id: p.id, label: p.label, distance: distance(position, p) });
   return candidates.sort((a, b) => a.distance - b.distance)[0] || null;
 }
-export const throughExit = (scene, position) => scene !== 'world' && Math.abs(position.x - EXIT.x) < 48 && position.y > 1004;
+export const throughExit = (scene, position) => !!ROOMS[scene] && Math.abs(position.x - EXIT.x) < 48 && position.y > 1004;
 export function nextMenuIndex(current, key, count, columns = 1) {
   if (!count) return -1;
   if (key === 'Home') return 0;

@@ -6,7 +6,7 @@ import { GitHubStore } from '../verwaltung/github-store.js';
 import { COPY_GROUPS, normalizeTexts } from '../copy-defaults.js';
 import { DEFAULT_BAND, bandMembers } from '../band-defaults.js';
 import { DEFAULT_ANIMALS, playableAnimals } from '../animal-defaults.js';
-import { paletteColors, PALETTE_LIMIT } from '../painting.js';
+import { paletteColors, PALETTE_LIMIT, DEFAULT_PALETTE } from '../painting.js';
 import { fileReferences } from '../verwaltung/drafts.js';
 import { validateContent, validateUpload, checkMagic } from '../verwaltung/schema.js';
 import { RepositoryFixture, TEST_TOKEN } from './github-fixture.mjs';
@@ -35,7 +35,7 @@ async function harness(saved = null) {
   for (const id of ['concerts', 'music', 'info']) get('#tab-' + id).dataset.tab = id;
   get('#editor').hidden = true;
   const context = vm.createContext({
-    COPY_GROUPS, normalizeTexts, DEFAULT_BAND, bandMembers, DEFAULT_ANIMALS, playableAnimals, paletteColors, PALETTE_LIMIT, fileReferences, validateContent, validateUpload, checkMagic,
+    COPY_GROUPS, normalizeTexts, DEFAULT_BAND, bandMembers, DEFAULT_ANIMALS, playableAnimals, paletteColors, PALETTE_LIMIT, DEFAULT_PALETTE, fileReferences, validateContent, validateUpload, checkMagic,
     REPOSITORY: 'uglyagi/bumbumtschak', GitHubStore: class extends GitHubStore { constructor(token) { super(token, repo.fetch); } },
     readDraft: async () => structuredClone(draft),
     writeDraft: async ({ document, contentSha, files }) => { draft = structuredClone({ document, contentSha, files, savedAt: '2026-10-18T09:00:00Z' }); },
@@ -134,19 +134,19 @@ test('playable character graphics and extra paint colors publish with their edit
   const name = new h.Element('monkey name', { path: 'info.animals.3.name' }); name.value = 'Unser Affe';
   await h.fire('#panel', 'input', name);
   const add = new h.Element('add color', { addColor: '' }); await h.click(add);
-  assert.equal(h.state.document.info.palette.length, 6);
+  assert.equal(h.state.document.info.palette.length, DEFAULT_PALETTE.length + 1);
   for (const [key, value] of [['name', 'Orange'], ['color', '#ff9900']]) {
-    const field = new h.Element('extra color', { path: 'info.palette.5.' + key }); field.value = value;
+    const field = new h.Element('extra color', { path: 'info.palette.' + DEFAULT_PALETTE.length + '.' + key }); field.value = value;
     await h.fire('#panel', 'input', field);
   }
   assert(await h.save(true));
   assert.equal(h.repo.document().info.animals[3].name, 'Unser Affe');
   assert.equal(h.repo.document().info.animals[3].image, imagePath);
   assert.deepEqual(h.repo.blobs.get(h.repo.currentTree().get(imagePath)), png);
-  assert.equal(h.repo.document().info.palette[5].name, 'Orange'); assert.equal(h.repo.document().info.palette[5].color, '#ff9900');
+  assert.equal(h.repo.document().info.palette[DEFAULT_PALETTE.length].name, 'Orange'); assert.equal(h.repo.document().info.palette[DEFAULT_PALETTE.length].color, '#ff9900');
   assert.equal(h.repo.requests.filter(request => request.method === 'PATCH').length, 1, 'image, character and palette publish atomically');
   await h.click(new h.Element('original monkey', { resetAnimal: 'monkey' }));
   assert.equal(h.state.document.info.animals[3].image, DEFAULT_ANIMALS[3].image);
-  await h.click(new h.Element('remove orange', { removeColor: '5' }));
-  assert.equal(h.state.document.info.palette.length, 5);
+  await h.click(new h.Element('remove orange', { removeColor: String(DEFAULT_PALETTE.length) }));
+  assert.equal(h.state.document.info.palette.length, DEFAULT_PALETTE.length);
 });
