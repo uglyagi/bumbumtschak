@@ -504,3 +504,34 @@ assert.equal(mousePaint.state.paint.grass, undefined, 'even a stale mouse action
 mousePaint.game.focus(); mousePaint.press(mousePaint.windowHandlers, mousePaint.event(' ', 'Space', mousePaint.game));
 assert.equal(mousePaint.state.paint.grass, '#1d55ff', 'confirmation by keyboard still commits the preview');
 console.log('PASS: holding a paint bucket makes mouse clicks steer to the actual transformed point, without selecting or committing colors or displaying contextual paint actions; Space still paints.');
+
+const spaceFlight = await harness(false, 'monkey', { path: '#ff3935' });
+spaceFlight.enterRoom('wardrobe'); spaceFlight.state.position = { ...painting.paintSlots(content.PALETTE).find(color => color.id === 'white') }; spaceFlight.game.focus();
+spaceFlight.press(spaceFlight.windowHandlers, spaceFlight.event('Enter', 'Enter', spaceFlight.game)); spaceFlight.leaveRoom();
+spaceFlight.state.position = { ...sky.GROUND_ROCKET }; spaceFlight.game.focus();
+spaceFlight.press(spaceFlight.windowHandlers, spaceFlight.event('Enter', 'Enter', spaceFlight.game));
+spaceFlight.state.keys.add('ArrowUp');
+let spaceTick = 0, firstSpace = null;
+while (spaceTick < 450) {
+  spaceFlight.frame(++spaceTick * 16);
+  if (spaceTick * 16 < 6000) assert.notEqual(spaceFlight.state.scene, 'space');
+  if (spaceFlight.state.scene === 'space' && firstSpace === null) firstSpace = spaceTick * 16;
+}
+assert(firstSpace >= 6000 && firstSpace <= 7000, String(firstSpace));
+assert.equal(spaceFlight.state.scene, 'space'); assert.equal(spaceFlight.state.viewport.w, 1200, 'space uses one world unit per CSS pixel at this viewport');
+assert.equal(spaceFlight.state.paintCan, 'white'); assert.equal(spaceFlight.state.animal, 'monkey');
+assert(spaceFlight.game.innerHTML.includes('data-planet="neptune"'));
+spaceFlight.state.keys.clear(); spaceFlight.game.focus(); spaceFlight.press(spaceFlight.windowHandlers, spaceFlight.event(' ', 'Space', spaceFlight.game));
+assert(spaceFlight.state.rocket.riding && spaceFlight.state.rocket.airborne, 'the pilot cannot leave in space');
+spaceFlight.state.keys.add('ArrowUp');
+while (spaceFlight.state.position.y > -6750 && spaceTick < 2400) spaceFlight.frame(++spaceTick * 16);
+spaceFlight.state.keys.clear(); assert(spaceFlight.state.position.y < -6700, 'the flight reaches beyond all eight planets');
+new spaceFlight.Element('return from deep space', 'button', { action: 'exit-walk' }).click();
+const returnScenes = new Set();
+while (spaceFlight.state.rocket.airborne && spaceTick < 6000) { spaceFlight.frame(++spaceTick * 16); returnScenes.add(spaceFlight.state.scene); }
+assert(returnScenes.has('space') && returnScenes.has('sky') && returnScenes.has('world'));
+assert(!spaceFlight.state.rocket.airborne && spaceFlight.state.rocket.riding);
+spaceFlight.game.focus(); spaceFlight.press(spaceFlight.windowHandlers, spaceFlight.event('Enter', 'Enter', spaceFlight.game));
+assert.equal(spaceFlight.state.rocket.riding, false); assert.equal(spaceFlight.state.paintCan, 'white');
+assert.equal(spaceFlight.state.paint.path, '#ff3935');
+console.log('PASS: real Up handlers enter space after ' + firstSpace + ' ms, retain the pilot, bucket and drawing, reach every planet and return through sky to a safe landing and exit.');

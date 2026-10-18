@@ -105,7 +105,7 @@ export function createPaintPreview(root, id, color) {
   };
   for (const node of root.querySelectorAll(`[data-paint-target="${id}"]`)) {
     const property = node.dataset.paintProperty;
-    if (['fill', 'stroke', 'color'].includes(property)) change(node, property, color);
+    if (['fill', 'stroke', 'color', 'stop-color'].includes(property)) change(node, property, color);
   }
   for (const node of root.querySelectorAll(`[data-paint-ink="${id}"]`)) change(node, 'fill', readableInk(color));
   return () => { while (undo.length) undo.pop()(); };

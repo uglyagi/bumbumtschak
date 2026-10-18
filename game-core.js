@@ -1,6 +1,6 @@
-import { SKY, GROUND_ROCKET, rocketBody } from './sky-world.js';
+import { SPACE, SKY, GROUND_ROCKET, rocketBody } from './sky-world.js';
 
-export const WORLD = { width: 1600, height: 1100, top: SKY.top, radius: 18, speed: 205 };
+export const WORLD = { width: 1600, height: 1100, top: SPACE.top, radius: 18, speed: 205 };
 export const WORLD_SPAWN = { x: 650, y: 650 };
 export const OBSTACLES = [
   { x: 530, y: 110, w: 555, h: 223 },
@@ -50,13 +50,14 @@ export const isActionKey = event => event.key === 'Enter' || event.key === ' ' |
 const WALLS = [{ x: 125, y: 100, w: 1350, h: 145 }, { x: 125, y: 210, w: 35, h: 860 }, { x: 1440, y: 210, w: 35, h: 860 }, { x: 125, y: 1000, w: 615, h: 80 }, { x: 860, y: 1000, w: 615, h: 80 }];
 export function sceneObstacles(scene = 'world', parkedRocket = GROUND_ROCKET) {
   if (scene === 'world') return parkedRocket ? [...OBSTACLES, rocketBody(parkedRocket)] : OBSTACLES;
-  if (scene === 'sky') return [];
+  if (scene === 'sky' || scene === 'space') return [];
   const props = scene === 'radio' ? [{ x: 615, y: 285, w: 370, h: 180 }, { x: 215, y: 300, w: 355, h: 195 }, { x: 980, y: 275, w: 420, h: 60 }]
     : scene === 'wardrobe' ? [380, 660, 940, 1220].map(x => ({ x: x - 100, y: 350, w: 200, h: 245 }))
     : [{ x: 500, y: 280, w: 600, h: 200 }];
   return [...WALLS, ...props];
 }
 export function canStand(x, y, radius = WORLD.radius, scene = 'world', parkedRocket = GROUND_ROCKET) {
+  if (scene === 'space') return false;
   if (x < radius + 24 || x > WORLD.width - radius - 24) return false;
   if (scene === 'sky') {
     if (y < SKY.top + radius + 45 || y > SKY.bottom - radius - 27) return false;

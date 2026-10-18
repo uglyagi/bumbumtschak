@@ -5,6 +5,7 @@ import { escapeXML as escape } from './utils.js';
 import { WORLD, WORLD_SPAWN } from './game-core.js';
 import { FLOWERS, TREES, CLOUDS, WORLD_PATH, PAINT_SURFACES, paintAttributes, readableInk } from './painting.js';
 import { SKY, GROUND_ROCKET } from './sky-world.js';
+import { spaceMarkup } from './space-art.js';
 export const icon = (name, cls = '') => {
   const paths = {
     music: '<path d="M9 17V5l11-2v12M9 8l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/>',
@@ -73,6 +74,7 @@ export function worldMarkup(paint = {}, painting = false, scene = 'world', rocke
   return `<svg id="world-svg" xmlns="http://www.w3.org/2000/svg" viewBox="60 120 1480 850" font-family="Trebuchet MS, Arial, sans-serif" aria-hidden="false" aria-label="${escape(text('world_title'))}" preserveAspectRatio="xMidYMid meet">
     ${defs()}
     <rect x="0" y="${SKY.top}" width="1600" height="${WORLD.height - SKY.top}" ${P('sky', SKY.color)}/>
+    ${spaceMarkup(paint)}
     <path d="M0 12Q160-9 320 9T640 9 960 9 1280 9 1600 8V${WORLD.height}H0Z" ${P('grass', '#40cea1')}/>
     <path d="M0 12Q160-9 320 9T640 9 960 9 1280 9 1600 8" fill="none" stroke="#101014" stroke-width="4"/>
     <g fill="none" stroke="#101014" stroke-linecap="round" stroke-linejoin="round">

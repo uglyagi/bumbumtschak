@@ -6,7 +6,7 @@ import { cassetteMarkup, cassetteSVG, roomMarkup, slotContents, slotDescription 
 import { ROOMS, ROOM_SPAWN, EXIT, RADIO, TAPE_SLOTS, SHELF_SWITCH, ROOM_PROPS, ANIMAL_SPOTS, slotsOnPage, tapePages, findTapeSlot, refreshBandWayfinding, roomFor, createCassetteState, tapeLocation, cassetteAction, nearbyInteraction, throughExit, nextMenuIndex } from './rooms.js';
 import { brandIcon, socialPads, contactLinks } from './social.js';
 import { adminURL } from './connection.js';
-import { SKY, GROUND_ROCKET, moveRocket, outsideScene } from './sky-world.js';
+import { SPACE, ROCKET_SPEED, GROUND_ROCKET, moveRocket, outsideScene, flightScene } from './sky-world.js';
 
 const previewMode = new URLSearchParams(location.search).get('preview') === '1';
 const contentStatus = await loadContent(previewMode);
@@ -69,7 +69,7 @@ function characterPanel() {
     ${state.started ? exitWay() : ''}<div class="welcome-foot"><span>${T('welcome_keys')}</span><span>${icon('music')} ${T('welcome_music')}</span></div></div>`;
 }
 const inspectionPanels = new Set(['grownups', 'letter', 'help']);
-const backLabel = () => text(state.scene === 'sky' ? 'back_flight' : state.scene === 'world' ? 'back_world' : 'back_room');
+const backLabel = () => text(state.rocket.riding ? 'back_flight' : state.scene === 'world' ? 'back_world' : 'back_room');
 const closeButton = () => `<button class="modal-close" data-action="close" aria-label="${escape(backLabel())}">${icon('close')}</button>`;
 function exitWay() {
   return `<div class="modal-exitway"><button class="secondary-button" data-action="close">↩ ${escape(backLabel())}</button>${state.scene !== 'world' ? `<button class="text-button" data-action="leave">${T('back_direct')}</button>` : ''}<small>${T(inspectionPanels.has(state.modal) ? 'inspect_close_hint' : 'menu_keys')}</small></div>`;
@@ -161,7 +161,7 @@ function renderScene() {
   clearPaintPreview();
   game.innerHTML = outsideScene(state.scene) ? worldMarkup(state.paint, !!state.paintCan, state.scene, state.rocket, state.animal) : roomMarkup(state.scene, state.shelfPage, state.tapes, state.animal, { can: state.paintCan, page: state.paintPage });
   world = $('#world-svg'); player = $('#player'); playerUse = $('#player-use'); marker = $('#destination-marker');
-  game.setAttribute('aria-label', state.scene === 'sky' ? text('sky_title') : state.scene === 'world' ? text('world_title') : ROOMS[state.scene].title);
+  game.setAttribute('aria-label', state.scene === 'space' ? text('space_title') : state.scene === 'sky' ? text('sky_title') : state.scene === 'world' ? text('world_title') : ROOMS[state.scene].title);
   $('.wayfinder').hidden = state.scene !== 'world' || state.rocket.riding;
   $('.exit-room').hidden = state.scene === 'world' && !state.rocket.riding;
   $('.exit-room').textContent = text(state.rocket.riding ? state.rocket.airborne ? 'rocket_land_button' : 'rocket_exit' : 'exit_button');
@@ -356,7 +356,7 @@ function activateSocial(id) {
   else navigateTo(p.x, p.y);
 }
 function navigateTo(x, y, destination = null) {
-  const path = state.rocket.riding ? [{ x: clamp(x, 65, 1535), y: clamp(y, SKY.top + 160, 1040) }] : planPath(state.position, { x, y }, state.scene, state.rocket.position);
+  const path = state.rocket.riding ? [{ x: clamp(x, 65, 1535), y: clamp(y, SPACE.top + 160, 1040) }] : planPath(state.position, { x, y }, state.scene, state.rocket.position);
   if (!path.length) { toast(text('walk_blocked')); return; }
   state.path = path; state.destination = destination; stuckTime = 0;
   marker.removeAttribute('hidden'); marker.setAttribute('transform', `translate(${x} ${y})`); game.focus({ preventScroll: true });
@@ -553,6 +553,10 @@ function updateNear() {
 }
 function resize() {
   const r = game.getBoundingClientRect(); if (!r.width || !r.height) return;
+  if (state.scene === 'space') {
+    const w = Math.min(r.width, WORLD.width);
+    state.viewport = { w, h: w * r.height / r.width }; updateCamera(1, true); return;
+  }
   let w = clamp(r.width * 1.24, 600, 1520), h = w / (r.width / r.height);
   if (h > 1050) { h = 1050; w = h * r.width / r.height; }
   state.viewport = { w, h }; updateCamera(1, true);
@@ -584,13 +588,13 @@ function frame(time) {
       }
     }
     if (dx || dy) {
-      const old = state.position, stepTime = state.path.length ? Math.min(dt, Math.hypot(dx, dy) / (state.rocket.riding ? 255 : WORLD.speed)) : dt;
+      const old = state.position, stepTime = state.path.length ? Math.min(dt, Math.hypot(dx, dy) / (state.rocket.riding ? ROCKET_SPEED : WORLD.speed)) : dt;
       if (state.rocket.riding) {
         if (!state.rocket.airborne && dy < 0) { state.rocket.airborne = true; renderScene(); announce(text('rocket_flying')); }
         if (state.rocket.airborne) {
           state.position = moveRocket(old, dx, dy, stepTime); state.rocket.position = { ...state.position };
-          const scene = state.position.y < 0 ? 'sky' : 'world';
-          if (scene !== state.scene) { state.scene = scene; state.paintTarget = null; renderScene(); }
+          const scene = flightScene(state.position.y);
+          if (scene !== state.scene) { state.scene = scene; state.paintTarget = null; renderScene(); if (scene === 'space') announce(text('space_entered')); }
           if (dy > 0 && canLandRocket(state.position)) {
             landRocket();
           }
