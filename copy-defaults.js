@@ -1,0 +1,1277 @@
+// Editorial text catalog; the JSON companion is used by the standalone PHP export.
+export const COPY_GROUPS = [
+  {
+    "id": "grownups",
+    "label": "Für Große",
+    "fields": [
+      {
+        "key": "grown_title",
+        "label": "Überschrift",
+        "value": "Alle Infos. Auf kurzem Weg.",
+        "max": 180
+      },
+      {
+        "key": "grown_kicker",
+        "label": "Zeile über der Überschrift",
+        "value": "FÜR ELTERN, FAMILIEN & VERANSTALTER",
+        "max": 180
+      },
+      {
+        "key": "grown_intro",
+        "label": "Text direkt unter der Überschrift",
+        "value": "Ein Panda am Schlagzeug, ein Papagei an Bass und Gesang und ein Krokodil an der E-Gitarre: Zusammen sind wir Bum Bum Tschak. Unsere Lieder erzählen vom Tanzen, von Freundschaft, vom Fahrradfahren und von einem Hut, der beim Reiten verloren geht.",
+        "max": 2400
+      },
+      {
+        "key": "grown_music_title",
+        "label": "Musik: Überschrift",
+        "value": "Musik & Konzerte",
+        "max": 180
+      },
+      {
+        "key": "grown_music_body",
+        "label": "Musik: Text",
+        "value": "Unsere Lieder zum Entdecken und die Konzerttafel für gemeinsame Live-Erlebnisse.",
+        "max": 2400
+      },
+      {
+        "key": "grown_music_link",
+        "label": "Musik: Schaltfläche",
+        "value": "Zu den Liedern →",
+        "max": 180
+      },
+      {
+        "key": "grown_concert_link",
+        "label": "Konzerte: Schaltfläche",
+        "value": "Zu den Terminen →",
+        "max": 180
+      },
+      {
+        "key": "grown_contact_title",
+        "label": "Kontakt: Überschrift",
+        "value": "Booking & Kontakt",
+        "max": 180
+      },
+      {
+        "key": "grown_contact_body",
+        "label": "Kontakt: Text",
+        "value": "Ihr möchtet Bum Bum Tschak für eine Veranstaltung anfragen? Schreibt uns.",
+        "max": 2400
+      },
+      {
+        "key": "grown_contact_empty",
+        "label": "Kontakt: Text ohne E-Mail-Adresse",
+        "value": "Die Kontaktdaten für Anfragen werden hier noch ergänzt.",
+        "max": 180
+      },
+      {
+        "key": "grown_social_link",
+        "label": "Kontakt: Schaltfläche",
+        "value": "Zu Social Media →",
+        "max": 180
+      },
+      {
+        "key": "grown_how_title",
+        "label": "Erklärung: Überschrift",
+        "value": "So funktioniert die Musikwelt",
+        "max": 180
+      },
+      {
+        "key": "grown_how_body",
+        "label": "Erklärung: Text",
+        "value": "Wähle ein Tier und lauf mit den Pfeiltasten durch die Musikwelt. Enter oder Leertaste öffnet eine Tür oder ein Gespräch. Die drei Bandmitglieder lernst du direkt draußen an der Bühne kennen. Im Kassettenhaus nimmst du ein Band, trägst es zum Radio und legst es ein. Danach kannst du es auf jedem freien Platz ablegen. Jedes Haus hat unten eine Ausgangstür. Alle Inhalte erreichst du auch über das Menü.",
+        "max": 2400
+      },
+      {
+        "key": "grown_board",
+        "label": "Tafel: Überschrift",
+        "value": "FÜR GROSSE",
+        "max": 40
+      },
+      {
+        "key": "grown_board_sub",
+        "label": "Tafel: Unterzeile",
+        "value": "Infos · Booking · Kontakt",
+        "max": 80
+      }
+    ]
+  },
+  {
+    "id": "welcome",
+    "label": "Start & Figurenwahl",
+    "fields": [
+      {
+        "key": "page_title",
+        "label": "Titel im Browser",
+        "value": "Bum Bum Tschak · Deine bunte Musikwelt",
+        "max": 180
+      },
+      {
+        "key": "page_description",
+        "label": "Beschreibung der Homepage",
+        "value": "Entdecke mit deiner Spielfigur die Musikwelt von Bum Bum Tschak: Kassetten, Konzerte und Bandgeschichten.",
+        "max": 180
+      },
+      {
+        "key": "brand_top",
+        "label": "Logo: obere Zeile",
+        "value": "BUM",
+        "max": 20
+      },
+      {
+        "key": "brand_middle",
+        "label": "Logo: mittlere Zeile",
+        "value": "BUM",
+        "max": 20
+      },
+      {
+        "key": "brand_bottom",
+        "label": "Logo: untere Zeile",
+        "value": "TSCHAK!",
+        "max": 20
+      },
+      {
+        "key": "brand_label",
+        "label": "Logo: Vorlesetext",
+        "value": "Bum Bum Tschak – Startseite",
+        "max": 180
+      },
+      {
+        "key": "welcome_kicker",
+        "label": "Begrüßungszeile",
+        "value": "WILLKOMMEN BEI BUM BUM TSCHAK",
+        "max": 180
+      },
+      {
+        "key": "welcome_title",
+        "label": "Überschrift",
+        "value": "Wer möchtest du sein?",
+        "max": 180
+      },
+      {
+        "key": "welcome_intro",
+        "label": "Begrüßungstext",
+        "value": "Such dir ein Tier aus. Pfeiltasten wählen, Enter oder Leertaste startet dein Abenteuer.",
+        "max": 2400
+      },
+      {
+        "key": "welcome_start",
+        "label": "Start-Schaltfläche",
+        "value": "Los geht’s!",
+        "max": 180
+      },
+      {
+        "key": "welcome_resume",
+        "label": "Fortsetzen-Schaltfläche",
+        "value": "Weiter geht’s!",
+        "max": 180
+      },
+      {
+        "key": "welcome_radio",
+        "label": "Direkt zur Musik",
+        "value": "Direkt zu den Liedern",
+        "max": 180
+      },
+      {
+        "key": "welcome_keys",
+        "label": "Tastaturhinweis",
+        "value": "← → auswählen · Enter / Leertaste loslaufen",
+        "max": 180
+      },
+      {
+        "key": "welcome_music",
+        "label": "Hinweis zur Musik",
+        "value": "Musik startet nur mit dir",
+        "max": 180
+      },
+      {
+        "key": "animal_group",
+        "label": "Vorlesetext der Figurenwahl",
+        "value": "Spielfigur auswählen",
+        "max": 180
+      },
+      {
+        "key": "cat_name",
+        "label": "Katze: Name",
+        "value": "Katze",
+        "max": 40
+      },
+      {
+        "key": "cat_trait",
+        "label": "Katze: Beschreibung",
+        "value": "Auf leisen Pfoten",
+        "max": 180
+      },
+      {
+        "key": "dog_name",
+        "label": "Hund: Name",
+        "value": "Hund",
+        "max": 40
+      },
+      {
+        "key": "dog_trait",
+        "label": "Hund: Beschreibung",
+        "value": "Immer der Nase nach",
+        "max": 180
+      },
+      {
+        "key": "horse_name",
+        "label": "Pferd: Name",
+        "value": "Pferd",
+        "max": 40
+      },
+      {
+        "key": "horse_trait",
+        "label": "Pferd: Beschreibung",
+        "value": "Mit Schwung voraus",
+        "max": 180
+      },
+      {
+        "key": "monkey_name",
+        "label": "Affe: Name",
+        "value": "Affe",
+        "max": 40
+      },
+      {
+        "key": "monkey_trait",
+        "label": "Affe: Beschreibung",
+        "value": "Neugierig um jede Ecke",
+        "max": 180
+      }
+    ]
+  },
+  {
+    "id": "world",
+    "label": "Spielwelt, Häuser & Wegweiser",
+    "fields": [
+      {
+        "key": "nav_world",
+        "label": "Menü: Spielwelt",
+        "value": "Die Welt",
+        "max": 32
+      },
+      {
+        "key": "nav_music",
+        "label": "Menü: Musik",
+        "value": "Lieder",
+        "max": 32
+      },
+      {
+        "key": "nav_concerts",
+        "label": "Menü: Konzerte",
+        "value": "Konzerte",
+        "max": 32
+      },
+      {
+        "key": "nav_band",
+        "label": "Menü: Band",
+        "value": "Die Band",
+        "max": 32
+      },
+      {
+        "key": "nav_grownups",
+        "label": "Menü: Für Große",
+        "value": "Für Große",
+        "max": 32
+      },
+      {
+        "key": "nav_social",
+        "label": "Fußzeile: Kontaktlink",
+        "value": "Bleib in Kontakt",
+        "max": 40
+      },
+      {
+        "key": "footer",
+        "label": "Text in der Fußzeile",
+        "value": "Eine kleine Welt. Ganz viel ♥ Musik.",
+        "max": 180
+      },
+      {
+        "key": "admin_link",
+        "label": "Link zur Verwaltung",
+        "value": "Bandverwaltung ↗",
+        "max": 180
+      },
+      {
+        "key": "world_title",
+        "label": "Name der Spielwelt",
+        "value": "Die Bum Bum Welt",
+        "max": 60
+      },
+      {
+        "key": "world_kicker",
+        "label": "Zeile über dem Namen",
+        "value": "HIER SPIELT DIE MUSIK",
+        "max": 80
+      },
+      {
+        "key": "wayfinder",
+        "label": "Wegweiser-Schaltfläche",
+        "value": "Wegweiser",
+        "max": 32
+      },
+      {
+        "key": "world_instructions",
+        "label": "Ausführlicher Tastaturhinweis",
+        "value": "Pfeiltasten bewegen die Figur und wählen Menüpunkte aus. Enter oder Leertaste bestätigt, betritt ein Haus, nimmt eine Kassette auf oder legt sie ins Radio ein. An der Bühne sprichst du die Bandmitglieder direkt an. Jeder Raum hat unten eine Ausgangstür. Escape geht zurück. Mit Tab erreichst du alle Bedienelemente.",
+        "max": 2400
+      },
+      {
+        "key": "keys_move",
+        "label": "Kurzer Tastaturhinweis",
+        "value": "Pfeile: laufen · Enter / Leertaste: Aktion",
+        "max": 180
+      },
+      {
+        "key": "keys_menu",
+        "label": "Kurzer Menühinweis",
+        "value": "Enter / Leertaste im Freien: Menü · Esc: zurück",
+        "max": 180
+      },
+      {
+        "key": "sign_radio",
+        "label": "Name des Kassettenhauses",
+        "value": "Kassettenhaus",
+        "max": 32
+      },
+      {
+        "key": "sign_concerts",
+        "label": "Name des Konzerthauses",
+        "value": "Konzerthaus",
+        "max": 32
+      },
+      {
+        "key": "sign_grownups",
+        "label": "Name von Für Große",
+        "value": "Für Große",
+        "max": 32
+      },
+      {
+        "key": "sign_social",
+        "label": "Name des Kontaktbereichs",
+        "value": "Bleib in Kontakt",
+        "max": 32
+      },
+      {
+        "key": "station_radio_short",
+        "label": "Wegweiser-Menü: Musikbeschreibung",
+        "value": "Musik hören",
+        "max": 180
+      },
+      {
+        "key": "station_concerts_short",
+        "label": "Wegweiser-Menü: Konzertbeschreibung",
+        "value": "Konzerte entdecken",
+        "max": 180
+      },
+      {
+        "key": "station_social_short",
+        "label": "Wegweiser-Menü: Kontaktbeschreibung",
+        "value": "Mit uns verbunden bleiben",
+        "max": 180
+      },
+      {
+        "key": "station_grownups_short",
+        "label": "Wegweiser-Menü: Für-Große-Beschreibung",
+        "value": "Eltern & Veranstalter",
+        "max": 180
+      },
+      {
+        "key": "room_radio",
+        "label": "Name des Kassettenhauses",
+        "value": "Das Kassettenhaus",
+        "max": 50
+      },
+      {
+        "key": "room_concerts",
+        "label": "Name des Konzerthauses",
+        "value": "Das Konzerthaus",
+        "max": 50
+      },
+      {
+        "key": "room_social",
+        "label": "Name des Kontakthauses",
+        "value": "Der bunte Treffpunkt",
+        "max": 50
+      },
+      {
+        "key": "room_grownups",
+        "label": "Name von Für Große",
+        "value": "Für Große",
+        "max": 50
+      },
+      {
+        "key": "kicker_radio",
+        "label": "Kassettenhaus: Unterzeile",
+        "value": "NEHMEN · TRAGEN · EINLEGEN",
+        "max": 180
+      },
+      {
+        "key": "kicker_concerts",
+        "label": "Konzerthaus: Unterzeile",
+        "value": "WANN MACHT’S WIEDER BUM?",
+        "max": 180
+      },
+      {
+        "key": "kicker_social",
+        "label": "Kontakthaus: Unterzeile",
+        "value": "BLEIB MIT UNS VERBUNDEN",
+        "max": 180
+      },
+      {
+        "key": "kicker_grownups",
+        "label": "Für Große: Unterzeile",
+        "value": "FÜR ELTERN & VERANSTALTER",
+        "max": 180
+      },
+      {
+        "key": "map_kicker",
+        "label": "Wegweiser-Menü: obere Zeile",
+        "value": "DEIN WEGWEISER",
+        "max": 180
+      },
+      {
+        "key": "map_title",
+        "label": "Wegweiser-Menü: Überschrift",
+        "value": "Wohin soll’s gehen?",
+        "max": 180
+      },
+      {
+        "key": "map_intro",
+        "label": "Wegweiser-Menü: Erklärung",
+        "value": "Wähle mit den Pfeiltasten ein Ziel und bestätige mit Enter oder Leertaste. Dein Tier läuft zum Haus oder zu einem Bandmitglied. Die drei Bandfreunde lernst du direkt draußen an der Bühne kennen. Jedes Haus hat eine Ausgangstür.",
+        "max": 2400
+      }
+    ]
+  },
+  {
+    "id": "radio",
+    "label": "Kassettenhaus & Radio",
+    "fields": [
+      {
+        "key": "radio_kicker",
+        "label": "Obere Zeile im Radiomenü",
+        "value": "DAS KASSETTENHAUS",
+        "max": 180
+      },
+      {
+        "key": "radio_title",
+        "label": "Überschrift im Radiomenü",
+        "value": "Echte Bänder. Kleine Abenteuer.",
+        "max": 180
+      },
+      {
+        "key": "radio_intro",
+        "label": "Erklärung im Radiomenü",
+        "value": "Lauf zu einer Kassette und nimm sie mit Enter oder Leertaste. Trag sie zum Radio und drücke dort noch einmal Enter oder Leertaste. Danach kannst du die Kassette auf jeden freien Platz zurücklegen.",
+        "max": 2400
+      },
+      {
+        "key": "radio_name",
+        "label": "Beschriftung am Radio",
+        "value": "BUM BUM FM",
+        "max": 40
+      },
+      {
+        "key": "radio_empty",
+        "label": "Leeres Radio im Menü",
+        "value": "NOCH KEIN BAND",
+        "max": 50
+      },
+      {
+        "key": "radio_volume",
+        "label": "Lautstärkeregler",
+        "value": "LAUTSTÄRKE",
+        "max": 40
+      },
+      {
+        "key": "radio_loaded",
+        "label": "Überschrift bei eingelegter Kassette",
+        "value": "IM RADIO",
+        "max": 40
+      },
+      {
+        "key": "radio_how",
+        "label": "Überschrift ohne Kassette",
+        "value": "SO GEHT’S",
+        "max": 40
+      },
+      {
+        "key": "radio_how_title",
+        "label": "Anleitung: Überschrift",
+        "value": "Nehmen, tragen, einlegen.",
+        "max": 180
+      },
+      {
+        "key": "radio_how_body",
+        "label": "Anleitung: Text",
+        "value": "Die Kassetten liegen auf den Regalen links und rechts. Enter oder Leertaste nimmt ein Band auf und legt es am Radio ein.",
+        "max": 2400
+      },
+      {
+        "key": "radio_no_audio",
+        "label": "Text bei fehlender Aufnahme",
+        "value": "Die Aufnahme ist hier noch nicht verfügbar. Das Tragen und Einlegen kannst du schon ausprobieren.",
+        "max": 180
+      },
+      {
+        "key": "radio_note",
+        "label": "Hinweis unter den Kassetten",
+        "value": "Du trägst immer eine Kassette. Beim Wechsel am Radio nimmst du die vorige Kassette mit. Zurücklegen kannst du sie auf jeden freien Platz – kein Band hat einen festen Platz.",
+        "max": 2400
+      },
+      {
+        "key": "radio_tape_group",
+        "label": "Vorlesetext der Kassettenauswahl",
+        "value": "Weg zu einer Kassette wählen",
+        "max": 180
+      },
+      {
+        "key": "cassette_stamp",
+        "label": "Kleiner Aufdruck auf der Kassette",
+        "value": "BUM BUM TSCHAK · A",
+        "max": 40
+      },
+      {
+        "key": "radio_board",
+        "label": "Schild am Radio",
+        "value": "DEIN KASSETTENRADIO",
+        "max": 40
+      },
+      {
+        "key": "radio_shelf",
+        "label": "Überschrift am Regal",
+        "value": "SUCH DIR EIN BAND AUS!",
+        "max": 40
+      },
+      {
+        "key": "radio_shelf_page",
+        "label": "Regalseite",
+        "value": "REGAL {seite} / {anzahl}",
+        "max": 60
+      },
+      {
+        "key": "radio_next_shelf",
+        "label": "Nächstes Regal",
+        "value": "NÄCHSTES REGAL · ENTER / ␣ →",
+        "max": 60
+      },
+      {
+        "key": "radio_sign_1",
+        "label": "Anleitungsschild: Zeile 1",
+        "value": "1. HINLAUFEN · ENTER / ␣: NEHMEN",
+        "max": 80
+      },
+      {
+        "key": "radio_sign_2",
+        "label": "Anleitungsschild: Zeile 2",
+        "value": "2. ZUM RADIO · ENTER / ␣: EINLEGEN",
+        "max": 80
+      },
+      {
+        "key": "radio_sign_3",
+        "label": "Anleitungsschild: Zeile 3",
+        "value": "3. AUF JEDEM FREIEN PLATZ ABLEGEN",
+        "max": 80
+      },
+      {
+        "key": "radio_empty_slot",
+        "label": "Freier Platz: Vorlesetext",
+        "value": "Freier Kassettenplatz",
+        "max": 180
+      },
+      {
+        "key": "radio_empty_display",
+        "label": "Leeres Radio im Haus",
+        "value": "LEER",
+        "max": 30
+      },
+      {
+        "key": "carry_title",
+        "label": "Anzeige über getragener Kassette",
+        "value": "DU TRÄGST",
+        "max": 40
+      },
+      {
+        "key": "carry_hint",
+        "label": "Hinweis beim Tragen",
+        "value": "Zum Radio oder zu einem freien Platz",
+        "max": 180
+      },
+      {
+        "key": "tape_walk",
+        "label": "Schaltfläche: zur Kassette",
+        "value": "Zur Kassette laufen",
+        "max": 180
+      },
+      {
+        "key": "radio_walk",
+        "label": "Schaltfläche: zum Radio",
+        "value": "Zum Radio laufen",
+        "max": 180
+      },
+      {
+        "key": "slot_walk",
+        "label": "Schaltfläche: zum freien Platz",
+        "value": "Zu einem freien Platz laufen",
+        "max": 180
+      }
+    ]
+  },
+  {
+    "id": "concerts",
+    "label": "Konzerte",
+    "fields": [
+      {
+        "key": "concert_kicker",
+        "label": "Obere Zeile",
+        "value": "DIE KONZERTTAFEL",
+        "max": 180
+      },
+      {
+        "key": "concert_title",
+        "label": "Überschrift",
+        "value": "Sehen wir uns vor der Bühne?",
+        "max": 180
+      },
+      {
+        "key": "concert_intro",
+        "label": "Text unter der Überschrift",
+        "value": "Hier erfährst du, wann und wo Bum Bum Tschak live spielt.",
+        "max": 2400
+      },
+      {
+        "key": "concert_empty_title",
+        "label": "Ohne Termine: Überschrift",
+        "value": "Hier kommt das nächste BUM!",
+        "max": 180
+      },
+      {
+        "key": "concert_empty_body",
+        "label": "Ohne Termine: Text",
+        "value": "Die Konzerttafel wird noch gefüllt. Neue Termine mit Ort, Uhrzeit und weiteren Infos werden hier angekündigt.",
+        "max": 2400
+      },
+      {
+        "key": "concert_tickets",
+        "label": "Ticketlink",
+        "value": "Infos & Tickets ↗",
+        "max": 180
+      },
+      {
+        "key": "concert_time",
+        "label": "Nach der Uhrzeit",
+        "value": "Uhr",
+        "max": 20
+      },
+      {
+        "key": "concert_radio",
+        "label": "Schaltfläche zur Musik",
+        "value": "Bis dahin: Kassetten entdecken",
+        "max": 180
+      },
+      {
+        "key": "concert_board",
+        "label": "Tafel: Überschrift",
+        "value": "KONZERTE!",
+        "max": 40
+      },
+      {
+        "key": "concert_board_sub",
+        "label": "Tafel: Unterzeile",
+        "value": "Termine · Orte · Musik",
+        "max": 80
+      }
+    ]
+  },
+  {
+    "id": "band",
+    "label": "Bandgeschichten",
+    "fields": [
+      {
+        "key": "band_kicker",
+        "label": "Obere Zeile",
+        "value": "DREI FREUNDE. EINE BAND.",
+        "max": 180
+      },
+      {
+        "key": "band_title",
+        "label": "Überschrift",
+        "value": "Hallo von Bum Bum Tschak!",
+        "max": 180
+      },
+      {
+        "key": "band_group",
+        "label": "Vorlesetext der Bandwahl",
+        "value": "Bandmitglied auswählen",
+        "max": 180
+      },
+      {
+        "key": "band_story_title",
+        "label": "Überschrift der Bandgeschichte",
+        "value": "Das sind wir.",
+        "max": 180
+      },
+      {
+        "key": "band_radio",
+        "label": "Schaltfläche zur Musik",
+        "value": "Zu unseren Liedern",
+        "max": 180
+      },
+      {
+        "key": "band_concert",
+        "label": "Schaltfläche zu Konzerten",
+        "value": "Zur Konzerttafel",
+        "max": 180
+      }
+    ]
+  },
+  {
+    "id": "social",
+    "label": "Bleib in Kontakt",
+    "fields": [
+      {
+        "key": "social_kicker",
+        "label": "Obere Zeile im Kontaktmenü",
+        "value": "AUCH AUSSERHALB DER MUSIKWELT",
+        "max": 180
+      },
+      {
+        "key": "social_title",
+        "label": "Überschrift im Kontaktmenü",
+        "value": "Bleib mit uns verbunden.",
+        "max": 180
+      },
+      {
+        "key": "social_intro",
+        "label": "Text im Kontaktmenü",
+        "value": "Stell dich auf ein Symbol und drücke Enter oder Leertaste. So öffnest du unseren offiziellen Kanal. Über den Briefumschlag kannst du uns eine E-Mail schreiben.",
+        "max": 2400
+      },
+      {
+        "key": "social_note",
+        "label": "Hinweis unter den Links",
+        "value": "Diese Links führen zu unseren offiziellen Kanälen. Die Spielwelt bleibt geöffnet.",
+        "max": 2400
+      },
+      {
+        "key": "social_board",
+        "label": "Schild im Haus: Überschrift",
+        "value": "BLEIB IN KONTAKT!",
+        "max": 40
+      },
+      {
+        "key": "social_board_sub",
+        "label": "Schild im Haus: Unterzeile",
+        "value": "Enter / Leertaste öffnet den Kanal.",
+        "max": 90
+      },
+      {
+        "key": "social_board_note",
+        "label": "Schild im Haus: Hinweis",
+        "value": "Der Briefumschlag öffnet dein E-Mail-Programm.",
+        "max": 100
+      },
+      {
+        "key": "social_pad_hint",
+        "label": "Hinweis unter den Symbolen",
+        "value": "DRAUFSTELLEN · ENTER / ␣ ↗",
+        "max": 80
+      },
+      {
+        "key": "email_label",
+        "label": "Name des Briefumschlags",
+        "value": "E-Mail schreiben",
+        "max": 40
+      },
+      {
+        "key": "email_title",
+        "label": "E-Mail: Überschrift",
+        "value": "Schreibt uns!",
+        "max": 180
+      },
+      {
+        "key": "email_body",
+        "label": "E-Mail: Erklärung",
+        "value": "Fragen, Konzertanfragen oder ein lieber Gruß? Wir freuen uns auf eure Nachricht.",
+        "max": 2400
+      },
+      {
+        "key": "email_note",
+        "label": "Hinweis beim Öffnen einer E-Mail",
+        "value": "Dein E-Mail-Programm öffnet sich. Die Spielwelt bleibt geöffnet.",
+        "max": 2400
+      },
+      {
+        "key": "network_facebook",
+        "label": "Beschriftung Facebook",
+        "value": "Facebook",
+        "max": 40
+      },
+      {
+        "key": "network_instagram",
+        "label": "Beschriftung Instagram",
+        "value": "Instagram",
+        "max": 40
+      },
+      {
+        "key": "network_youtube",
+        "label": "Beschriftung YouTube",
+        "value": "YouTube",
+        "max": 40
+      },
+      {
+        "key": "network_spotify",
+        "label": "Beschriftung Spotify",
+        "value": "Spotify",
+        "max": 40
+      }
+    ]
+  },
+  {
+    "id": "common",
+    "label": "Schaltflächen & Spielmenü",
+    "fields": [
+      {
+        "key": "back_world",
+        "label": "Zurück in die Spielwelt",
+        "value": "Zurück in die Spielwelt",
+        "max": 180
+      },
+      {
+        "key": "back_room",
+        "label": "Zurück in den Raum",
+        "value": "Zurück in den Raum",
+        "max": 180
+      },
+      {
+        "key": "back_direct",
+        "label": "Direkt zurück",
+        "value": "Direkt zurück in die Spielwelt →",
+        "max": 180
+      },
+      {
+        "key": "exit_button",
+        "label": "Ausgang-Schaltfläche",
+        "value": "Ausgang ↓",
+        "max": 180
+      },
+      {
+        "key": "exit_sign",
+        "label": "Schild am Ausgang",
+        "value": "AUSGANG · ZUR SPIELWELT ↓",
+        "max": 60
+      },
+      {
+        "key": "menu_keys",
+        "label": "Tastaturhinweis in Menüs",
+        "value": "↑ ↓ auswählen · Enter / Leertaste bestätigen · Esc zurück",
+        "max": 180
+      },
+      {
+        "key": "character_change",
+        "label": "Figur wechseln",
+        "value": "Figur wechseln",
+        "max": 180
+      },
+      {
+        "key": "map_open",
+        "label": "Wegweiser öffnen",
+        "value": "Wegweiser öffnen",
+        "max": 180
+      },
+      {
+        "key": "help_open",
+        "label": "Hilfe öffnen",
+        "value": "So geht’s",
+        "max": 180
+      },
+      {
+        "key": "pause_kicker",
+        "label": "Spielmenü: obere Zeile",
+        "value": "DEIN SPIELMENÜ",
+        "max": 180
+      },
+      {
+        "key": "pause_title",
+        "label": "Spielmenü: Überschrift",
+        "value": "Was möchtest du machen?",
+        "max": 180
+      },
+      {
+        "key": "pause_intro",
+        "label": "Spielmenü: Erklärung",
+        "value": "Pfeiltasten wählen aus, Enter oder Leertaste bestätigt. Mit „Weiterlaufen“ geht’s zurück.",
+        "max": 2400
+      },
+      {
+        "key": "pause_continue",
+        "label": "Spielmenü: weiterspielen",
+        "value": "Weiterlaufen",
+        "max": 180
+      },
+      {
+        "key": "pause_character",
+        "label": "Spielmenü: Tierwahl",
+        "value": "Tier wechseln",
+        "max": 180
+      },
+      {
+        "key": "pause_radio",
+        "label": "Spielmenü: Kassettenhaus",
+        "value": "Ins Kassettenhaus",
+        "max": 180
+      },
+      {
+        "key": "pause_concerts",
+        "label": "Spielmenü: Konzerte",
+        "value": "Ins Konzerthaus",
+        "max": 180
+      },
+      {
+        "key": "pause_band",
+        "label": "Spielmenü: Band",
+        "value": "Die Band kennenlernen",
+        "max": 180
+      },
+      {
+        "key": "pause_social",
+        "label": "Spielmenü: Kontakt",
+        "value": "Bleib in Kontakt",
+        "max": 180
+      },
+      {
+        "key": "read_hint",
+        "label": "Hinweis zum Lesen eines Schildes",
+        "value": "GEH NÄHER · ENTER / ␣ ZUM LESEN",
+        "max": 80
+      },
+      {
+        "key": "play_label",
+        "label": "Lied abspielen",
+        "value": "Lied abspielen",
+        "max": 180
+      },
+      {
+        "key": "pause_label",
+        "label": "Lied pausieren",
+        "value": "Lied pausieren",
+        "max": 180
+      },
+      {
+        "key": "missing_audio_label",
+        "label": "Fehlende Aufnahme",
+        "value": "Audioaufnahme noch nicht verfügbar",
+        "max": 180
+      }
+    ]
+  },
+  {
+    "id": "help",
+    "label": "Hilfe",
+    "fields": [
+      {
+        "key": "help_kicker",
+        "label": "Obere Zeile",
+        "value": "SO GEHT’S",
+        "max": 180
+      },
+      {
+        "key": "help_title",
+        "label": "Überschrift",
+        "value": "Dein kleines Musikabenteuer.",
+        "max": 180
+      },
+      {
+        "key": "help_step1_title",
+        "label": "Schritt 1: Überschrift",
+        "value": "Wähle dein Tier.",
+        "max": 180
+      },
+      {
+        "key": "help_step1_body",
+        "label": "Schritt 1: Text",
+        "value": "Katze, Hund, Pferd oder Affe? Unten rechts kannst du deine Figur jederzeit wechseln.",
+        "max": 2400
+      },
+      {
+        "key": "help_step2_title",
+        "label": "Schritt 2: Überschrift",
+        "value": "Lauf durch die Welt.",
+        "max": 180
+      },
+      {
+        "key": "help_step2_body",
+        "label": "Schritt 2: Text",
+        "value": "Mit den Pfeiltasten oder W, A, S, D bewegst du deine Figur. Am Handy nutzt du die Richtungstasten. Du kannst auch auf eine freie Stelle tippen. Mit Tab erreichst du jede Station direkt.",
+        "max": 2400
+      },
+      {
+        "key": "help_step3_title",
+        "label": "Schritt 3: Überschrift",
+        "value": "Geh auf Entdeckung.",
+        "max": 180
+      },
+      {
+        "key": "help_step3_body",
+        "label": "Schritt 3: Text",
+        "value": "Enter oder Leertaste betritt ein Haus oder öffnet ein Gespräch. An der Bühne kannst du Panda, Papagei und Krokodil direkt ansprechen. Im Kassettenhaus nimmst du ein Band auf, trägst es zum Radio und legst es ein. Zurücklegen kannst du es auf jeden freien Platz. Alle Häuser haben einen Ausgang. In Menüs wählen die Pfeiltasten aus, Enter oder Leertaste bestätigt. Esc geht zurück.",
+        "max": 2400
+      },
+      {
+        "key": "help_confirm",
+        "label": "Schaltfläche zum Schließen",
+        "value": "Alles klar, los geht’s!",
+        "max": 180
+      }
+    ]
+  },
+  {
+    "id": "messages",
+    "label": "Spielaktionen & Meldungen",
+    "fields": [
+      {
+        "key": "action_enter",
+        "label": "Haus betreten",
+        "value": "{ziel} betreten",
+        "max": 180
+      },
+      {
+        "key": "action_member",
+        "label": "Bandmitglied ansprechen",
+        "value": "{name} kennenlernen",
+        "max": 180
+      },
+      {
+        "key": "action_external",
+        "label": "Kanal öffnen",
+        "value": "{kanal} im neuen Tab öffnen",
+        "max": 180
+      },
+      {
+        "key": "action_email",
+        "label": "E-Mail schreiben",
+        "value": "E-Mail an {adresse} schreiben",
+        "max": 180
+      },
+      {
+        "key": "action_concerts",
+        "label": "Konzerttafel lesen",
+        "value": "Konzerttafel lesen",
+        "max": 180
+      },
+      {
+        "key": "action_grownups",
+        "label": "Informationen lesen",
+        "value": "Infos & Kontakt lesen",
+        "max": 180
+      },
+      {
+        "key": "action_shelf",
+        "label": "Regal wechseln",
+        "value": "Das nächste Kassettenregal ansehen",
+        "max": 180
+      },
+      {
+        "key": "action_insert",
+        "label": "Kassette einlegen",
+        "value": "Kassette ins Radio einlegen",
+        "max": 180
+      },
+      {
+        "key": "action_eject",
+        "label": "Kassette herausnehmen",
+        "value": "Kassette aus dem Radio nehmen",
+        "max": 180
+      },
+      {
+        "key": "action_radio_help",
+        "label": "Radiohilfe öffnen",
+        "value": "Wie geht das Kassettenradio?",
+        "max": 180
+      },
+      {
+        "key": "action_pickup",
+        "label": "Kassette nehmen",
+        "value": "{lied}: nehmen",
+        "max": 180
+      },
+      {
+        "key": "action_return",
+        "label": "Kassette ablegen",
+        "value": "{lied}: hier ablegen",
+        "max": 180
+      },
+      {
+        "key": "action_hint",
+        "label": "Hinweis zur Aktion",
+        "value": "{aktion}. Drücke Enter oder Leertaste.",
+        "max": 180
+      },
+      {
+        "key": "walk_tape",
+        "label": "Weg zu einer Kassette",
+        "value": "Zur Kassette {lied} laufen",
+        "max": 180
+      },
+      {
+        "key": "walk_target",
+        "label": "Weg zu einem Ziel",
+        "value": "Dein Tier läuft zu: {ziel}.",
+        "max": 180
+      },
+      {
+        "key": "walk_blocked",
+        "label": "Weg versperrt",
+        "value": "Hier steht etwas im Weg. Such dir einen freien Platz aus.",
+        "max": 180
+      },
+      {
+        "key": "walk_stuck",
+        "label": "Weg unterbrochen",
+        "value": "Hier ist etwas im Weg. Versuch es ein Stück daneben.",
+        "max": 180
+      },
+      {
+        "key": "now_animal",
+        "label": "Bestätigung der Spielfigur",
+        "value": "Du bist {tier}. Pfeile bewegen dich. Enter oder Leertaste führt eine Aktion aus.",
+        "max": 180
+      },
+      {
+        "key": "player_label",
+        "label": "Vorlesetext der Spielfigur",
+        "value": "Du bist {tier}. Spielfigur wechseln.",
+        "max": 180
+      },
+      {
+        "key": "welcome_back",
+        "label": "Begrüßung beim Wiederkommen",
+        "value": "Willkommen zurück. Pfeile bewegen dich, Enter oder Leertaste führt eine Aktion aus.",
+        "max": 180
+      },
+      {
+        "key": "entered_room",
+        "label": "Beim Betreten eines Hauses",
+        "value": "{haus}. Die Ausgangstür ist unten. Geh hindurch, um in die Spielwelt zurückzukehren.",
+        "max": 180
+      },
+      {
+        "key": "left_room",
+        "label": "Nach dem Verlassen eines Hauses",
+        "value": "Du bist wieder draußen in der Bum Bum Welt.",
+        "max": 180
+      },
+      {
+        "key": "tape_taken",
+        "label": "Kassette aufgenommen",
+        "value": "{lied} aufgenommen. Trag die Kassette zum Radio. Enter oder Leertaste legt sie ein.",
+        "max": 180
+      },
+      {
+        "key": "tape_returned",
+        "label": "Kassette abgelegt",
+        "value": "{lied} liegt jetzt auf diesem Platz.",
+        "max": 180
+      },
+      {
+        "key": "tape_ejected",
+        "label": "Kassette herausgenommen",
+        "value": "{lied} aus dem Radio genommen. Du trägst die Kassette jetzt.",
+        "max": 180
+      },
+      {
+        "key": "tape_inserted",
+        "label": "Kassette eingelegt",
+        "value": "{lied} eingelegt.",
+        "max": 180
+      },
+      {
+        "key": "tape_no_audio",
+        "label": "Aufnahme fehlt",
+        "value": "Die Audioaufnahme fehlt noch.",
+        "max": 180
+      },
+      {
+        "key": "tape_swap",
+        "label": "Kassette getauscht",
+        "value": "Du trägst jetzt {lied}.",
+        "max": 180
+      },
+      {
+        "key": "tape_already_loaded",
+        "label": "Kassette liegt im Radio",
+        "value": "Diese Kassette liegt im Radio. Mit Enter oder Leertaste holst du sie heraus.",
+        "max": 180
+      },
+      {
+        "key": "tape_carrying",
+        "label": "Kassette bereits in der Hand",
+        "value": "Du trägst diese Kassette. Geh zum Radio oder zu einem freien Platz.",
+        "max": 180
+      },
+      {
+        "key": "tape_walk_hint",
+        "label": "Weg zur Kassette gewählt",
+        "value": "Lauf zur Kassette und drücke Enter oder Leertaste zum Aufnehmen.",
+        "max": 180
+      },
+      {
+        "key": "shelf_changed",
+        "label": "Regal gewechselt",
+        "value": "Regal {seite} von {anzahl}",
+        "max": 180
+      },
+      {
+        "key": "social_opened",
+        "label": "Kanal geöffnet",
+        "value": "{kanal} wird in einem neuen Tab geöffnet. Die Spielwelt bleibt erhalten.",
+        "max": 180
+      },
+      {
+        "key": "audio_start",
+        "label": "Wiedergabe bestätigen",
+        "value": "Öffne das Radiomenü und bestätige Play mit Enter oder Leertaste.",
+        "max": 180
+      },
+      {
+        "key": "audio_error",
+        "label": "Aufnahme kann nicht geladen werden",
+        "value": "Diese Aufnahme konnte gerade nicht geladen werden.",
+        "max": 180
+      },
+      {
+        "key": "audio_play_error",
+        "label": "Wiedergabe fehlgeschlagen",
+        "value": "Das Lied konnte gerade nicht gestartet werden.",
+        "max": 180
+      },
+      {
+        "key": "preview_label",
+        "label": "Entwurfsvorschau",
+        "value": "ENTWURFSVORSCHAU · Änderungen sind noch nicht veröffentlicht.",
+        "max": 180
+      },
+      {
+        "key": "preview_error",
+        "label": "Vorschau nicht geladen",
+        "value": "VORSCHAU NICHT GELADEN · {fehler}",
+        "max": 180
+      },
+      {
+        "key": "preview_back",
+        "label": "Link zur Verwaltung",
+        "value": "Zur Bandverwaltung ↗",
+        "max": 180
+      }
+    ]
+  }
+];
+export const COPY_FIELDS = COPY_GROUPS.flatMap(group => group.fields);
+export const DEFAULT_TEXTS = Object.fromEntries(COPY_FIELDS.map(field => [field.key, field.value]));
+export function normalizeTexts(saved) {
+  return Object.fromEntries(COPY_FIELDS.map(field => [field.key, typeof saved?.[field.key] === "string" ? saved[field.key] : field.value]));
+}
+export function formatText(value, variables = {}) {
+  return String(value).replace(/\{(\w+)\}/g, (match, key) => Object.hasOwn(variables, key) ? String(variables[key]) : match);
+}

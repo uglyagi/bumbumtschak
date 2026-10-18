@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#40cea1">
+  <title>Bum Bum Tschak · Deine bunte Musikwelt</title>
+  <meta name="description" content="Such dir ein Tier aus und entdecke die bunte Welt von Bum Bum Tschak. Besuche das Kassettenradio, die Konzerttafel und unsere drei Bandfreunde.">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <a class="brand" href="./" data-copy-aria="brand_label" aria-label="Bum Bum Tschak – Startseite">
+        <span class="brand-words"><span data-copy="brand_top">BUM</span><span data-copy="brand_middle">BUM</span><span data-copy="brand_bottom">TSCHAK!</span></span>
+        <span class="brand-caption">DIE KINDERLIEDERBAND</span>
+      </a>
+      <nav class="main-nav" aria-label="Direkt zu den Inhalten">
+        <button class="nav-button active" data-action="world"><span data-copy="nav_world">Die Welt</span> <span class="nav-dot"></span></button>
+        <button class="nav-button" data-open="radio"><span data-copy="nav_music">Lieder</span></button>
+        <button class="nav-button" data-open="concerts"><span data-copy="nav_concerts">Konzerte</span></button>
+        <button class="nav-button" data-open="panda"><span data-copy="nav_band">Die Band</span></button>
+        <button class="nav-button" data-open="grownups"><span data-copy="nav_grownups">Für Große</span></button>
+      </nav>
+      <div class="header-actions">
+        <button class="round-button" id="radio-shortcut" data-copy-aria="room_radio" data-open="radio" aria-label="Radio öffnen"></button>
+        <button class="round-button help-button" id="help-button" data-copy-aria="help_open" data-open="help" aria-label="So geht’s"></button>
+      </div>
+    </header>
+
+    <main class="main">
+      <div class="world-shell">
+        <div id="game" class="game" tabindex="0" role="application" aria-label="Bum Bum Tschak Spielwelt" aria-describedby="game-instructions"></div>
+        <p id="game-instructions" data-copy="world_instructions" class="sr-only">Pfeiltasten bewegen die Figur und wählen Menüpunkte aus. Enter und Leertaste bestätigen, betreten ein Haus, nehmen eine Kassette auf oder legen sie ins Radio ein. Die Bandmitglieder kannst du direkt draußen an der Bühne ansprechen. Jeder Raum hat unten eine Ausgangstür. Gehe hindurch oder drücke dort Enter oder die Leertaste, um in den Park zurückzukehren. Escape geht ebenfalls zurück. Mit Tab erreichst du alle Bedienelemente.</p>
+
+        <div class="scene-heading" aria-hidden="true"><span class="eyebrow" id="scene-kicker">HIER SPIELT DIE MUSIK</span><span class="scene-title"><span id="scene-title-text">Die Bum Bum Welt</span><span class="little-star">✦</span></span></div>
+        <button class="wayfinder pill-button" data-open="map" aria-label="Wegweiser öffnen"></button>
+        <button class="exit-room pill-button" data-copy="exit_button" data-action="exit-walk" hidden>Ausgang ↓</button>
+        <div id="carry-indicator" class="carry-indicator" aria-live="polite" hidden></div>
+
+        <div class="keyboard-hint" aria-hidden="true"><span class="key-cluster"><kbd>↑</kbd><span><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd></span></span><span><strong data-copy="keys_move">Pfeile: laufen · Enter / Leertaste: Aktion</strong><small data-copy="keys_menu">Enter / Leertaste im Freien: Menü · Esc: zurück</small></span></div>
+
+        <div id="dpad" class="dpad" aria-label="Richtungstasten">
+          <button data-direction="up" class="pad-up" aria-label="Nach oben laufen">↑</button>
+          <button data-direction="left" class="pad-left" aria-label="Nach links laufen">←</button>
+          <span class="pad-center" aria-hidden="true">✦</span>
+          <button data-direction="right" class="pad-right" aria-label="Nach rechts laufen">→</button>
+          <button data-direction="down" class="pad-down" aria-label="Nach unten laufen">↓</button>
+        </div>
+        <button id="interact" class="interact-button" hidden></button>
+        <button id="player-chip" class="player-chip" data-open="characters" aria-label="Spielfigur wechseln"></button>
+      </div>
+    </main>
+
+    <footer class="footer"><span data-copy="footer">Eine kleine Welt. Ganz viel ♥ Musik.</span><button data-open="social"><span data-copy="nav_social">Bleib in Kontakt</span> <span aria-hidden="true">↗</span></button><a id="admin-link" data-copy="admin_link" href="https://bum-bum-tschak-welt.daring-fawn-7685.chatgpt.site/admin">Bandverwaltung ↗</a></footer>
+  </div>
+  <dialog id="modal" aria-labelledby="modal-title"><div id="modal-content"></div></dialog>
+  <div id="announcement" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <audio id="audio" preload="none"></audio>
+  <noscript><div class="no-script"><h1>Bum Bum Tschak</h1><p>Der Panda spielt Schlagzeug, der Papagei Bass und singt, und das Krokodil spielt E-Gitarre.</p><p>Für die begehbare Musikwelt bitte JavaScript aktivieren.</p><p>Unsere Lieder: Hut, Tanzen, Freundschaft und Fahrradfahren.</p></div></noscript>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
