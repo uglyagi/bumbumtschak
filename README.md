@@ -44,6 +44,8 @@ Nach erfolgreicher Prüfung veröffentlicht die Verwaltung über GitHub Blobs �
 
 ## Prüfen
 
+Nach Änderungen an Programmdateien oder styles.css zuerst `npm run version-assets` ausführen. Das aktualisiert die Version des Stylesheets und aller direkt oder indirekt geladenen Spielmodule gemeinsam. So kann eine neue Tanzszene nicht mit einer älteren Musikhausgrafik aus dem Browsercache vermischt werden. Inhaltsänderungen in der Verwaltung brauchen diesen Schritt nicht.
+
 node --test tests/*.test.mjs
 
 Die Tests prüfen GitHub-Aufrufe, gemeinsames Veröffentlichen, konkurrierende Änderungen, Dateibytes, Entwürfe und Vorschau, Inhaltsprüfung und die tatsächlichen Formular- und Spielhandler. Ein vollständiger Browser-Test mit echtem Zugangsschlüssel war in der Entwicklungsumgebung nicht verfügbar.

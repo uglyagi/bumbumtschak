@@ -555,6 +555,9 @@ try {
   assert(h.get('#party-dancer-monkey').classList.contains('has-arrived'));
   h.get('#audio').pause(); for (const callback of h.get('#audio').handlers.get('pause')) callback({});
   assert.equal(layer.classList.contains('is-dancing'), false, 'audio pause stops the dance and lights');
+  const pausedAt = h.state.party.elapsed;
+  for (let i = 0; i < 10; i++) h.frame(++partyTick * 16);
+  assert.equal(h.state.party.elapsed, pausedAt, 'the guest entrance also pauses with the recording');
   await h.get('#audio').play(); for (const callback of h.get('#audio').handlers.get('play')) callback({});
   assert(layer.classList.contains('is-dancing'));
   h.showPanel('radio-info'); h.closePanel(); assert(layer.classList.contains('is-dancing'), 'the party resumes when a menu closes');

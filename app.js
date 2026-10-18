@@ -601,7 +601,7 @@ function frame(time) {
   const dt = Math.min(.05, Math.max(0, (time - (lastTime || time)) / 1000)); lastTime = time;
   let walking = false;
   if (state.started && !modal.open && !document.hidden) {
-    if (state.party.active) { state.party.elapsed += dt; updateDanceGuests(); }
+    if (state.party.active && state.playing) { state.party.elapsed += dt; updateDanceGuests(); }
     let dx = 0, dy = 0;
     for (const code of state.keys) { const v = directions.get(code); if (v) { dx += v[0]; dy += v[1]; } }
     for (const direction of state.pad.values()) { const v = padVectors[direction]; dx += v[0]; dy += v[1]; }
