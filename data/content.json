@@ -4,100 +4,56 @@
     {
       "id": "hut",
       "title": "Hut",
-      "image": "assets/hut.png",
-      "color": "#fff20b",
       "description": "Ein Papagei, ein Pferd und ein Hut, der davonfliegt.",
+      "image": "assets/hut.png",
       "src": "",
+      "color": "#fff20b",
       "published": true
     },
     {
       "id": "tanzen",
       "title": "Tanzen",
-      "image": "assets/tanzen.png",
-      "color": "#ff87ce",
       "description": "Ein Lied für wackelnde Beine und tanzende Flügel.",
+      "image": "assets/tanzen.png",
       "src": "",
+      "color": "#ff87ce",
       "published": true
     },
     {
       "id": "freundschaft",
       "title": "Beste Freunde",
-      "image": "assets/freundschaft.png",
-      "color": "#40cea1",
       "description": "Zusammen unterwegs. Ein Lied über Freundschaft.",
+      "image": "assets/freundschaft.png",
       "src": "",
+      "color": "#40cea1",
       "published": true
     },
     {
       "id": "fahrradfahren",
       "title": "Fahrradfahrn",
-      "image": "assets/fahrradfahren.jpg",
-      "color": "#1d55ff",
       "description": "Ab auf die Räder! Ein Lied übers Fahrradfahren.",
+      "image": "assets/fahrradfahren.jpg",
       "src": "",
+      "color": "#1d55ff",
       "published": true
     }
   ],
-  "concerts": [],
+  "concerts": [
+    {
+      "id": "concert-70e2b858-6ac1-4c48-b0a6-30b88fbce45a",
+      "title": "Konzert Bum Bum Tschak",
+      "place": "Vorchdorf/Kitzmantelhalle",
+      "localDateTime": "2026-11-08T15:00",
+      "date": "2026-11-08T14:00:00.000Z",
+      "timeZone": "Europe/Vienna",
+      "url": "https://www.facebook.com/events/2043299276277127/?acontext=%7B%22event_action_history%22%3A[%7B%22surface%22%3A%22search%22%7D%2C%7B%22mechanism%22%3A%22attachment%22%2C%22surface%22%3A%22newsfeed%22%7D]%2C%22ref_notif_type%22%3Anull%7D",
+      "published": true
+    }
+  ],
   "info": {
     "tagline": "Die Kinderliederband",
     "about": "Ein Panda am Schlagzeug, ein Papagei an Bass und Gesang und ein Krokodil an der E-Gitarre: Zusammen sind wir Bum Bum Tschak. Unsere Lieder erzählen vom Tanzen, von Freundschaft, vom Fahrradfahren und von einem Hut, der beim Reiten verloren geht.",
     "email": "bumbumtschakband@gmail.com",
-    "social": [
-      {
-        "id": "facebook",
-        "label": "Facebook",
-        "url": "https://www.facebook.com/BumBumTschak.Kinderband",
-        "color": "#1877f2"
-      },
-      {
-        "id": "instagram",
-        "label": "Instagram",
-        "url": "https://www.instagram.com/bumbumtschakband/",
-        "color": "#e4408d"
-      },
-      {
-        "id": "youtube",
-        "label": "YouTube",
-        "url": "https://www.youtube.com/@BumBumTschak-Kinderband",
-        "color": "#ff0033"
-      },
-      {
-        "id": "spotify",
-        "label": "Spotify",
-        "url": "https://open.spotify.com/intl-de/artist/0Yn4gitKAlqg7kDEBLkXWv",
-        "color": "#1ed760"
-      }
-    ],
-    "members": [
-      {
-        "id": "panda",
-        "name": "Der Panda",
-        "role": "Schlagzeug",
-        "sound": "BUM! BUM!",
-        "image": "assets/panda-drums-v3.png",
-        "color": "#1d55ff",
-        "intro": "Ich bin der Panda. Ich spiele Schlagzeug und gebe den Rhythmus vor. Wenn meine Stöcke loslegen, dürfen alle mitwippen!"
-      },
-      {
-        "id": "parrot",
-        "name": "Der Papagei",
-        "role": "Bass & Gesang",
-        "sound": "LA LA LAAA!",
-        "image": "assets/parrot-bass-v3.png",
-        "color": "#ff3935",
-        "intro": "Ich bin der Papagei. Ich spiele Bassgitarre und singe. In unserem Lied „Hut“ reite ich auf einem Pferd – und verliere meinen Hut!"
-      },
-      {
-        "id": "croc",
-        "name": "Das Krokodil",
-        "role": "E-Gitarre",
-        "sound": "TSCHAK!",
-        "image": "assets/croc-guitar-v3.png",
-        "color": "#40cea1",
-        "intro": "Ich bin das Krokodil. Meine E-Gitarre gehört zu Bum Bum Tschak. Komm näher und lerne auch meine beiden Bandfreunde kennen!"
-      }
-    ],
     "texts": {
       "grown_title": "Alle Infos. Auf kurzem Weg.",
       "grown_kicker": "FÜR ELTERN, FAMILIEN & VERANSTALTER",
@@ -300,6 +256,61 @@
       "preview_label": "ENTWURFSVORSCHAU · Änderungen sind noch nicht veröffentlicht.",
       "preview_error": "VORSCHAU NICHT GELADEN · {fehler}",
       "preview_back": "Zur Bandverwaltung ↗"
-    }
+    },
+    "members": [
+      {
+        "id": "panda",
+        "name": "Der Panda",
+        "role": "Schlagzeug",
+        "sound": "BUM! BUM!",
+        "image": "assets/panda-drums-v3.png",
+        "color": "#1d55ff",
+        "intro": "Ich bin der Panda. Ich spiele Schlagzeug und gebe den Rhythmus vor. Wenn meine Stöcke loslegen, dürfen alle mitwippen!"
+      },
+      {
+        "id": "parrot",
+        "name": "Der Papagei",
+        "role": "Bass & Gesang",
+        "sound": "LA LA LAAA!",
+        "image": "assets/parrot-bass-v3.png",
+        "color": "#ff3935",
+        "intro": "Ich bin der Papagei. Ich spiele Bassgitarre und singe. In unserem Lied „Hut“ reite ich auf einem Pferd – und verliere meinen Hut!"
+      },
+      {
+        "id": "croc",
+        "name": "Das Krokodil",
+        "role": "E-Gitarre",
+        "sound": "TSCHAK!",
+        "image": "assets/croc-guitar-v3.png",
+        "color": "#40cea1",
+        "intro": "Ich bin das Krokodil. Meine E-Gitarre gehört zu Bum Bum Tschak. Komm näher und lerne auch meine beiden Bandfreunde kennen!"
+      }
+    ],
+    "social": [
+      {
+        "id": "facebook",
+        "label": "Facebook",
+        "color": "#1877f2",
+        "url": "https://www.facebook.com/BumBumTschak.Kinderband"
+      },
+      {
+        "id": "instagram",
+        "label": "Instagram",
+        "color": "#d62976",
+        "url": "https://www.instagram.com/bumbumtschakband/"
+      },
+      {
+        "id": "youtube",
+        "label": "YouTube",
+        "color": "#ff0033",
+        "url": "https://www.youtube.com/@BumBumTschak-Kinderband"
+      },
+      {
+        "id": "spotify",
+        "label": "Spotify",
+        "color": "#1ed760",
+        "url": "https://open.spotify.com/intl-de/artist/0Yn4gitKAlqg7kDEBLkXWv"
+      }
+    ]
   }
 }
