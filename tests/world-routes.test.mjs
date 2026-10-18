@@ -45,4 +45,6 @@ for (let x = 100; x < 1600; x += 175) for (let y = 100; y < 1050; y += 155) {
 }
 const exit = { x: 800, y: 1020 };
 for (const start of [ROOM_SPAWN, ...ANIMAL_SPOTS]) for (const end of [...ANIMAL_SPOTS, exit]) { follow(start, end, 'wardrobe'); routes++; }
+follow({ x: 1270, y: 865 }, { x: 1500, y: 865 }); routes++;
+for (let x = 1415; x <= 1540; x += 5) assert(canStand(x, 280), 'the passage below the upper-right tree remains open');
 console.log(`PASS: ${routes} complete walking routes, obstacle collisions, bounds, normalized diagonal speed, all ${STATIONS.length} outdoor stations and all four character choices with an exit.`);

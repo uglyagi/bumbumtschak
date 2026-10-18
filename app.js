@@ -483,23 +483,20 @@ function activateRoomTarget(id) {
 }
 game.addEventListener('click', e => {
   if (modal.open || !state.started) return;
-  const surface = e.target.closest('[data-paint-target]');
-  if (state.paintCan && outsideScene(state.scene) && surface) { activatePaintSurface(surface.dataset.paintTarget, false); return; }
+  if (state.paintCan && outsideScene(state.scene)) { state.paintTarget = null; walkToPointer(e); return; }
   const social = e.target.closest('[data-social]');
   if (social) { const pad = socialPads(state.scene).find(p => p.id === social.dataset.social); if (pad) navigateTo(pad.x, pad.y); return; }
   const station = e.target.closest('[data-station]');
   if (station) { const s = STATIONS.find(s => s.id === station.dataset.station); if (!s) return; if (BAND.some(member => member.id === s.id) && Math.hypot(s.x - state.position.x, s.y - state.position.y) < 110) visit(s.id); else goToStation(s.id); return; }
   const prop = e.target.closest('[data-room-target]');
   if (prop) { activateRoomTarget(prop.dataset.roomTarget); return; }
+  walkToPointer(e);
+});
+function walkToPointer(event) {
   const matrix = world.getScreenCTM(); if (!matrix) return;
-  const point = new DOMPoint(e.clientX, e.clientY).matrixTransform(matrix.inverse()); navigateTo(point.x, point.y);
-});
-game.addEventListener('focusin', e => {
-  const surface = e.target.closest('[data-paint-target]');
-  if (state.paintCan && outsideScene(state.scene) && !modal.open && surface && canPaintSurface(state.position, PAINT_SURFACES.find(item => item.id === surface.dataset.paintTarget))) {
-    state.paintTarget = surface.dataset.paintTarget; updateNear();
-  }
-});
+  const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse());
+  navigateTo(point.x, point.y);
+}
 game.addEventListener('keydown', e => {
   if (!isActionKey(e)) return;
   const surface = e.target.closest('[data-paint-target]');
@@ -542,13 +539,14 @@ $('#dpad').querySelectorAll('button').forEach(btn => {
   btn.addEventListener('pointerup', release); btn.addEventListener('pointercancel', release); btn.addEventListener('lostpointercapture', release);
   btn.addEventListener('click', e => { if (e.detail === 0 && state.started && !modal.open) { const [dx, dy] = padVectors[btn.dataset.direction]; navigateTo(state.position.x + dx * 28, state.position.y + dy * 28); } });
 });
-$('#interact').addEventListener('click', performInteraction);
+$('#interact').addEventListener('click', () => { if (currentInteraction()?.kind !== 'paint') performInteraction(); });
 function updateNear() {
   const near = currentInteraction();
   refreshPaintPreview(near);
   if (near?.kind === state.near?.kind && near?.id === state.near?.id && near?.slot === state.near?.slot) return;
-  state.near = near; const btn = $('#interact'); btn.hidden = !near;
-  if (near) {
+  state.near = near; const btn = $('#interact'); btn.hidden = !near || near.kind === 'paint';
+  if (near?.kind === 'paint') btn.innerHTML = '';
+  else if (near) {
     const label = near.label;
     btn.innerHTML = `<kbd aria-hidden="true">↵ / ␣</kbd>${escape(label)}`; announce(text('action_hint', { aktion: label }));
   }

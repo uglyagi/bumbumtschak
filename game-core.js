@@ -6,13 +6,13 @@ export const OBSTACLES = [
   { x: 530, y: 110, w: 555, h: 223 },
   { x: 170, y: 345, w: 270, h: 145 },
   { x: 1150, y: 320, w: 260, h: 170 },
-  { x: 1207, y: 723, w: 120, h: 87 },
-  { x: 176, y: 742, w: 247, h: 77 },
+  { x: 1317, y: 723, w: 120, h: 87 },
+  { x: 196, y: 690, w: 208, h: 112 },
   { x: 722, y: 610, w: 156, h: 108 },
   { x: 985, y: 726, w: 30, h: 30 },
   { x: 55, y: 110, w: 112, h: 140 },
-  { x: 1420, y: 140, w: 110, h: 150 },
-  { x: 1460, y: 745, w: 85, h: 135 },
+  { x: 1420, y: 85, w: 110, h: 150 },
+  { x: 1460, y: 545, w: 85, h: 135 },
   { x: 55, y: 900, w: 100, h: 120 },
   { x: 520, y: 830, w: 75, h: 100 },
 ];
@@ -22,8 +22,8 @@ export const STATIONS = [
   { id: 'panda', label: 'Der Panda', short: 'Schlagzeug · BUM!', x: 640, y: 382, color: '#1d55ff' },
   { id: 'parrot', label: 'Der Papagei', short: 'Bass & Gesang', x: 815, y: 382, color: '#ff3935' },
   { id: 'croc', label: 'Das Krokodil', short: 'E-Gitarre · TSCHAK!', x: 1005, y: 382, color: '#40cea1' },
-  { id: 'social', label: 'Kontakt', short: 'Mit uns verbunden bleiben', x: 1265, y: 867, color: '#ff87ce' },
-  { id: 'grownups', label: 'für Eltern und Veranstalter', short: 'Eltern & Veranstalter', x: 300, y: 840, color: '#fff20b' },
+  { id: 'social', label: 'Kontakt', short: 'Mit uns verbunden bleiben', x: 1375, y: 867, color: '#c9ced4' },
+  { id: 'grownups', label: 'Büro', short: 'Eltern & Veranstalter', x: 300, y: 840, color: '#fff20b' },
   { id: 'wardrobe', label: 'Home sweet Home', short: 'Dein Tier wechseln und malen', x: 800, y: 752, color: '#ff87ce' },
   { id: 'help', label: 'So geht’s', short: 'Die Steuerung entdecken', x: 1000, y: 705, color: '#fff20b' },
   { id: 'rocket', label: 'Zum Himmel', short: 'Mit der Rakete hinauffliegen', x: GROUND_ROCKET.x, y: GROUND_ROCKET.y, color: '#bde7ff' },
@@ -34,7 +34,7 @@ export const HOUSE_DOORS = [
   { id: 'wardrobe', x: 800, y: 752, halfWidth: 19, top: 733, bottom: 763, outside: { x: 800, y: 803 } },
 ];
 const WORLD_OBJECTS = [
-  { id: 'grownups', x: 176, y: 742, w: 247, h: 77 },
+  { id: 'grownups', x: 196, y: 690, w: 208, h: 112 },
   { id: 'help', x: 985, y: 726, w: 30, h: 30 },
 ];
 export function worldTouch(position) {

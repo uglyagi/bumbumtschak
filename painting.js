@@ -30,7 +30,7 @@ export const FLOWERS = [
   [665, 540, '#ff87ce', 32], [1115, 735, '#fff20b', 32], [880, 870, '#ff87ce', 30],
   [185, 825, '#fff20b', 28], [1460, 425, '#ff87ce', 32],
 ];
-export const TREES = [[35, 85, 150, 210, '#ff87ce'], [1390, 105, 170, 225, '#fff20b'], [1440, 700, 130, 210, '#ff87ce'], [30, 850, 145, 210, '#1d55ff'], [500, 805, 110, 155, '#ff87ce']];
+export const TREES = [[35, 85, 150, 210, '#ff87ce'], [1390, 50, 170, 225, '#fff20b'], [1440, 500, 130, 210, '#ff87ce'], [30, 850, 145, 210, '#1d55ff'], [500, 805, 110, 155, '#ff87ce']];
 export const CLOUDS = [[356, -310, 140, 60], [1155, -285, 145, 60]];
 export const WORLD_PATH = 'M300 1020Q255 900 300 750T315 560Q280 466 440 475L1110 475Q1320 440 1280 610L1265 850Q1150 945 910 810T670 670Q560 610 570 500M815 500V320M800 665Q840 660 895 695';
 const rect = (x, y, w, h) => ({ x, y, w, h });
@@ -41,11 +41,13 @@ export const PAINT_SURFACES = [
   { id: 'concert-roof', key: 'paint_concert_roof', bounds: rect(1144, 304, 277, 25), walk: { x: 1280, y: 275 } },
   { id: 'home-wall', key: 'paint_home_wall', bounds: rect(722, 610, 156, 108), walk: { x: 800, y: 795 } },
   { id: 'home-roof', key: 'paint_home_roof', bounds: rect(712, 578, 176, 32), walk: { x: 800, y: 550 } },
+  { id: 'office-wall', key: 'paint_office_wall', bounds: rect(196, 690, 208, 112), walk: { x: 300, y: 840 } },
+  { id: 'office-roof', key: 'paint_office_roof', bounds: rect(183, 650, 234, 40), walk: { x: 300, y: 615 } },
   { id: 'stage-wall', key: 'paint_stage_wall', bounds: rect(530, 150, 555, 193), walk: { x: 640, y: 382 } },
   { id: 'stage-roof', key: 'paint_stage_roof', bounds: rect(530, 96, 555, 57), walk: { x: 800, y: 70 } },
   { id: 'sun', key: 'paint_sun', bounds: rect(190, -300, 102, 106), walk: { x: 241, y: -159 }, reach: 55, sky: true },
   ...CLOUDS.map(([x, y, w, h], i) => ({ id: `cloud-${i}`, key: 'paint_cloud', bounds: rect(x, y, w, h), walk: { x: x + w / 2, y: y + h + 38 }, reach: 60, sky: true })),
-  ...TREES.map(([x, y, w, h], i) => ({ id: `tree-${i}`, key: 'paint_tree', bounds: rect(x, y, w, h * .71), walk: [{ x: 215, y: 200 }, { x: 1350, y: 215 }, { x: 1390, y: 790 }, { x: 205, y: 950 }, { x: 470, y: 875 }][i], reach: 65 })),
+  ...TREES.map(([x, y, w, h], i) => ({ id: `tree-${i}`, key: 'paint_tree', bounds: rect(x, y, w, h * .71), walk: [{ x: 215, y: 200 }, { x: 1350, y: 160 }, { x: 1390, y: 610 }, { x: 205, y: 950 }, { x: 470, y: 875 }][i], reach: 65 })),
   ...FLOWERS.map(([x, y, , size], i) => ({ id: `flower-${i}`, key: 'paint_flower', bounds: rect(x, y, size, size * .7), walk: { x: x + size / 2, y: y + size + 20 }, reach: 42 })),
   { id: 'water', key: 'paint_water', bounds: rect(0, 1025, 1600, 75), walk: { x: 800, y: 1005 }, reach: 55 },
   { id: 'path', key: 'paint_path', walk: { x: 650, y: 650 }, ground: true },

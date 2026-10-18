@@ -27,7 +27,8 @@ test('every requested color surface changes while all black outlines and their g
     for (const match of matches) assert(match[0].includes('#ff3935'), surface.id + ' receives its new color');
   }
   assert(!original.includes('M800 755v65')); assert(!original.includes('Kassettenhaus')); assert(!original.includes('Konzerthaus'));
-  assert(original.includes('Musikhaus')); assert(original.includes('Home sweet Home')); assert(original.includes('für Eltern und Veranstalter'));
+  assert(original.includes('Musikhaus')); assert(original.includes('Home sweet Home')); assert(original.includes('Büro'));
+  assert.equal(text('nav_grownups'), 'für Eltern und Veranstalter');
   assert(!original.includes('mapLabel(1280'));
 });
 

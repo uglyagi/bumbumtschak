@@ -55,6 +55,7 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null) {
       return this.name === '#game' && match ? (this.paintNodes || []).filter(node => node.dataset[match[1] === 'target' ? 'paintTarget' : 'paintInk'] === match[2]) : [];
     }
     getBoundingClientRect() { return { width: 1200, height: 700 }; }
+    getScreenCTM() { return { inverse: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }) }; }
     getClientRects() { return [{}]; }
     showModal() { this.open = true; }
     close() { if (!this.open) return; this.open = false; for (const cb of this.handlers.get('close') || []) cb({}); }
@@ -87,6 +88,7 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null) {
     window: { innerWidth: 1200, matchMedia: () => ({ matches: false }), addEventListener: (n, cb) => add(windowHandlers, n, cb), open(...args) { opened.push(args); } },
     location: { search: preview ? '?preview=1' : '' }, localStorage: { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value) },
     URLSearchParams, URL, Intl, console,
+    DOMPoint: class { constructor(x = 0, y = 0) { this.x = x; this.y = y; } matrixTransform(m) { return { x: m.a * this.x + m.c * this.y + m.e, y: m.b * this.x + m.d * this.y + m.f }; } },
     fetch: async () => ({ ok: false }), clearTimeout() {}, setTimeout: () => 1,
     ResizeObserver: class { observe() {} }, requestAnimationFrame() {},
   });
@@ -278,7 +280,7 @@ assert.equal(social.socialPads('social').length, 0);
 const index = await fs.readFile(new URL('index.html', root), 'utf8');
 assert(!index.includes('class="scene-heading"')); assert(!index.includes('class="keyboard-hint"'));
 assert(art.worldMarkup().includes('data-station="help"'));
-console.log('PASS: automatic door entry/exit, wall rejection, desk/help require nearby confirmation, no automatic reopening, all three confirmation keys close inspections, Escape close, inactive empty ground, outdoor contact pads and letter without navigation.');
+console.log('PASS: automatic door entry/exit, wall rejection, office/help require nearby confirmation, no automatic reopening, all three confirmation keys close inspections, Escape close, inactive empty ground, outdoor contact pads and letter without navigation.');
 for (const id of ['radio', 'concerts', 'wardrobe', 'grownups', 'help', 'social']) {
   const h = await harness(); h.state.started = true; h.closePanel(); h.game.focus(); h.goToStation(id);
   let tick = 0;
@@ -481,3 +483,24 @@ new returning.Element('return from a flight over the meadow', 'button', { action
 let returnClock = 0;
 while (returning.state.rocket.airborne && returnClock < 500) returning.frame(++returnClock * 16);
 assert(!returning.state.rocket.airborne && returning.state.rocket.riding, 'the return button also lands when approaching its destination from below');
+
+const mousePaint = await harness(false, 'cat', { path: '#ff3935' });
+mousePaint.enterRoom('wardrobe'); mousePaint.state.position = { ...painting.paintSlots(content.PALETTE).find(color => color.id === 'blue') }; mousePaint.game.focus();
+mousePaint.press(mousePaint.windowHandlers, mousePaint.event('Enter', 'Enter', mousePaint.game)); mousePaint.leaveRoom();
+mousePaint.state.position = { x: 700, y: 475 }; mousePaint.state.paintTarget = 'path'; mousePaint.frame(16);
+assert.equal(mousePaint.get('#interact').hidden, true, 'paint surfaces do not display a contextual action button');
+assert.equal(mousePaint.get('#interact').innerHTML, '');
+mousePaint.get('#world-svg').getScreenCTM = () => ({ inverse: () => ({ a: .5, b: 0, c: 0, d: .5, e: -10, f: -20 }) });
+for (const callback of mousePaint.game.handlers.get('click')) callback({ target: new mousePaint.Element('grass', 'path', { paintTarget: 'grass' }), clientX: 2120, clientY: 1320 });
+assert.equal(mousePaint.state.paintTarget, null, 'pointer movement never selects a paint surface');
+assert.equal(mousePaint.state.path.at(-1).x, 1050); assert.equal(mousePaint.state.path.at(-1).y, 640, 'the clicked point is transformed into world coordinates');
+assert.equal(mousePaint.state.paint.path, '#ff3935'); assert.equal(mousePaint.state.paint.grass, undefined);
+let mouseClock = 1;
+while (mousePaint.state.path.length && mouseClock < 1000) mousePaint.frame(++mouseClock * 16);
+assert(Math.hypot(mousePaint.state.position.x - 1050, mousePaint.state.position.y - 640) < 5, 'the pointer steers the animal to the actual clicked spot');
+assert.equal(mousePaint.get('#interact').hidden, true); assert.equal(mousePaint.state.paint.grass, undefined);
+for (const callback of mousePaint.get('#interact').handlers.get('click')) callback({});
+assert.equal(mousePaint.state.paint.grass, undefined, 'even a stale mouse action cannot commit a color');
+mousePaint.game.focus(); mousePaint.press(mousePaint.windowHandlers, mousePaint.event(' ', 'Space', mousePaint.game));
+assert.equal(mousePaint.state.paint.grass, '#1d55ff', 'confirmation by keyboard still commits the preview');
+console.log('PASS: holding a paint bucket makes mouse clicks steer to the actual transformed point, without selecting or committing colors or displaying contextual paint actions; Space still paints.');
