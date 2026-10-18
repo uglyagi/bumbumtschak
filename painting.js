@@ -21,7 +21,15 @@ export function paletteColors(saved) {
 }
 export const paintSlots = (palette, page = 0) => palette.slice(page * PAINT_PAGE_SIZE, (page + 1) * PAINT_PAGE_SIZE).map((color, i) => ({ ...color, x: 300 + i * 200, y: 850 }));
 export const paintPages = palette => Math.max(1, Math.ceil(palette.length / PAINT_PAGE_SIZE));
-export const FLOWERS = [[445, 560, '#ff87ce', 35], [105, 610, '#fff20b', 43], [1090, 595, '#ff87ce', 40], [1385, 600, '#fff20b', 33], [1030, 920, '#fff20b', 44], [710, 915, '#ff87ce', 36], [400, 940, '#ff87ce', 36], [1410, 960, '#ff87ce', 50], [450, 255, '#fff20b', 38], [1200, 150, '#ff87ce', 40], [120, 350, '#ff87ce', 32]];
+export const FLOWERS = [
+  [445, 560, '#ff87ce', 35], [105, 610, '#fff20b', 43], [1090, 595, '#ff87ce', 40],
+  [1385, 600, '#fff20b', 33], [1030, 920, '#fff20b', 44], [710, 915, '#ff87ce', 36],
+  [400, 940, '#ff87ce', 36], [1410, 960, '#ff87ce', 50], [450, 255, '#fff20b', 38],
+  [1200, 150, '#ff87ce', 40], [120, 350, '#ff87ce', 32],
+  [245, 165, '#fff20b', 30], [430, 100, '#ff87ce', 28], [505, 390, '#fff20b', 28],
+  [665, 540, '#ff87ce', 32], [1115, 735, '#fff20b', 32], [880, 870, '#ff87ce', 30],
+  [185, 825, '#fff20b', 28], [1460, 425, '#ff87ce', 32],
+];
 export const TREES = [[35, 85, 150, 210, '#ff87ce'], [1390, 105, 170, 225, '#fff20b'], [1440, 700, 130, 210, '#ff87ce'], [30, 850, 145, 210, '#1d55ff'], [500, 805, 110, 155, '#ff87ce']];
 export const CLOUDS = [[356, -310, 140, 60], [1155, -285, 145, 60]];
 export const WORLD_PATH = 'M300 1020Q255 900 300 750T315 560Q280 466 440 475L1110 475Q1320 440 1280 610L1265 850Q1150 945 910 810T670 670Q560 610 570 500M815 500V320M800 665Q840 660 895 695';
