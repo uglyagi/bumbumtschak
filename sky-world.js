@@ -1,5 +1,5 @@
 export const SKY = { top: -650, bottom: 0, color: '#bde7ff', spawn: { x: 1060, y: -125 } };
-export const GROUND_ROCKET = { x: 1130, y: 350 };
+export const GROUND_ROCKET = { x: 365, y: 70 };
 export const ROCKET_REACH = 65;
 export const outsideScene = scene => scene === 'world' || scene === 'sky';
 export const rocketBody = position => ({ x: position.x - 19, y: position.y - 140, w: 38, h: 112 });

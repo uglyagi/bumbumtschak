@@ -28,7 +28,7 @@ test('landing requires free grass and a reachable place to step out', () => {
     assert(exit && canStand(exit.x, exit.y, WORLD.radius, 'world', point));
   }
   const parked = { x: 800, y: 70 };
-  assert(canStand(1130, 270, WORLD.radius, 'world', parked), 'the former launch site has no invisible rocket after landing elsewhere');
+  assert(canStand(1130, 270, WORLD.radius, 'world', parked), 'the open route beside the stage remains clear after landing elsewhere');
 });
 
 test('the rendered flight keeps the selected animal inside and disables ground destinations', () => {
