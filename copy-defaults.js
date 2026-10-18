@@ -79,9 +79,10 @@ export const COPY_GROUPS = [
       {
         "key": "grown_how_body",
         "label": "Erklärung: Text",
-        "value": "Wähle ein Tier und lauf mit den Pfeiltasten durch die Musikwelt. Ins Kassettenhaus und Konzerthaus gelangst du durch den Eingang, hinaus durch den Ausgang. Gehe zum Schreibtisch oder zum kleinen Hinweisschild und drücke Enter oder die Leertaste, um die Infos groß anzusehen. Enter oder Leertaste spricht auch die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Auf Kontaktsymbolen öffnest du damit den Link oder den Brief. Schreibtisch, Brief und Schild schließen mit Enter, Leertaste oder Esc.",
+        "value": "Wähle ein Tier und lauf mit den Pfeiltasten durch die Musikwelt. Kassettenhaus, Konzerthaus und Figurenhaus betrittst du durch den Eingang und verlässt sie durch den Ausgang. Im Figurenhaus gehst du zu Katze, Hund, Pferd oder Affe und wechselst mit Enter oder Leertaste dein Tier. Das Hinweisschild steht neben dem Figurenhaus. Gehe zum Schreibtisch oder zum Hinweisschild und drücke Enter oder die Leertaste, um die Infos groß anzusehen. Damit sprichst du auch die Band an, nimmst Kassetten, legst sie ins Radio ein oder öffnest Kontaktsymbole. Schreibtisch, Brief und Schild schließen mit Enter, Leertaste oder Esc.",
         "max": 2400,
         "previousValues": [
+          "Wähle ein Tier und lauf mit den Pfeiltasten durch die Musikwelt. Ins Kassettenhaus und Konzerthaus gelangst du durch den Eingang, hinaus durch den Ausgang. Gehe zum Schreibtisch oder zum kleinen Hinweisschild und drücke Enter oder die Leertaste, um die Infos groß anzusehen. Enter oder Leertaste spricht auch die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Auf Kontaktsymbolen öffnest du damit den Link oder den Brief. Schreibtisch, Brief und Schild schließen mit Enter, Leertaste oder Esc.",
           "Wähle ein Tier und lauf mit den Pfeiltasten durch die Musikwelt. Ins Kassettenhaus und Konzerthaus gelangst du durch den Eingang, hinaus durch den Ausgang. Berühre den Schreibtisch oder das kleine Hinweisschild, um die Infos groß anzusehen. Enter oder Leertaste spricht die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Auf Kontaktsymbolen öffnest du damit den Link oder den Brief. Schreibtisch, Brief und Schild schließen mit Enter, Leertaste oder Esc.",
           "Wähle ein Tier und lauf mit den Pfeiltasten durch die Musikwelt. Enter oder Leertaste öffnet eine Tür oder ein Gespräch. Die drei Bandmitglieder lernst du direkt draußen an der Bühne kennen. Im Kassettenhaus nimmst du ein Band, trägst es zum Radio und legst es ein. Danach kannst du es auf jedem freien Platz ablegen. Jedes Haus hat unten eine Ausgangstür. Alle Inhalte erreichst du auch über das Menü."
         ]
@@ -317,9 +318,10 @@ export const COPY_GROUPS = [
       {
         "key": "world_instructions",
         "label": "Ausführlicher Tastaturhinweis",
-        "value": "Mit den Pfeiltasten bewegst du die Figur. Laufe durch den Eingang ins Kassettenhaus oder Konzerthaus und unten durch den Ausgang wieder hinaus. In der Nähe des Schreibtischs oder des kleinen Hinweisschilds öffnest du die große Ansicht mit Enter oder der Leertaste. Damit nimmst du auch Kassetten auf, legst sie ins Radio ein, sprichst die Band an oder öffnest ein Linksymbol unter deinen Füßen. Beim Briefsymbol erscheint unsere E-Mail-Adresse. Schreibtisch, Brief und Hinweisschild schließen mit Enter, Leertaste oder Escape. Auf freien Flächen bewirken Enter und Leertaste nichts. Mit Tab erreichst du alle Bedienelemente.",
+        "value": "Mit den Pfeiltasten bewegst du die Figur. Kassettenhaus, Konzerthaus und Figurenhaus betrittst du durch den Eingang. Unten durch den Ausgang geht es wieder hinaus. Im Figurenhaus stellst du dich vor ein Tier und wechselst mit Enter oder der Leertaste deine Figur. Das Hinweisschild steht daneben. In der Nähe des Schreibtischs oder Hinweisschilds öffnest du die große Ansicht mit Enter oder der Leertaste. Damit nimmst du auch Kassetten auf, legst sie ins Radio ein, sprichst die Band an oder öffnest ein Linksymbol unter deinen Füßen. Beim Briefsymbol erscheint unsere E-Mail-Adresse. Schreibtisch, Brief und Hinweisschild schließen mit Enter, Leertaste oder Escape. Auf freien Flächen bewirken Enter und Leertaste nichts. Mit Tab erreichst du alle Bedienelemente.",
         "max": 2400,
         "previousValues": [
+          "Mit den Pfeiltasten bewegst du die Figur. Laufe durch den Eingang ins Kassettenhaus oder Konzerthaus und unten durch den Ausgang wieder hinaus. In der Nähe des Schreibtischs oder des kleinen Hinweisschilds öffnest du die große Ansicht mit Enter oder der Leertaste. Damit nimmst du auch Kassetten auf, legst sie ins Radio ein, sprichst die Band an oder öffnest ein Linksymbol unter deinen Füßen. Beim Briefsymbol erscheint unsere E-Mail-Adresse. Schreibtisch, Brief und Hinweisschild schließen mit Enter, Leertaste oder Escape. Auf freien Flächen bewirken Enter und Leertaste nichts. Mit Tab erreichst du alle Bedienelemente.",
           "Mit den Pfeiltasten bewegst du die Figur. Laufe durch den Eingang ins Kassettenhaus oder Konzerthaus und unten durch den Ausgang wieder hinaus. Berühre den Schreibtisch oder das kleine Hinweisschild, um es groß anzusehen. Enter oder Leertaste nimmt Kassetten auf, legt sie ins Radio ein, spricht die Band an oder öffnet ein Linksymbol unter deinen Füßen. Beim Briefsymbol erscheint unsere E-Mail-Adresse. Schreibtisch, Brief und Hinweisschild schließen mit Enter, Leertaste oder Escape. Auf freien Flächen bewirken Enter und Leertaste nichts. Mit Tab erreichst du alle Bedienelemente.",
           "Pfeiltasten bewegen die Figur und wählen Menüpunkte aus. Enter oder Leertaste bestätigt, betritt ein Haus, nimmt eine Kassette auf oder legt sie ins Radio ein. An der Bühne sprichst du die Bandmitglieder direkt an. Jeder Raum hat unten eine Ausgangstür. Escape geht zurück. Mit Tab erreichst du alle Bedienelemente."
         ]
@@ -460,6 +462,60 @@ export const COPY_GROUPS = [
         "key": "station_help_short",
         "label": "Wegweiser-Menü: Steuerung",
         "value": "So bewegst du dich durch die Welt",
+        "max": 180
+      }
+    ]
+  },
+  {
+    "id": "wardrobe",
+    "label": "Figurenhaus",
+    "fields": [
+      {
+        "key": "sign_wardrobe",
+        "label": "Name am Figurenhaus",
+        "value": "Figurenhaus",
+        "max": 32
+      },
+      {
+        "key": "station_wardrobe_short",
+        "label": "Wegweiser-Menü: Beschreibung",
+        "value": "Katze, Hund, Pferd oder Affe sein",
+        "max": 180
+      },
+      {
+        "key": "room_wardrobe",
+        "label": "Überschrift im Figurenhaus",
+        "value": "Das Figurenhaus",
+        "max": 50
+      },
+      {
+        "key": "kicker_wardrobe",
+        "label": "Figurenhaus: Unterzeile",
+        "value": "DEIN TIER · DEINE MUSIKWELT",
+        "max": 180
+      },
+      {
+        "key": "wardrobe_board",
+        "label": "Innenraum: Überschrift",
+        "value": "Welches Tier möchtest du sein?",
+        "max": 180
+      },
+      {
+        "key": "wardrobe_hint",
+        "label": "Innenraum: Erklärung",
+        "value": "Stelle dich vor ein Tier und drücke Enter oder die Leertaste.",
+        "max": 2400
+      },
+      {
+        "key": "wardrobe_selected",
+        "label": "Hinweis am gewählten Tier",
+        "value": "Das bist du!",
+        "max": 180
+      },
+      {
+        "key": "action_change_character",
+        "label": "Aktion zum Figurenwechsel",
+        "value": "{tier} werden",
         "max": 180
       }
     ]
@@ -1050,9 +1106,10 @@ export const COPY_GROUPS = [
       {
         "key": "help_step3_body",
         "label": "Schritt 3: Text",
-        "value": "Laufe durch den Eingang ins Kassettenhaus oder Konzerthaus. Hinaus geht es durch den Ausgang. Gehe zum Schreibtisch oder zum Hinweisschild und drücke Enter oder die Leertaste, um die Infos groß anzusehen. Enter oder Leertaste spricht auch die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Stelle dich auf ein Kontaktsymbol und drücke Enter oder die Leertaste. Der Brief zeigt unsere E-Mail-Adresse. Schreibtisch, Brief und dieses Hinweisschild schließen mit Enter, Leertaste oder Esc. Auf freien Flächen passiert beim Bestätigen nichts.",
+        "value": "Laufe durch den Eingang ins Kassettenhaus, Konzerthaus oder Figurenhaus. Hinaus geht es durch den Ausgang. Im Figurenhaus kannst du Katze, Hund, Pferd oder Affe sein: Gehe zu einem Tier und drücke Enter oder die Leertaste. Gehe zum Schreibtisch oder zum Hinweisschild neben dem Figurenhaus und bestätige, um die Infos groß anzusehen. Enter oder Leertaste spricht auch die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Auf Kontaktsymbolen öffnest du damit den Link oder den Brief mit unserer E-Mail-Adresse. Schreibtisch, Brief und dieses Hinweisschild schließen mit Enter, Leertaste oder Esc. Auf freien Flächen passiert beim Bestätigen nichts.",
         "max": 2400,
         "previousValues": [
+          "Laufe durch den Eingang ins Kassettenhaus oder Konzerthaus. Hinaus geht es durch den Ausgang. Gehe zum Schreibtisch oder zum Hinweisschild und drücke Enter oder die Leertaste, um die Infos groß anzusehen. Enter oder Leertaste spricht auch die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Stelle dich auf ein Kontaktsymbol und drücke Enter oder die Leertaste. Der Brief zeigt unsere E-Mail-Adresse. Schreibtisch, Brief und dieses Hinweisschild schließen mit Enter, Leertaste oder Esc. Auf freien Flächen passiert beim Bestätigen nichts.",
           "Laufe durch den Eingang ins Kassettenhaus oder Konzerthaus. Hinaus geht es durch den Ausgang. Berührst du den Schreibtisch, erscheinen seine Infos. Enter oder Leertaste spricht die Band an, nimmt eine Kassette oder legt sie ins Radio ein. Stelle dich auf ein Kontaktsymbol und drücke Enter oder die Leertaste. Der Brief zeigt unsere E-Mail-Adresse. Schreibtisch, Brief und dieses Hinweisschild schließen mit Enter, Leertaste oder Esc. Auf freien Flächen passiert beim Bestätigen nichts.",
           "Enter oder Leertaste betritt ein Haus oder öffnet ein Gespräch. An der Bühne kannst du Panda, Papagei und Krokodil direkt ansprechen. Im Kassettenhaus nimmst du ein Band auf, trägst es zum Radio und legst es ein. Zurücklegen kannst du es auf jeden freien Platz. Alle Häuser haben einen Ausgang. In Menüs wählen die Pfeiltasten aus, Enter oder Leertaste bestätigt. Esc geht zurück."
         ]

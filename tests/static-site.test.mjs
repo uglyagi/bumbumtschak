@@ -14,7 +14,7 @@ test('the public world loads only its local GitHub content file', async () => {
     assert.deepEqual(await loadContent(), { ok: true });
     assert.equal(requests.length, 1); assert.equal(requests[0].url, new URL('data/content.json', root).href);
     assert.equal(requests[0].options.credentials, 'omit'); assert.equal(requests[0].options.cache, 'no-store');
-    assert.equal(TRACKS.length, 4); assert.equal(BAND.length, 3); assert(text('grown_title'));
+    assert.equal(TRACKS.length, defaults.tracks.filter(track => track.published !== false).length); assert.equal(BAND.length, 3); assert(text('grown_title'));
     assert.equal(adminURL, new URL('verwaltung/', root).href);
   } finally { globalThis.fetch = before; }
 });

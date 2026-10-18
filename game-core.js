@@ -1,11 +1,13 @@
 export const WORLD = { width: 1600, height: 1100, radius: 18, speed: 205 };
+export const WORLD_SPAWN = { x: 650, y: 650 };
 export const OBSTACLES = [
   { x: 530, y: 110, w: 555, h: 223 },
   { x: 170, y: 345, w: 270, h: 145 },
   { x: 1150, y: 320, w: 260, h: 170 },
   { x: 1207, y: 723, w: 120, h: 87 },
   { x: 176, y: 742, w: 247, h: 77 },
-  { x: 785, y: 726, w: 30, h: 30 },
+  { x: 710, y: 600, w: 180, h: 140 },
+  { x: 985, y: 726, w: 30, h: 30 },
   { x: 55, y: 110, w: 112, h: 140 },
   { x: 1420, y: 140, w: 110, h: 150 },
   { x: 1460, y: 745, w: 85, h: 135 },
@@ -20,15 +22,17 @@ export const STATIONS = [
   { id: 'croc', label: 'Das Krokodil', short: 'E-Gitarre · TSCHAK!', x: 1005, y: 382, color: '#40cea1' },
   { id: 'social', label: 'Social Media', short: 'Mit uns verbunden bleiben', x: 1265, y: 867, color: '#ff87ce' },
   { id: 'grownups', label: 'Für Große', short: 'Eltern & Veranstalter', x: 300, y: 840, color: '#fff20b' },
-  { id: 'help', label: 'So geht’s', short: 'Die Steuerung entdecken', x: 800, y: 705, color: '#fff20b' },
+  { id: 'wardrobe', label: 'Figurenhaus', short: 'Dein Tier wechseln', x: 800, y: 774, color: '#ff87ce' },
+  { id: 'help', label: 'So geht’s', short: 'Die Steuerung entdecken', x: 1000, y: 705, color: '#fff20b' },
 ];
 export const HOUSE_DOORS = [
   { id: 'radio', x: 305, y: 526, halfWidth: 24, top: 506, bottom: 535, outside: { x: 305, y: 565 } },
   { id: 'concerts', x: 1280, y: 526, halfWidth: 23, top: 506, bottom: 535, outside: { x: 1280, y: 565 } },
+  { id: 'wardrobe', x: 800, y: 774, halfWidth: 23, top: 756, bottom: 785, outside: { x: 800, y: 825 } },
 ];
 const WORLD_OBJECTS = [
   { id: 'grownups', x: 176, y: 742, w: 247, h: 77 },
-  { id: 'help', x: 785, y: 726, w: 30, h: 30 },
+  { id: 'help', x: 985, y: 726, w: 30, h: 30 },
 ];
 export function worldTouch(position) {
   const door = HOUSE_DOORS.find(door => Math.abs(position.x - door.x) <= door.halfWidth && position.y >= door.top && position.y <= door.bottom);
@@ -43,7 +47,9 @@ export const isActionKey = event => event.key === 'Enter' || event.key === ' ' |
 const WALLS = [{ x: 125, y: 100, w: 1350, h: 145 }, { x: 125, y: 210, w: 35, h: 860 }, { x: 1440, y: 210, w: 35, h: 860 }, { x: 125, y: 1000, w: 615, h: 80 }, { x: 860, y: 1000, w: 615, h: 80 }];
 export function sceneObstacles(scene = 'world') {
   if (scene === 'world') return OBSTACLES;
-  const props = scene === 'radio' ? [{ x: 615, y: 285, w: 370, h: 180 }, { x: 215, y: 300, w: 355, h: 195 }, { x: 980, y: 275, w: 420, h: 60 }] : [{ x: 500, y: 280, w: 600, h: 200 }];
+  const props = scene === 'radio' ? [{ x: 615, y: 285, w: 370, h: 180 }, { x: 215, y: 300, w: 355, h: 195 }, { x: 980, y: 275, w: 420, h: 60 }]
+    : scene === 'wardrobe' ? [380, 660, 940, 1220].map(x => ({ x: x - 100, y: 350, w: 200, h: 245 }))
+    : [{ x: 500, y: 280, w: 600, h: 200 }];
   return [...WALLS, ...props];
 }
 export function canStand(x, y, radius = WORLD.radius, scene = 'world') {
@@ -75,7 +81,10 @@ export function nearestStation(position, range = 110) {
   return nearest;
 }
 export function planPath(start, end, scene = 'world') {
-  const free = (x, y, radius = WORLD.radius) => canStand(x, y, radius, scene);
+  const inDoor = (point, door, margin = 0) => Math.abs(point.x - door.x) <= door.halfWidth + margin && point.y >= door.top - margin && point.y <= door.bottom + margin;
+  // Walking to another destination must not lead through an automatic entrance.
+  const avoidedDoors = scene === 'world' ? HOUSE_DOORS.filter(door => !inDoor(start, door, WORLD.radius + 7) && !inDoor(end, door)) : [];
+  const free = (x, y, radius = WORLD.radius) => canStand(x, y, radius, scene) && !avoidedDoors.some(door => inDoor({ x, y }, door, radius));
   if (!free(start.x, start.y) || !free(end.x, end.y)) return [];
   const step = 28, cols = Math.ceil(WORLD.width / step), rows = Math.ceil(WORLD.height / step);
   const margin = WORLD.radius + 7;

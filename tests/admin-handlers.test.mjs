@@ -55,6 +55,8 @@ test('login clears the password field and opens all existing editorial forms', a
   assert.equal(h.get('#token').value, ''); assert.equal(h.get('#gate').hidden, true); assert.equal(h.get('#editor').hidden, false);
   await h.click(h.get('#tab-info'));
   assert(h.get('#panel').innerHTML.includes('info.texts.grown_title'));
+  assert(h.get('#panel').innerHTML.includes('info.texts.wardrobe_board'));
+  assert(h.get('#panel').innerHTML.includes('info.texts.action_change_character'));
   assert(h.get('#panel').innerHTML.includes('info.members.0.name'));
   assert(h.get('#panel').innerHTML.includes('info.members.0.image'));
   assert(!h.get('#panel').innerHTML.includes(TEST_TOKEN));
@@ -62,12 +64,13 @@ test('login clears the password field and opens all existing editorial forms', a
 });
 test('selected audio is local until publish, then content and file are committed together', async () => {
   const h = await harness(); await h.login();
+  const originalAudio = h.repo.document().tracks[0].src;
   const input = new h.Element('audio upload', { upload: 'src', track: 'hut' });
   const wav = new Uint8Array(128); wav.set(new TextEncoder().encode('RIFF')); wav.set(new TextEncoder().encode('WAVE'), 8);
   input.files = [new File([wav], 'Hut.wav', { type: 'audio/wav' })];
   await h.fire('#panel', 'change', input);
   assert(h.state.document.tracks[0].src.startsWith('uploads/')); assert.equal(h.state.files.size, 1);
-  assert.equal(h.repo.document().tracks[0].src, '');
+  assert.equal(h.repo.document().tracks[0].src, originalAudio);
   h.state.document.info.texts.grown_title = 'Neue Überschrift';
   assert(await h.save()); assert.equal(h.state.hasDraft, true);
   assert.equal(h.draft().files.length, 1); assert(!JSON.stringify(h.draft()).includes(TEST_TOKEN));

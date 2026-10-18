@@ -1,8 +1,8 @@
-import { WORLD, STATIONS, clamp, move, planPath, isActionKey, HOUSE_DOORS, worldTouch } from './game-core.js';
+import { WORLD, WORLD_SPAWN, STATIONS, clamp, move, planPath, isActionKey, HOUSE_DOORS, worldTouch } from './game-core.js';
 import { ANIMALS, BAND, TRACKS, CONCERTS, CONTACT, INFO, loadContent, text } from './content.js';
 import { icon, avatar, memberArt, worldMarkup } from './art.js';
 import { cassetteMarkup, cassetteSVG, roomMarkup, slotContents, slotDescription } from './room-art.js';
-import { ROOMS, ROOM_SPAWN, EXIT, RADIO, TAPE_SLOTS, SHELF_SWITCH, ROOM_PROPS, slotsOnPage, tapePages, findTapeSlot, refreshBandWayfinding, roomFor, createCassetteState, tapeLocation, cassetteAction, nearbyInteraction, throughExit, nextMenuIndex } from './rooms.js';
+import { ROOMS, ROOM_SPAWN, EXIT, RADIO, TAPE_SLOTS, SHELF_SWITCH, ROOM_PROPS, ANIMAL_SPOTS, slotsOnPage, tapePages, findTapeSlot, refreshBandWayfinding, roomFor, createCassetteState, tapeLocation, cassetteAction, nearbyInteraction, throughExit, nextMenuIndex } from './rooms.js';
 import { brandIcon, socialPads, contactLinks } from './social.js';
 import { adminURL } from './connection.js';
 
@@ -23,7 +23,7 @@ const state = {
   animal: ANIMALS.some(a => a.id === savedAnimal) ? savedAnimal : 'cat',
   scene: 'world', returnPosition: null, tapes: createCassetteState(), shelfPage: 0,
   started: ANIMALS.some(a => a.id === savedAnimal),
-  position: { x: 800, y: 650 },
+  position: { ...WORLD_SPAWN },
   camera: { x: 800, y: 520 },
   viewport: { w: 1480, h: 850 },
   keys: new Set(), pad: new Map(), path: [], destination: null,
@@ -141,7 +141,7 @@ function refreshCassettes() {
   if (slot) { slot.toggleAttribute('hidden', !loaded); slot.innerHTML = loaded ? cassetteMarkup(loaded) : ''; slot.classList.toggle('is-playing', state.playing); }
 }
 function renderScene() {
-  game.innerHTML = state.scene === 'world' ? worldMarkup() : roomMarkup(state.scene, state.shelfPage, state.tapes);
+  game.innerHTML = state.scene === 'world' ? worldMarkup() : roomMarkup(state.scene, state.shelfPage, state.tapes, state.animal);
   world = $('#world-svg'); player = $('#player'); playerUse = $('#player-use'); marker = $('#destination-marker');
   game.setAttribute('aria-label', state.scene === 'world' ? text('world_title') : ROOMS[state.scene].title);
   $('.wayfinder').hidden = state.scene !== 'world'; $('.exit-room').hidden = state.scene === 'world';
@@ -186,7 +186,7 @@ function enterRoom(id) {
 function leaveRoom() {
   stopWalking(); closePanel();
   if (state.scene !== 'world') {
-    state.scene = 'world'; state.position = { ...(state.returnPosition || { x: 800, y: 650 }) }; renderScene();
+    state.scene = 'world'; state.position = { ...(state.returnPosition || WORLD_SPAWN) }; renderScene();
   }
   game.focus({ preventScroll: true }); announce(text('left_room'));
 }
@@ -228,6 +228,10 @@ function performInteraction() {
   if (near.kind === 'enter') { enterRoom(near.id); return; }
   if (near.kind === 'exit') { leaveRoom(); return; }
   if (near.kind === 'read') { showPanel(near.id); return; }
+  if (near.kind === 'change-character') {
+    chooseAnimal(near.id); storage.set('animal', state.animal); renderScene(); game.focus({ preventScroll: true });
+    announce(text('now_animal', { tier: ANIMALS.find(animal => animal.id === state.animal).name })); return;
+  }
   if (near.kind === 'radio-help') { showPanel('radio-info'); return; }
   const old = state.tapes; state.tapes = cassetteAction(old, { type: near.kind, id: near.id, slot: near.slot });
   if (old === state.tapes) return;
@@ -353,6 +357,12 @@ function activateRoomTarget(id) {
     return;
   }
   if (id === 'exit') { navigateTo(EXIT.x, 1020, { kind: 'exit' }); return; }
+  if (id.startsWith('animal:')) {
+    const spot = ANIMAL_SPOTS.find(spot => spot.id === id.slice(7)); if (!spot) return;
+    const near = nearbyInteraction(state.scene, state.position, state.tapes, state.shelfPage);
+    if (near?.kind === 'change-character' && near.id === spot.id) performInteraction(); else navigateTo(spot.x, spot.y);
+    return;
+  }
   if (id.startsWith('slot:')) {
     const index = Number(id.slice(5)), slot = slotsOnPage(state.shelfPage).find(s => s.slot === index);
     if (!slot) return;

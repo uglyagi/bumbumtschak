@@ -10,8 +10,9 @@ const connection = await import(new URL(`connection.${extension}`, root));
 // Exercise the application's real registered handlers with DOM test doubles.
 // This checks app behavior, not browser rendering or native default actions.
 const source = await fs.readFile(new URL(`app.${extension}`, root), 'utf8');
-async function harness(preview = false) {
+async function harness(preview = false, savedAnimal = '') {
   const opened = [];
+  const stored = new Map(savedAnimal ? [['bbt-animal', savedAnimal]] : []);
   const nodes = new Map(), windowHandlers = new Map(), documentHandlers = new Map();
   const add = (map, name, callback) => map.set(name, [...(map.get(name) || []), callback]);
   const doc = { activeElement: null, hidden: false, baseURI: 'https://uglyagi.github.io/bumbumtschak/' };
@@ -64,7 +65,7 @@ async function harness(preview = false) {
     ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...connection,
     loadContent: async () => ({ ok: true }), document: doc,
     window: { innerWidth: 1200, matchMedia: () => ({ matches: false }), addEventListener: (n, cb) => add(windowHandlers, n, cb), open(...args) { opened.push(args); } },
-    location: { search: preview ? '?preview=1' : '' }, localStorage: { getItem: () => null, setItem() {} },
+    location: { search: preview ? '?preview=1' : '' }, localStorage: { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value) },
     URLSearchParams, URL, Intl, console,
     fetch: async () => ({ ok: false }), clearTimeout() {}, setTimeout: () => 1,
     ResizeObserver: class { observe() {} }, requestAnimationFrame() {},
@@ -72,7 +73,7 @@ async function harness(preview = false) {
   const app = await new vm.Script(`(async () => {${source.replace(/^import .*;\n/gm, '')}\nreturn {state, enterRoom, leaveRoom, showPanel, closePanel, goToStation, frame, renderPanel, loadRecording, checkWorldTouch};})()`).runInContext(context);
   const event = (key, code, target, repeat = false) => ({ key, code, target, repeat, prevented: false, stopped: false, preventDefault() { this.prevented = true; }, stopPropagation() { this.stopped = true; } });
   function press(handlers, e) { for (const cb of handlers.get('keydown') || []) cb(e); return e; }
-  return { ...app, opened, get, game, modal, modalContent, Element, event, press, documentHandlers, windowHandlers };
+  return { ...app, opened, stored, get, game, modal, modalContent, Element, event, press, documentHandlers, windowHandlers };
 }
 
 for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'NumpadEnter']]) {
@@ -169,11 +170,11 @@ for (const door of core.HOUSE_DOORS) {
   assert.equal(h.state.position.x, door.outside.x); assert.equal(h.state.position.y, door.outside.y);
   for (let i = 0; i < 10; i++) h.frame(++tick * 16);
   assert.equal(h.state.scene, 'world', 'standing outside cannot immediately re-enter');
-  h.state.position = { x: door.x - 65, y: 565 }; h.state.keys.add('ArrowUp');
+  h.state.position = { x: door.x - 65, y: door.outside.y }; h.state.keys.add('ArrowUp');
   for (let i = 0; i < 50; i++) h.frame(++tick * 16);
   assert.equal(h.state.scene, 'world', 'touching a wall outside the doorway does not enter');
 }
-for (const [id, start, direction] of [['grownups', { x: 300, y: 850 }, 'ArrowUp'], ['help', { x: 800, y: 690 }, 'ArrowDown']]) {
+for (const [id, start, direction] of [['grownups', { x: 300, y: 850 }, 'ArrowUp'], ['help', { x: 1000, y: 690 }, 'ArrowDown']]) {
   for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'NumpadEnter']]) {
     const h = await harness(); h.state.started = true; h.closePanel(); h.game.focus();
     h.state.position = { ...start }; h.state.keys.add(direction);
@@ -194,7 +195,7 @@ for (const [id, start, direction] of [['grownups', { x: 300, y: 850 }, 'ArrowUp'
     h.press(h.windowHandlers, h.event(key, code, h.game));
     assert.equal(h.state.modal, id, 'a fresh confirmation reopens the object without walking away');
     h.closePanel();
-    h.state.position = { x: 800, y: 650 }; h.frame(++tick * 16);
+    h.state.position = { ...core.WORLD_SPAWN }; h.frame(++tick * 16);
     h.press(h.windowHandlers, h.event(key, code, h.game));
     assert.equal(h.modal.open, false, 'confirmation away from the objects cannot open them');
     h.state.position = point; h.frame(++tick * 16);
@@ -208,7 +209,7 @@ for (const [id, start, direction] of [['grownups', { x: 300, y: 850 }, 'ArrowUp'
 }
 for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'NumpadEnter']]) {
   const h = await harness(); h.state.started = true; h.closePanel(); h.game.focus();
-  h.state.position = { x: 800, y: 650 };
+  h.state.position = { ...core.WORLD_SPAWN };
   h.press(h.windowHandlers, h.event(key, code, h.game));
   assert.equal(h.modal.open, false, 'confirmation on empty grass does nothing');
   h.enterRoom('radio'); h.state.position = { x: 800, y: 870 };
@@ -237,12 +238,12 @@ const index = await fs.readFile(new URL('index.html', root), 'utf8');
 assert(!index.includes('class="scene-heading"')); assert(!index.includes('class="keyboard-hint"'));
 assert(art.worldMarkup().includes('data-station="help"'));
 console.log('PASS: automatic door entry/exit, wall rejection, desk/help require nearby confirmation, no automatic reopening, all three confirmation keys close inspections, Escape close, inactive empty ground, outdoor contact pads and letter without navigation.');
-for (const id of ['radio', 'concerts', 'grownups', 'help', 'social']) {
+for (const id of ['radio', 'concerts', 'wardrobe', 'grownups', 'help', 'social']) {
   const h = await harness(); h.state.started = true; h.closePanel(); h.game.focus(); h.goToStation(id);
   let tick = 0;
   while (tick < 1500 && !h.modal.open && h.state.scene === 'world' && h.state.path.length) h.frame(++tick * 16);
   h.frame(++tick * 16);
-  if (['radio', 'concerts'].includes(id)) assert.equal(h.state.scene, id, 'wayfinding walks through the actual entrance');
+  if (['radio', 'concerts', 'wardrobe'].includes(id)) assert.equal(h.state.scene, id, 'wayfinding walks through the actual entrance');
   else if (id === 'social') { assert.equal(h.state.scene, 'world'); assert.equal(h.modal.open, false); assert.equal(h.opened.length, 0); }
   else {
     assert.equal(h.modal.open, false, 'wayfinding reaches the object without opening it');
@@ -250,4 +251,39 @@ for (const id of ['radio', 'concerts', 'grownups', 'help', 'social']) {
     assert.equal(h.state.modal, id, 'confirmation after arriving opens the object');
   }
 }
-console.log('PASS: walking routes to both entrances, desk, hint sign and outdoor contact area.');
+console.log('PASS: walking routes to all three entrances, desk, relocated hint sign and outdoor contact area.');
+
+for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'NumpadEnter']]) {
+  const h = await harness(); h.state.started = true; h.closePanel(); h.enterRoom('wardrobe');
+  const carried = content.TRACKS[0].id; h.state.tapes.carrying = carried;
+  for (const spot of rooms.ANIMAL_SPOTS) {
+    h.state.position = { ...spot }; h.game.focus(); h.frame(16);
+    const previousAnimal = h.state.animal;
+    h.press(h.windowHandlers, h.event(key, code, h.game, true));
+    assert.equal(h.state.animal, previousAnimal, 'holding confirmation does not change the character');
+    h.press(h.windowHandlers, h.event(key, code, h.game));
+    assert.equal(h.state.animal, spot.id); assert.equal(h.stored.get('bbt-animal'), spot.id);
+    assert.equal(h.state.scene, 'wardrobe'); assert.equal(h.modal.open, false);
+    assert.equal(h.state.position.x, spot.x); assert.equal(h.state.position.y, spot.y);
+    assert.equal(h.state.tapes.carrying, carried, 'changing characters preserves the carried cassette');
+    assert(h.game.innerHTML.includes(`data-room-target="animal:${spot.id}"`));
+    assert.equal((h.game.innerHTML.match(/aria-pressed="true"/g) || []).length, 1);
+    assert.equal(h.get('#player-use').attrs.get('href'), `#animal-${spot.id}`);
+  }
+  h.state.position = { ...rooms.ROOM_SPAWN }; h.game.focus();
+  const cat = new h.Element('cat choice', 'g', { roomTarget: 'animal:cat' });
+  h.press(h.game.handlers, h.event(key, code, cat));
+  let tick = 0;
+  while (h.state.path.length && tick < 1000) h.frame(++tick * 16);
+  assert.equal(h.state.animal, 'monkey', 'walking to a different animal does not select it automatically');
+  h.press(h.game.handlers, h.event(key, code, cat));
+  assert.equal(h.state.animal, 'cat', 'confirmation on a focused nearby animal selects it');
+  h.press(h.windowHandlers, h.event('Escape', 'Escape', h.game));
+  assert.equal(h.state.scene, 'world'); assert.equal(h.state.animal, 'cat');
+}
+const restored = await harness(false, 'monkey');
+assert.equal(restored.state.animal, 'monkey'); assert.equal(restored.state.started, true);
+assert(core.canStand(restored.state.position.x, restored.state.position.y));
+assert.equal(core.worldTouch(restored.state.position), null, 'initial spawn does not enter a house automatically');
+assert(art.worldMarkup().includes('data-station="wardrobe"'));
+console.log('PASS: all four characters switch inside the house with Enter, Space or Numpad Enter, focused targets walk before confirming, selected sprite and saved choice update, cassette state survives, Escape exits and the initial spawn is safe.');

@@ -1,15 +1,17 @@
 import { STATIONS, nearbyWorldObject } from './game-core.js';
 import { socialPads } from './social.js';
-import { TRACKS, BAND, text } from './content.js';
+import { TRACKS, BAND, ANIMALS, text } from './content.js';
 
 export const ROOMS = {
   radio: { color: '#ff87ce', station: 'radio' },
   concerts: { color: '#fff20b', station: 'concerts' },
+  wardrobe: { color: '#ff87ce', station: 'wardrobe' },
 };
 export const ROOM_SPAWN = { x: 800, y: 870 };
 export const EXIT = { x: 800, y: 980 };
 export const RADIO = { x: 800, y: 550 };
 export const SHELF_SWITCH = { id: 'shelf', x: 800, y: 740 };
+export const ANIMAL_SPOTS = ['cat', 'dog', 'horse', 'monkey'].map((id, i) => ({ id, x: 380 + i * 280, y: 670 }));
 export const SHELF_SIZE = 10;
 // Six positions on the right, four on the left. A position belongs to no song.
 export const TAPE_SLOTS = [
@@ -27,7 +29,7 @@ export function findTapeSlot(tapes, id) {
 }
 export function roomFor(id) { return ROOMS[id] ? id : null; }
 export const ROOM_PROPS = {
-  radio: [], concerts: [{ id: 'concerts', x: 800, y: 570 }],
+  radio: [], concerts: [{ id: 'concerts', x: 800, y: 570 }], wardrobe: [],
 };
 export function refreshBandWayfinding() {
   for (const [id, room] of Object.entries(ROOMS)) { room.title = text(`room_${id}`); room.kicker = text(`kicker_${id}`); }
@@ -68,6 +70,10 @@ export function nearbyInteraction(scene, position, tapes, shelfPage = 0) {
   }
   const candidates = [...links];
   if (distance(position, EXIT) < 95) candidates.push({ kind: 'exit', id: 'exit', label: text('back_world'), distance: distance(position, EXIT) });
+  if (scene === 'wardrobe') for (const spot of ANIMAL_SPOTS) {
+    const d = distance(position, spot), animal = ANIMALS.find(animal => animal.id === spot.id);
+    if (d < 85) candidates.push({ ...spot, kind: 'change-character', label: text('action_change_character', { tier: animal.name }), distance: d });
+  }
   if (scene === 'radio') {
     if (tapePages(tapes) > 1 && distance(position, SHELF_SWITCH) < 78) candidates.push({ ...SHELF_SWITCH, kind: 'shelf', label: text('action_shelf'), distance: distance(position, SHELF_SWITCH) });
     if (distance(position, RADIO) < 100) candidates.push({ kind: tapes.carrying ? 'insert' : tapes.loaded ? 'eject' : 'radio-help', id: tapes.carrying || tapes.loaded || 'radio', label: text(tapes.carrying ? 'action_insert' : tapes.loaded ? 'action_eject' : 'action_radio_help'), distance: distance(position, RADIO) });
