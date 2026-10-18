@@ -1,2 +1,2 @@
-// Public content connection; no password or access token is stored here.
-export const CONTENT_ORIGIN = "https://bum-bum-tschak-welt.daring-fawn-7685.chatgpt.site";
+export const CONTENT_FILE = new URL('./data/content.json', import.meta.url).href;
+export const ADMIN_URL = new URL('./verwaltung/', import.meta.url).href;

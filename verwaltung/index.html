@@ -1,3 +1,36 @@
 <!doctype html>
-<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><meta http-equiv="refresh" content="0;url=https://bum-bum-tschak-welt.daring-fawn-7685.chatgpt.site/admin"><title>Bum Bum Tschak · Bandverwaltung</title></head>
-<body><h1>Bandverwaltung</h1><p><a href="https://bum-bum-tschak-welt.daring-fawn-7685.chatgpt.site/admin">Zur geschützten Bandverwaltung</a></p><p><a href="../">Zurück zur Spielwelt</a></p></body></html>
+<html lang="de">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bandverwaltung · Bum Bum Tschak</title><meta name="robots" content="noindex,nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https:; media-src 'self' blob: https:; connect-src 'self' https://api.github.com; object-src 'none'; base-uri 'none'; form-action 'self'">
+  <link rel="icon" href="../assets/favicon.svg"><link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="top-stripe" aria-hidden="true"></div>
+  <header class="header"><a class="brand" href="../">BUM BUM <span>TSCHAK!</span><small>DIE BANDVERWALTUNG</small></a><div class="actions"><a class="world-link" href="../">Zur Spielwelt ↗</a><button id="logout" class="button small" hidden>Abmelden</button></div></header>
+  <main>
+    <section id="gate" class="gate"><span class="eyebrow">HALLO, LIEBE BAND!</span><h1>Ein Platz für eure Neuigkeiten.</h1>
+      <p>Homepage, Verwaltung und Dateien liegen gemeinsam auf GitHub. Zum Bearbeiten meldest du dich mit einem GitHub-Zugangsschlüssel an.</p>
+      <form id="login"><label class="field">GitHub-Zugangsschlüssel<input id="token" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" required placeholder="github_pat_…" aria-describedby="token-hint"></label><p id="token-hint" class="hint">Der Schlüssel gilt nur in dieser geöffneten Verwaltung. Er wird weder im Repository noch im Browserspeicher abgelegt.</p><button id="login-button" class="button primary" type="submit">Verwaltung öffnen →</button><p id="gate-message" role="status"></p></form>
+      <details class="setup"><summary>Zum ersten Mal hier? Zugang einrichten</summary><ol>
+        <li>Öffne <a id="token-create" href="https://github.com/settings/personal-access-tokens/new?name=Bum%20Bum%20Tschak%20Verwaltung&amp;target_name=uglyagi&amp;expires_in=90&amp;contents=write" target="_blank" rel="noopener noreferrer">die Einrichtung bei GitHub ↗</a> und melde dich dort an.</li>
+        <li>Bei <strong>Repository access</strong> wähle <strong>Only select repositories</strong> und dann <strong>bumbumtschak</strong>.</li>
+        <li>Unter den Repository-Berechtigungen muss <strong>Contents: Read and write</strong> eingestellt sein. Weitere Schreibrechte sind nicht erforderlich.</li>
+        <li>Klicke auf <strong>Generate token</strong>, kopiere den angezeigten Schlüssel und füge ihn oben ein. Bewahre ihn in deinem Passwortmanager auf; GitHub zeigt ihn nur einmal. Nach Ablauf kannst du hier einen neuen erstellen.</li>
+      </ol><p class="hint">Den Schlüssel nur hier in der Verwaltung eingeben. Zum Ansehen und Spielen brauchen Besucher keinen Zugang.</p></details>
+    </section>
+    <div id="editor" hidden>
+      <div class="intro"><div><span class="eyebrow">EUER PROGRAMM HINTER DER BÜHNE</span><h1>Was gibt’s Neues?</h1><p>Konzerte, Kassetten und Geschichten. Alles an einem Ort.</p></div><span class="sticker" aria-hidden="true">IHR MACHT<br>DIE MUSIK!</span></div>
+      <aside id="draft-notice" class="message" hidden><p id="draft-description"></p><div class="actions"><button id="restore-draft" class="button small">Entwurf laden</button><button id="discard-draft" class="button small">Entwurf verwerfen</button></div></aside>
+      <div class="toolbar"><div><span id="save-state" class="state-dot">Wird geladen …</span><small id="account"></small></div><div class="actions"><button id="save" class="button">Entwurf lokal speichern</button><button id="preview" class="button">Vorschau ↗</button><button id="publish" class="button primary">Veröffentlichen →</button></div></div>
+      <div id="message" class="message" role="status" hidden></div>
+      <nav class="tabs" role="tablist" aria-label="Inhalte verwalten"><button id="tab-concerts" class="tab" role="tab" aria-selected="true" aria-controls="panel" data-tab="concerts"><span>01</span> Konzerte <small id="concert-count"></small></button><button id="tab-music" class="tab" role="tab" aria-selected="false" aria-controls="panel" tabindex="-1" data-tab="music"><span>02</span> Musik <small id="music-count"></small></button><button id="tab-info" class="tab" role="tab" aria-selected="false" aria-controls="panel" tabindex="-1" data-tab="info"><span>03</span> Infos</button></nav>
+      <section id="panel" role="tabpanel" aria-labelledby="tab-concerts"></section>
+      <footer class="help"><strong>So kommen Änderungen in die Spielwelt:</strong> Entwurf lokal speichern → Vorschau ansehen → veröffentlichen. Entwürfe einschließlich ausgewählter Dateien bleiben nur in diesem Browser und werden nicht öffentlich hochgeladen. Beim Veröffentlichen speichert GitHub Inhalte und Dateien gemeinsam. Die öffentliche Homepage wird danach automatisch aktualisiert; das kann einige Minuten dauern. Bereits geöffnete Spielwelten bitte neu laden.</footer>
+    </div>
+  </main>
+  <dialog id="confirm"><form method="dialog"><h2 id="confirm-title">Veröffentlichen?</h2><p id="confirm-text"></p><div class="actions"><button class="button" value="cancel" autofocus>Abbrechen</button><button id="confirm-button" class="button primary" value="ok">Veröffentlichen</button></div></form></dialog>
+  <script type="module" src="admin.js"></script>
+</body></html>

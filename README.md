@@ -1,27 +1,43 @@
 # Bum Bum Tschak
 
-Die begehbare Musikwelt der Kinderliederband, vorbereitet für GitHub Pages.
+Homepage: https://uglyagi.github.io/bumbumtschak/
 
-Homepage nach Aktivierung: https://uglyagi.github.io/bumbumtschak/
+Verwaltung: https://uglyagi.github.io/bumbumtschak/verwaltung/
 
-Bandverwaltung: https://bum-bum-tschak-welt.daring-fawn-7685.chatgpt.site/admin
+## Alles gemeinsam auf GitHub
 
-## Veröffentlichen
+Die Spielwelt, die Verwaltungsoberfläche, die Inhaltsdatei data/content.json und hochgeladene Dateien im Ordner uploads liegen in diesem Repository. Die Homepage benötigt keinen weiteren Server. Die bisherige Verwaltung wird nicht mehr verwendet.
 
-1. Alle Dateien und den Ordner assets direkt in das Repository uglyagi/bumbumtschak laden. Die index.html muss im Hauptordner liegen, nicht in einem zusätzlichen Exportordner.
-2. Unter Settings → Pages die Quelle Deploy from a branch, den Branch main und den Ordner /(root) wählen. Save klicken.
-3. Nach erfolgreicher Bereitstellung die oben angeführte Homepage öffnen.
+Die Inhalte der Spielwelt werden beim Öffnen aus data/content.json geladen. Alle Menüs, Tastaturfunktionen, Kassetten und Bandgrafiken bleiben erhalten.
 
-## Inhalte bearbeiten
+## Verwaltung öffnen
 
-Im Verwaltungsbereich mit dem bereits freigeschalteten ChatGPT-Konto anmelden. Unter Konzerte, Musik und Infos die Inhalte bearbeiten und anschließend veröffentlichen. Die GitHub-Homepage zeigt veröffentlichte Änderungen nach dem Neuladen. Entwürfe bleiben bis zur Veröffentlichung nur in der Verwaltung und deren angemeldeter Vorschau sichtbar.
+Die Verwaltung verwendet einen Fine-grained personal access token von GitHub. Auf der Anmeldeseite steht unter „Zum ersten Mal hier? Zugang einrichten“ eine Schritt-für-Schritt-Anleitung samt Link zur Einrichtung. Nur das Repository bumbumtschak auswählen und die Repository-Berechtigung Contents auf Read and write setzen. Weitere Schreibrechte sind nicht nötig.
 
-Die Verwaltung und ihre Dateiablage bleiben auf der bestehenden Website. Die Spielwelt auf GitHub lädt die öffentlichen Inhalte von dort. Deshalb muss die bestehende Website verfügbar bleiben. Die Verbindung ist in site-config.js eingetragen. MP3 und WAV lassen sich weiterhin in der Verwaltung bei den Songs hochladen.
+Den Schlüssel in einem Passwortmanager aufbewahren und nur direkt auf der eigenen Verwaltungsseite eingeben. Der Schlüssel wird nur im Arbeitsspeicher der geöffneten Verwaltung gehalten und beim Abmelden entfernt. Er wird weder im Repository noch in localStorage, sessionStorage oder IndexedDB gespeichert. Beim erneuten Öffnen der Verwaltung ist er erneut einzugeben. Besucher der Spielwelt brauchen keinen Schlüssel.
 
-Steuerung: Pfeiltasten oder WASD, Enter oder Leertaste zum Bestätigen, Escape zum Zurückkehren.
+## Ändern und veröffentlichen
 
-Dieses Paket enthält nur öffentliche Dateien der Spielwelt. PHP-Verwaltung, Einrichtungsschlüssel, private Daten und Zugangsdaten gehören nicht in dieses Repository.
+1. In der Verwaltung Konzerte, Musik oder Infos auswählen.
+2. Texte und Termine bearbeiten oder Dateien auswählen. Bilder: JPG/PNG/WebP bis 12 MiB; Audio: MP3/WAV/M4A/OGG bis 50 MiB pro Datei. MP3 braucht weniger Speicher und lädt schneller.
+3. „Entwurf lokal speichern“ sichert den Entwurf einschließlich ausgewählter Dateien nur im aktuellen Browser. Der Entwurf ist auf anderen Geräten nicht verfügbar; beim Löschen der Browserdaten geht er verloren.
+4. „Vorschau“ zeigt den lokalen Entwurf als Spielwelt. Sie lädt ausgewählte Dateien direkt aus dem Browserspeicher.
+5. „Veröffentlichen“ speichert Dateien und Inhaltsdatei in einem gemeinsamen Git-Commit. Erst dann werden sie öffentlich. GitHub Pages aktualisiert die Homepage automatisch; das kann einige Minuten dauern. Bereits geöffnete Spielwelten bitte neu laden.
 
-## Prüfumfang
+Bei gleichzeitig geänderten Inhalten stoppt die Verwaltung und erhält den lokalen Entwurf. Es gibt keine erzwungenen Branch-Updates. Andere Dateien und Codeänderungen werden beim Veröffentlichen erhalten.
 
-Inhaltsverbindung, relative Dateipfade unter /bumbumtschak/, Darstellung hochgeladener Medien und Trennung von Entwürfen und veröffentlichten Inhalten wurden programmatisch geprüft. Ein vollständiger Test im Browser war in der Entwicklungsumgebung nicht verfügbar.
+GitHub Pages ist auf insgesamt 1 GB pro veröffentlichter Website begrenzt. Für die geplanten zehn Kassetten sind kompakte MP3-Dateien sinnvoll. Entfernte oder ersetzte Mediendateien werden zunächst im Repository erhalten, damit vorhandene Versionen nicht beschädigt werden.
+
+## Technischer Aufbau
+
+Statisches HTML, CSS und JavaScript ohne Build-Schritt. GitHub Pages veröffentlicht main, /(root). Die leere Datei .nojekyll deaktiviert die Jekyll-Verarbeitung. Verwaltung und Spielwelt funktionieren auch unter dem Projektpfad /bumbumtschak/.
+
+Die Verwaltung sendet GitHub-Aufrufe ausschließlich an api.github.com/repos/uglyagi/bumbumtschak mit einem nur für die Sitzung verwendeten Zugangsschlüssel. Im Browser werden keine zusätzlichen Skripte anderer Anbieter geladen. Die Anmeldung bei GitHub selbst und die Erstellung eines Schlüssels erfolgen direkt auf github.com.
+
+Nach erfolgreicher Prüfung veröffentlicht die Verwaltung über GitHub Blobs → Tree → Commit → Branch-Ref. Der Inhalt ist über eine SHA gegen konkurrierende Änderungen geschützt. Dateien werden anhand von Typ, Größe und Signatur geprüft; die Formulare prüfen alle Inhaltsfelder. Eingaben werden in der Spielwelt als Text ausgegeben.
+
+## Prüfen
+
+node --test tests/*.test.mjs
+
+Die Tests prüfen GitHub-Aufrufe, gemeinsames Veröffentlichen, konkurrierende Änderungen, Dateibytes, Entwürfe und Vorschau, Inhaltsprüfung und die tatsächlichen Formular- und Spielhandler. Ein vollständiger Browser-Test mit echtem Zugangsschlüssel war in der Entwicklungsumgebung nicht verfügbar.

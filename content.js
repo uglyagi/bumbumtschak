@@ -1,8 +1,9 @@
-// These approved defaults also keep the world usable if the content service is temporarily unavailable.
-// Published content is maintained through /admin; exported objects retain their identity for game modules.
+// These defaults keep the world usable if the published content file is temporarily unavailable.
 import { DEFAULT_BAND, bandMembers } from './band-defaults.js';
 import { DEFAULT_TEXTS, normalizeTexts, formatText } from './copy-defaults.js';
-import { apiURL, contentAssetURL, usesRemoteContent } from './connection.js';
+import { contentAssetURL } from './connection.js';
+import { CONTENT_FILE } from './site-config.js';
+import { readDraft, draftPreview } from './verwaltung/drafts.js';
 export const TEXTS = { ...DEFAULT_TEXTS };
 export const text = (key, variables) => formatText(TEXTS[key] ?? '', variables);
 export const TRACKS = [
@@ -53,9 +54,13 @@ export function applyContent(document) {
 }
 export async function loadContent(preview = false) {
   try {
-    if (preview && usesRemoteContent) throw new Error('Die Entwurfsvorschau bitte direkt aus der Bandverwaltung öffnen.');
-    const response = await fetch(apiURL(preview ? '/api/admin/content' : '/api/content'), { cache: 'no-store', credentials: usesRemoteContent ? 'omit' : 'same-origin', signal: AbortSignal.timeout(10000) });
+    if (preview) {
+      const draft = await readDraft();
+      if (!draft?.document) throw new Error('In diesem Browser ist kein Entwurf gespeichert. Bitte zuerst die Bandverwaltung öffnen.');
+      applyContent(draftPreview(draft)); return { ok: true };
+    }
+    const response = await fetch(CONTENT_FILE, { cache: 'no-store', credentials: 'omit', signal: AbortSignal.timeout(10000) });
     if (!response.ok) throw new Error(preview && response.status === 401 ? 'Bitte zuerst in der Bandverwaltung anmelden.' : 'Inhalte konnten nicht geladen werden.');
-    const { document } = await response.json(); applyContent(document); return { ok: true };
+    applyContent(await response.json()); return { ok: true };
   } catch (error) { return { ok: false, error: error.message }; }
 }

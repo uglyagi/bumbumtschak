@@ -4,9 +4,9 @@ import { icon, avatar, memberArt, worldMarkup } from './art.js';
 import { cassetteMarkup, cassetteSVG, roomMarkup, slotContents, slotDescription } from './room-art.js';
 import { ROOMS, ROOM_SPAWN, EXIT, RADIO, TAPE_SLOTS, SHELF_SWITCH, ROOM_PROPS, slotsOnPage, tapePages, findTapeSlot, refreshBandWayfinding, roomFor, createCassetteState, tapeLocation, cassetteAction, nearbyInteraction, throughExit, nextMenuIndex } from './rooms.js';
 import { brandIcon, socialPads, contactLinks } from './social.js';
-import { apiURL, adminURL, usesRemoteContent } from './connection.js';
+import { adminURL } from './connection.js';
 
-const previewMode = !usesRemoteContent && new URLSearchParams(location.search).get('preview') === '1';
+const previewMode = new URLSearchParams(location.search).get('preview') === '1';
 const contentStatus = await loadContent(previewMode);
 refreshBandWayfinding();
 
@@ -201,7 +201,8 @@ function refreshPlayback() {
 function loadRecording() {
   audio.pause(); state.playing = false;
   const track = TRACKS.find(t => t.id === state.tapes.loaded);
-  if (track?.src && safeURL(new URL(track.src, document.baseURI).href)) {
+  const recordingURL = track?.src ? new URL(track.src, document.baseURI) : null;
+  if (recordingURL && (safeURL(recordingURL.href) || (previewMode && recordingURL.protocol === 'blob:'))) {
     audio.src = track.src; audio.play().catch(() => toast(text('audio_start')));
   } else { audio.removeAttribute('src'); audio.load(); }
   refreshPlayback();
@@ -452,6 +453,5 @@ if (previewMode) {
   document.body.classList.add('preview-mode');
 }
 $('#admin-link').href = adminURL;
-if (usesRemoteContent) $('#admin-link').hidden = false;
-else fetch(apiURL('/api/admin/me'), { cache: 'no-store' }).then(response => { if (response.ok) $('#admin-link').hidden = false; }).catch(() => {});
+$('#admin-link').hidden = false;
 if (!state.started) showPanel('characters'); else { game.focus(); announce(text('welcome_back')); }
