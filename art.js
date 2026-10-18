@@ -2,7 +2,7 @@ import { brandSymbols, socialPadsMarkup } from './social.js';
 import { bandSymbols, animalSymbols } from './cover-art.js';
 import { ANIMALS, BAND, text } from './content.js';
 import { escapeXML as escape } from './utils.js';
-import { WORLD_SPAWN } from './game-core.js';
+import { WORLD, WORLD_SPAWN } from './game-core.js';
 import { FLOWERS, TREES, CLOUDS, WORLD_PATH, PAINT_SURFACES, paintAttributes, readableInk } from './painting.js';
 import { SKY, GROUND_ROCKET } from './sky-world.js';
 export const icon = (name, cls = '') => {
@@ -72,9 +72,8 @@ export function worldMarkup(paint = {}, painting = false, scene = 'world', rocke
   const grass = [[175, 690], [480, 700], [1040, 710], [1420, 520], [380, 230], [1170, 975], [650, 780], [890, 985], [1100, 265], [210, 1010]];
   return `<svg id="world-svg" xmlns="http://www.w3.org/2000/svg" viewBox="60 120 1480 850" font-family="Trebuchet MS, Arial, sans-serif" aria-hidden="false" aria-label="${escape(text('world_title'))}" preserveAspectRatio="xMidYMid meet">
     ${defs()}
-    <rect x="0" y="${SKY.top}" width="1600" height="${-SKY.top}" ${P('sky', SKY.color)}/>
-    <rect width="1600" height="1100" ${P('grass', '#40cea1')}/>
-    <path d="M0 12Q160-9 320 9T640 9 960 9 1280 9 1600 8V35H0Z" ${P('grass', '#40cea1')}/>
+    <rect x="0" y="${SKY.top}" width="1600" height="${WORLD.height - SKY.top}" ${P('sky', SKY.color)}/>
+    <path d="M0 12Q160-9 320 9T640 9 960 9 1280 9 1600 8V${WORLD.height}H0Z" ${P('grass', '#40cea1')}/>
     <path d="M0 12Q160-9 320 9T640 9 960 9 1280 9 1600 8" fill="none" stroke="#101014" stroke-width="4"/>
     <g fill="none" stroke="#101014" stroke-linecap="round" stroke-linejoin="round">
       <path d="${WORLD_PATH}" stroke-width="115"/>
