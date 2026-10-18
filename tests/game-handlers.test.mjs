@@ -178,17 +178,30 @@ for (const [id, start, direction] of [['grownups', { x: 300, y: 850 }, 'ArrowUp'
     const h = await harness(); h.state.started = true; h.closePanel(); h.game.focus();
     h.state.position = { ...start }; h.state.keys.add(direction);
     let tick = 0;
-    while (!h.modal.open && tick < 50) h.frame(++tick * 16);
-    assert.equal(h.state.modal, id, 'touch opens the enlarged object');
+    for (let i = 0; i < 50; i++) h.frame(++tick * 16);
+    assert.equal(h.modal.open, false, 'approaching or touching the object must not open it');
+    assert.equal(rooms.nearbyInteraction('world', h.state.position, h.state.tapes)?.id, id, 'nearby objects offer a confirmation action');
+    h.press(h.windowHandlers, h.event(key, code, h.game));
+    assert.equal(h.state.modal, id, 'confirmation near the object opens its enlarged view');
     assert.equal(h.state.scene, 'world');
     const point = { ...h.state.position };
     h.press(h.modalContent.handlers, h.event(key, code, h.get('#modal-content')));
     assert.equal(h.modal.open, false); assert.equal(h.state.position.x, point.x); assert.equal(h.state.position.y, point.y);
     for (let i = 0; i < 8; i++) h.frame(++tick * 16);
-    assert.equal(h.modal.open, false, 'the same touch cannot reopen the overlay');
+    assert.equal(h.modal.open, false, 'standing near the object after closing cannot reopen the overlay');
+    h.press(h.windowHandlers, h.event(key, code, h.game, true));
+    assert.equal(h.modal.open, false, 'holding the close key cannot reopen the overlay');
+    h.press(h.windowHandlers, h.event(key, code, h.game));
+    assert.equal(h.state.modal, id, 'a fresh confirmation reopens the object without walking away');
+    h.closePanel();
     h.state.position = { x: 800, y: 650 }; h.frame(++tick * 16);
+    h.press(h.windowHandlers, h.event(key, code, h.game));
+    assert.equal(h.modal.open, false, 'confirmation away from the objects cannot open them');
     h.state.position = point; h.frame(++tick * 16);
-    assert.equal(h.state.modal, id, 'moving away and touching again reopens the object');
+    assert.equal(h.modal.open, false, 'moving away and touching again still requires confirmation');
+    const object = new h.Element(id, 'g', { station: id });
+    h.press(h.game.handlers, h.event(key, code, object));
+    assert.equal(h.state.modal, id, 'confirmation on a focused nearby object opens its view');
     for (const callback of h.modal.handlers.get('cancel') || []) callback({ preventDefault() {} });
     assert.equal(h.modal.open, false, 'Escape/native cancel closes the enlarged object');
   }
@@ -223,7 +236,7 @@ assert.equal(social.socialPads('social').length, 0);
 const index = await fs.readFile(new URL('index.html', root), 'utf8');
 assert(!index.includes('class="scene-heading"')); assert(!index.includes('class="keyboard-hint"'));
 assert(art.worldMarkup().includes('data-station="help"'));
-console.log('PASS: automatic door entry/exit, wall rejection, touch-only desk/help with re-entry latch, all three confirmation keys close inspections, Escape close, inactive empty ground, outdoor contact pads and letter without navigation.');
+console.log('PASS: automatic door entry/exit, wall rejection, desk/help require nearby confirmation, no automatic reopening, all three confirmation keys close inspections, Escape close, inactive empty ground, outdoor contact pads and letter without navigation.');
 for (const id of ['radio', 'concerts', 'grownups', 'help', 'social']) {
   const h = await harness(); h.state.started = true; h.closePanel(); h.game.focus(); h.goToStation(id);
   let tick = 0;
@@ -231,6 +244,10 @@ for (const id of ['radio', 'concerts', 'grownups', 'help', 'social']) {
   h.frame(++tick * 16);
   if (['radio', 'concerts'].includes(id)) assert.equal(h.state.scene, id, 'wayfinding walks through the actual entrance');
   else if (id === 'social') { assert.equal(h.state.scene, 'world'); assert.equal(h.modal.open, false); assert.equal(h.opened.length, 0); }
-  else assert.equal(h.state.modal, id, 'wayfinding reaches the physical object and opens it by touch');
+  else {
+    assert.equal(h.modal.open, false, 'wayfinding reaches the object without opening it');
+    h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game));
+    assert.equal(h.state.modal, id, 'confirmation after arriving opens the object');
+  }
 }
 console.log('PASS: walking routes to both entrances, desk, hint sign and outdoor contact area.');

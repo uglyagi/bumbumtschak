@@ -26,15 +26,17 @@ export const HOUSE_DOORS = [
   { id: 'radio', x: 305, y: 526, halfWidth: 24, top: 506, bottom: 535, outside: { x: 305, y: 565 } },
   { id: 'concerts', x: 1280, y: 526, halfWidth: 23, top: 506, bottom: 535, outside: { x: 1280, y: 565 } },
 ];
-const TOUCH_OBJECTS = [
+const WORLD_OBJECTS = [
   { id: 'grownups', x: 176, y: 742, w: 247, h: 77 },
   { id: 'help', x: 785, y: 726, w: 30, h: 30 },
 ];
 export function worldTouch(position) {
   const door = HOUSE_DOORS.find(door => Math.abs(position.x - door.x) <= door.halfWidth && position.y >= door.top && position.y <= door.bottom);
-  if (door) return { id: door.id, kind: 'enter' };
-  const object = TOUCH_OBJECTS.find(rect => Math.hypot(position.x - Math.max(rect.x, Math.min(rect.x + rect.w, position.x)), position.y - Math.max(rect.y, Math.min(rect.y + rect.h, position.y))) <= WORLD.radius + 7);
-  return object ? { id: object.id, kind: 'inspect' } : null;
+  return door ? { id: door.id, kind: 'enter' } : null;
+}
+export function nearbyWorldObject(position) {
+  return WORLD_OBJECTS.map(rect => ({ id: rect.id, distance: Math.hypot(position.x - Math.max(rect.x, Math.min(rect.x + rect.w, position.x)), position.y - Math.max(rect.y, Math.min(rect.y + rect.h, position.y))) }))
+    .filter(object => object.distance <= WORLD.radius + 40).sort((a, b) => a.distance - b.distance)[0] || null;
 }
 export const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 export const isActionKey = event => event.key === 'Enter' || event.key === ' ' || event.code === 'Space';

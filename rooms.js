@@ -1,4 +1,4 @@
-import { STATIONS } from './game-core.js';
+import { STATIONS, nearbyWorldObject } from './game-core.js';
 import { socialPads } from './social.js';
 import { TRACKS, BAND, text } from './content.js';
 
@@ -62,6 +62,8 @@ export function nearbyInteraction(scene, position, tapes, shelfPage = 0) {
   const links = socialPads(scene).map(p => ({ ...p, kind: p.id === 'email' ? 'email' : 'external', distance: distance(position, p), label: p.id === 'email' ? text('action_email', { adresse: p.email }) : text('action_external', { kanal: p.label }) })).filter(p => p.distance <= p.reach);
   if (scene === 'world') {
     const choices = STATIONS.filter(s => BAND.some(member => member.id === s.id)).map(s => ({ ...s, kind: 'read', label: text('action_member', { name: s.label }), distance: distance(position, s) })).filter(s => s.distance < 110);
+    const object = nearbyWorldObject(position);
+    if (object) choices.push({ ...object, kind: 'read', label: text(object.id === 'grownups' ? 'action_grownups' : 'sign_help') });
     return [...links, ...choices].sort((a, b) => a.distance - b.distance)[0] || null;
   }
   const candidates = [...links];

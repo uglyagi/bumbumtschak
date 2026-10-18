@@ -39,9 +39,14 @@ test('all browser imports resolve within the project and the old service is abse
 
 test('updated control instructions replace only former defaults and keep custom text', async () => {
   const { COPY_FIELDS, normalizeTexts } = await import('../copy-defaults.js');
-  const help = COPY_FIELDS.find(field => field.key === 'help_step3_body');
-  const normalized = normalizeTexts({ help_step3_body: help.previousValues[0], grown_intro: 'Unsere selbst geschriebene Geschichte', help_board_label: 'SPIELTIPPS' });
-  assert.equal(normalized.help_step3_body, help.value);
-  assert.equal(normalized.grown_intro, 'Unsere selbst geschriebene Geschichte');
-  assert.equal(normalized.help_board_label, 'SPIELTIPPS');
+  for (const key of ['help_step3_body', 'world_instructions', 'grown_how_body']) {
+    const field = COPY_FIELDS.find(field => field.key === key);
+    for (const previousValue of field.previousValues) {
+      const normalized = normalizeTexts({ [key]: previousValue, grown_intro: 'Unsere selbst geschriebene Geschichte', help_board_label: 'SPIELTIPPS' });
+      assert.equal(normalized[key], field.value);
+      assert.equal(normalized.grown_intro, 'Unsere selbst geschriebene Geschichte');
+      assert.equal(normalized.help_board_label, 'SPIELTIPPS');
+    }
+    assert.equal(normalizeTexts({ [key]: 'Unser eigener Erklärungstext' })[key], 'Unser eigener Erklärungstext');
+  }
 });

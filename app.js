@@ -27,7 +27,7 @@ const state = {
   camera: { x: 800, y: 520 },
   viewport: { w: 1480, h: 850 },
   keys: new Set(), pad: new Map(), path: [], destination: null,
-  near: null, modal: null, playing: false, touchLatch: null,
+  near: null, modal: null, playing: false,
   volume: clamp(Number(storage.get('volume', '.6')) || 0, 0, 1),
   reduced: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
 };
@@ -151,7 +151,6 @@ function renderScene() {
 }
 function showPanel(id, focusSelector = '') {
   stopWalking(); state.modal = id; game.classList.add('paused');
-  if (state.scene === 'world' && worldTouch(state.position)?.id === id) state.touchLatch = id;
   modalContent.innerHTML = renderPanel(id);
   if (!modal.open) modal.showModal();
   if (focusSelector) modalContent.querySelector(focusSelector)?.focus();
@@ -195,10 +194,7 @@ function visit(id) { if (id === 'social') goToStation('social'); else if (roomFo
 function checkWorldTouch() {
   if (state.scene !== 'world' || modal.open || !state.started) return;
   const touch = worldTouch(state.position);
-  if (!touch) { state.touchLatch = null; return; }
-  if (state.touchLatch === touch.id) return;
-  state.touchLatch = touch.id;
-  if (touch.kind === 'enter') enterRoom(touch.id); else showPanel(touch.id);
+  if (touch) enterRoom(touch.id);
 }
 function refreshPlayback() {
   state.playing = !audio.paused && !audio.ended;
@@ -388,7 +384,11 @@ game.addEventListener('keydown', e => {
   const station = e.target.closest('[data-station]'), prop = e.target.closest('[data-room-target]');
   if (!station && !prop) return;
   e.preventDefault(); e.stopPropagation(); if (e.repeat) return;
-  if (station) goToStation(station.dataset.station); else activateRoomTarget(prop.dataset.roomTarget);
+  if (station) {
+    const near = nearbyInteraction(state.scene, state.position, state.tapes, state.shelfPage);
+    if (near?.kind === 'read' && near.id === station.dataset.station) performInteraction();
+    else goToStation(station.dataset.station);
+  } else activateRoomTarget(prop.dataset.roomTarget);
 });
 const directions = new Map([['ArrowUp', [0, -1]], ['KeyW', [0, -1]], ['ArrowDown', [0, 1]], ['KeyS', [0, 1]], ['ArrowLeft', [-1, 0]], ['KeyA', [-1, 0]], ['ArrowRight', [1, 0]], ['KeyD', [1, 0]]]);
 window.addEventListener('keydown', e => {
