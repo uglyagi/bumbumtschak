@@ -6,6 +6,7 @@ import { WORLD, WORLD_SPAWN } from './game-core.js';
 import { FLOWERS, TREES, CLOUDS, WORLD_PATH, PAINT_SURFACES, BUCKET_SURFACES, paintAttributes, readableInk } from './painting.js';
 import { SKY, GROUND_ROCKET } from './sky-world.js';
 import { spaceMarkup } from './space-art.js';
+import { rocketWreckageMarkup } from './rocket-wreckage.js';
 export const icon = (name, cls = '') => {
   const paths = {
     music: '<path d="M9 17V5l11-2v12M9 8l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/>',
@@ -39,10 +40,12 @@ export const defs = () => `<defs>${brandSymbols}
 const stationMarkup = (id, label, content, active = true) => `<g class="world-station" ${active ? `data-station="${id}" role="button" tabindex="0" aria-label="${escape(label)}"` : ''}>${content}</g>`;
 export function rocketMarkup(rocket, animal) {
   const position = rocket.position || GROUND_ROCKET;
-  return `<g id="rocket" transform="translate(${position.x} ${position.y})" ${rocket.riding ? '' : `class="world-station" data-station="rocket" role="button" tabindex="0" aria-label="${escape(text('rocket_board'))}"`}>
+  const interactionLabel = text(rocket.damaged ? 'rocket_needs_tools' : 'rocket_board');
+  if (rocket.broken) return `<g id="rocket" class="world-station" data-station="rocket" role="button" tabindex="0" aria-label="${escape(interactionLabel)}" transform="translate(${position.x} ${position.y})">${rocketWreckageMarkup(rocket.impact ?? 1)}</g>`;
+  return `<g id="rocket" transform="translate(${position.x} ${position.y})" ${rocket.riding ? '' : `class="world-station" data-station="rocket" role="button" tabindex="0" aria-label="${escape(interactionLabel)}"`}>
     <g id="rocket-hull" transform="rotate(${rocket.angle || 0} 0 -86)" stroke="#101014" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-      <ellipse cy="3" rx="36" ry="9" fill="#101014" stroke="none" opacity=".15"/>
-      <path class="rocket-flame" d="M-12-30Q-16-8 0 0 17-10 12-30Z" fill="#fff20b" ${rocket.airborne ? '' : 'hidden=""'}/>
+      <ellipse cy="3" rx="36" ry="9" fill="#101014" stroke="none" opacity=".15" ${rocket.airborne ? 'hidden=""' : ''}/>
+      <path class="rocket-flame" d="M-12-30Q-16-8 0 0 17-10 12-30Z" fill="#fff20b" ${rocket.airborne && !rocket.damaged ? '' : 'hidden=""'}/>
       <path d="M-17-63q-23 8-25 40l26-15M17-63q23 8 25 40l-26-15" fill="#ff87ce"/>
       <path d="M-19-111Q-29-78-17-33h34q12-45 2-78Z" fill="${rocket.damaged ? '#d3d2c7' : '#ffffff'}"/>
       <path d="M-19-111Q-12-135 0-143q13 9 19 32Z" fill="#1d55ff"/>
@@ -77,7 +80,7 @@ export function worldMarkup(paint = {}, painting = false, scene = 'world', rocke
   return `<svg id="world-svg" xmlns="http://www.w3.org/2000/svg" viewBox="60 120 1480 850" font-family="Trebuchet MS, Arial, sans-serif" aria-hidden="false" aria-label="${escape(text('world_title'))}" preserveAspectRatio="xMidYMid meet">
     ${defs()}
     <rect x="0" y="${SKY.top}" width="1600" height="${WORLD.height - SKY.top}" ${P('sky', SKY.color)}/>
-    ${snapshot ? '' : spaceMarkup(paint)}
+    ${snapshot ? '' : spaceMarkup(paint, false)}
     <path d="M0 12Q160-9 320 9T640 9 960 9 1280 9 1600 8V${WORLD.height}H0Z" ${P('grass', '#40cea1')}/>
     <path d="M0 12Q160-9 320 9T640 9 960 9 1280 9 1600 8" fill="none" stroke="#101014" stroke-width="4"/>
     <g fill="none" stroke="#101014" stroke-linecap="round" stroke-linejoin="round">

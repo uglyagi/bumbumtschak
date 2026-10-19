@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { SPACE, SKY, GROUND_ROCKET, flightScene, moveRocket } from '../sky-world.js';
 import { PLANETS, CSS_PIXELS_PER_CM } from '../solar-system.js';
 import { spaceMarkup, STARS } from '../space-art.js';
+import { worldMarkup } from '../art.js';
 
 test('eight named planets share the Mercury 1 cm diameter scale', () => {
   assert.deepEqual(PLANETS.map(p => p.id), ['mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune']);
@@ -34,4 +35,12 @@ test('the extended flight can reach past Neptune and descend through space, sky 
   const scenes = new Set();
   for (let i = 0; i < 3000 && position.y < 70; i++) { position = moveRocket(position, 0, 1, .016); scenes.add(flightScene(position.y)); }
   assert.deepEqual([...scenes], ['space', 'sky', 'world']);
+});
+
+
+test('the climb and return flight reveal stars without any planets from the old vertical scene', () => {
+  for (const scene of ['world', 'sky', 'space']) {
+    const svg = worldMarkup({}, false, scene, { position: { x: 365, y: SPACE.bottom }, riding: true, airborne: true }, 'cat');
+    assert(!svg.includes('data-planet=')); assert(svg.includes('id="space-world"'));
+  }
 });

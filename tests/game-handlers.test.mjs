@@ -12,6 +12,7 @@ const studio = await import(new URL(`painting-studio.${extension}`, root));
 const adventure = await import(new URL(`rocket-adventure.${extension}`, root));
 const adventureArt = await import(new URL(`adventure-art.${extension}`, root));
 const toolbox = await import(new URL(`toolbox.${extension}`, root));
+const wreckage = await import(new URL(`rocket-wreckage.${extension}`, root));
 
 // Exercise the application's real registered handlers with DOM test doubles.
 // This checks app behavior, not browser rendering or native default actions.
@@ -91,7 +92,7 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null, d
   const game = get('#game'), modal = get('#modal'), modalContent = get('#modal-content'), audio = get('#audio');
   for (const node of [audio, get('#member-audio')]) Object.assign(node, { paused: true, ended: false, currentTime: 0, pause() { this.paused = true; }, play() { this.paused = false; this.ended = false; return Promise.resolve(); }, load() {} });
   const context = vm.createContext({
-    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky, ...dance, ...studio, ...adventure, ...adventureArt, ...toolbox,
+    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky, ...dance, ...studio, ...adventure, ...adventureArt, ...toolbox, ...wreckage,
     loadContent: async () => ({ ok: true }), document: doc,
     window: { innerWidth: 1200, matchMedia: () => ({ matches: false }), addEventListener: (n, cb) => add(windowHandlers, n, cb), open(...args) { opened.push(args); } },
     location: { search: preview ? '?preview=1' : '' }, localStorage: { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value) },
@@ -491,12 +492,21 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
   h.press(h.windowHandlers, h.event(key, code, h.game)); h.leaveRoom();
   h.state.position = { ...sky.GROUND_ROCKET }; h.game.focus(); h.press(h.windowHandlers, h.event(key, code, h.game));
   h.state.keys.add('ArrowUp'); let clock = 0, firstSpace = null;
-  while (clock < 520) { h.frame(++clock * 16); if (clock * 16 < 6000) assert.notEqual(h.state.scene, 'space'); if (h.state.scene === 'space' && firstSpace === null) firstSpace = clock * 16; }
+  while (!h.state.adventure && clock < 520) { h.frame(++clock * 16); if (clock * 16 < 6000) assert.notEqual(h.state.scene, 'space'); if (h.state.scene === 'space' && firstSpace === null) firstSpace = clock * 16; }
+  assert.equal(h.state.adventure.phase, 'intro'); assert(!h.modal.open); assert(h.game.innerHTML.includes('id="adventure-course" hidden=""'));
+  const startingPose = adventureArt.adventureShipPose(h.state.adventure); assert.deepEqual({ ...startingPose }, { ...h.state.adventure.entry });
+  h.showPanel('space-launch'); assert(!h.modal.open, 'the choice cannot open before the transition finishes');
+  new h.Element('early start', 'button', { action: 'space-start' }).click(); assert.equal(h.state.adventure.phase, 'intro');
+  for (let i = 0; i < 100; i++) h.frame(++clock * 16);
+  assert.equal(h.state.adventure.phase, 'intro'); assert(!h.modal.open); assert(adventureArt.adventureShipPose(h.state.adventure).scale > 30);
+  assert(h.get('#adventure-course').attrs.has('hidden')); assert.equal(h.state.adventure.meteors.length, 0);
+  while (h.state.adventure.phase === 'intro' && clock < 800) h.frame(++clock * 16);
   assert(firstSpace >= 6000 && firstSpace <= 7000, String(firstSpace));
   assert.equal(h.state.adventure.phase, 'ready'); assert.equal(h.state.modal, 'space-launch');
   assert(h.modalContent.innerHTML.includes('Weltraumabenteuer starten')); assert(h.modalContent.innerHTML.includes('Landen'));
   assert.equal(h.state.adventure.width, 1200); assert.equal(h.state.paintCan, 'white'); assert.equal(h.state.animal, 'monkey');
-  assert(h.game.innerHTML.includes('data-planet="neptune"')); assert(h.get('#rocket-paint').innerHTML.includes('#ffffff'));
+  assert(h.get('#adventure-course').attrs.has('hidden')); assert(h.get('#rocket-paint').innerHTML.includes('#ffffff'));
+  assert.equal(h.state.adventure.angle, 90, 'the rocket has turned before the launch choice');
   const start = new h.Element('start adventure', 'button', { action: 'space-start' }); h.press(h.documentHandlers, h.event(key, code, start));
   assert.equal(h.state.adventure.phase, 'playing'); assert.equal(h.modal.open, false);
   const initialShip = { ...h.state.adventure.ship }; h.state.keys.add('ArrowRight'); h.state.keys.add('ArrowUp');
@@ -511,35 +521,50 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
   h.frame(++clock * 16); assert.equal(h.state.modal, 'space-win'); assert(h.modalContent.innerHTML.includes('Glückwunsch, du hast es geschafft!'));
   h.press(h.documentHandlers, h.event(key, code, new h.Element('replay', 'button', { action: 'space-replay' })));
   assert.equal(h.state.adventure.phase, 'playing'); assert.equal(h.state.adventure.progress, 0); assert(!h.modal.open);
-  const ship = h.state.adventure.ship; h.state.adventure.meteors = [{ id: 1, x: ship.x + 1, y: ship.y, radius: 18, speed: 250, drift: 0, angle: 0, spin: 0 }];
+  const ship = h.state.adventure.ship; h.state.adventure.meteors = [{ id: 1, x: ship.x + 1, y: ship.y, radius: 18, vx: -250, vy: 0, angle: 0, spin: 0 }];
   h.frame(++clock * 16); assert.equal(h.state.adventure, null); assert(h.state.rocket.damaged && h.state.landing);
   assert.equal(h.stored.get('bbt-rocket-damaged'), '1');
+  assert.equal(h.state.rocket.angle, 180, 'a crash points the rocket nose down');
+  assert(h.game.innerHTML.includes('id="rocket-hull" transform="rotate(180 0 -86)"'));
+  assert(h.game.innerHTML.includes('id="rocket-pilot-upright" transform="rotate(-180 0 -86)"'));
+  assert(!h.state.rocket.broken, 'the rocket stays whole until impact');
   const scenes = new Set(); while (h.state.landing && clock < 1200) { h.frame(++clock * 16); scenes.add(h.state.scene); }
   assert(scenes.has('space') && scenes.has('sky') && scenes.has('world'));
   assert(!h.state.rocket.riding && !h.state.rocket.airborne); assert.equal(h.state.paintCan, 'white'); assert.equal(h.state.paint.path, '#ff3935');
-  assert(h.game.innerHTML.includes('class="rocket-smoke"'));
+  assert(h.state.rocket.broken && h.state.rocket.impact === 0);
+  assert(h.game.innerHTML.includes('id="rocket-wreckage"'));
+  assert(!h.game.innerHTML.includes('id="rocket-hull"'));
+  for (let i = 0; i < 55; i++) h.frame(++clock * 16);
+  assert(h.state.rocket.impact >= .8); assert.notEqual(h.get('#rocket-debris-nose').getAttribute('transform'), null, 'pieces scatter after impact');
+  h.enterRoom('wardrobe'); h.leaveRoom();
+  assert(h.game.innerHTML.includes('id="rocket-wreckage"'), 'room changes keep the wreckage');
   h.state.position = { ...h.state.rocket.position }; h.game.focus(); h.press(h.windowHandlers, h.event(key, code, h.game));
   assert(!h.state.rocket.riding && h.state.rocket.damaged, 'the damaged rocket cannot restart');
-  const reload = await harness(false, 'cat', null, true); assert(reload.state.rocket.damaged, 'the repair is still needed after reloading');
+  const reload = await harness(false, 'cat', null, true); assert(reload.state.rocket.damaged && reload.state.rocket.broken, 'the repair is still needed after reloading');
+  assert(reload.game.innerHTML.includes('id="rocket-wreckage"'));
   h.enterRoom('wardrobe'); assert(h.game.innerHTML.includes('data-room-target="toolbox"'));
   h.state.position = { ...rooms.TOOLBOX_SPOT }; h.game.focus(); h.press(h.windowHandlers, h.event(key, code, h.game));
   assert(h.state.toolbox); assert(h.get('#carried-toolbox').innerHTML.includes('#ff3935'));
   h.leaveRoom(); h.state.position = { ...h.state.rocket.position }; h.game.focus(); assert.equal(h.currentInteraction().kind, 'rocket-repair');
-  h.press(h.windowHandlers, h.event(key, code, h.game)); assert(!h.state.rocket.damaged && !h.state.rocket.riding); assert.equal(h.stored.get('bbt-rocket-damaged'), '0');
+  h.press(h.windowHandlers, h.event(key, code, h.game)); assert(!h.state.rocket.damaged && !h.state.rocket.broken && !h.state.rocket.riding); assert.equal(h.stored.get('bbt-rocket-damaged'), '0');
+  assert(!h.state.toolbox, 'using the toolbox removes it from the player');
+  assert(h.get('#carried-toolbox').attrs.has('hidden')); assert.equal(h.get('#carried-toolbox').innerHTML, '');
+  assert(!h.game.innerHTML.includes('id="rocket-wreckage"')); assert(h.game.innerHTML.includes('id="rocket-hull"'));
   h.press(h.windowHandlers, h.event(key, code, h.game)); assert(h.state.rocket.riding, 'repair makes the rocket startable');
   h.press(h.windowHandlers, h.event(key, code, h.game)); assert(!h.state.rocket.riding);
-  h.enterRoom('wardrobe'); h.state.position = { ...rooms.TOOLBOX_SPOT }; h.game.focus(); h.press(h.windowHandlers, h.event(key, code, h.game)); assert(!h.state.toolbox);
+  h.enterRoom('wardrobe'); h.state.position = { ...rooms.TOOLBOX_SPOT }; h.game.focus(); h.press(h.windowHandlers, h.event(key, code, h.game)); assert(h.state.toolbox, 'a fresh toolbox is available at home for the next repair');
+  h.press(h.windowHandlers, h.event(key, code, h.game)); assert(!h.state.toolbox);
 }
 const choosingLand = await harness(false, 'dog');
 choosingLand.state.rocket.riding = choosingLand.state.rocket.airborne = true;
 choosingLand.state.position = { x: 365, y: sky.SPACE.bottom - 2 }; choosingLand.state.rocket.position = { ...choosingLand.state.position };
 choosingLand.state.scene = 'sky'; choosingLand.state.keys.add('ArrowUp'); choosingLand.frame(16); choosingLand.frame(32);
-for (let time = 48; time < 1200; time += 16) choosingLand.frame(time);
+for (let time = 48; time < 4500; time += 16) choosingLand.frame(time);
 assert.equal(choosingLand.state.modal, 'space-launch'); choosingLand.closePanel();
 assert(choosingLand.state.landing && !choosingLand.state.rocket.damaged, 'Escape at the launch choice lands safely');
-for (let time = 1200; time < 6500; time += 16) choosingLand.frame(time);
+for (let time = 4500; time < 10000; time += 16) choosingLand.frame(time);
 assert.equal(choosingLand.state.scene, 'world'); assert(!choosingLand.state.rocket.riding && !choosingLand.state.rocket.damaged);
-console.log('PASS: space entry at 6–7 seconds, zoom and launch/land choices, four-direction flight, upright pilot, pause, win, replay, crash descent, persistent damage, tool pickup/return, repair and restart work with Enter, Space and NumpadEnter.');
+console.log('PASS: space entry at 6–7 seconds, original-size entry, full cockpit zoom, hidden planets, shrinking and turning before launch/land choices, four-direction flight, upright pilot, pause, win, replay, nose-down crash, scattering wreckage, persistent damage, consuming and replacing the toolbox, repair and restart work with Enter, Space and NumpadEnter.');
 
 const dancingTrack = content.TRACKS.find(track => track.id === 'tanzen'), originalDanceAudio = dancingTrack.src;
 try {

@@ -13,17 +13,23 @@ export const COURSE = ADVENTURE_PLANETS.map((planet, i) => {
 });
 export const SUN_DIAMETER = CSS_PIXELS_PER_CM * SUN_RADIUS_KM / EARTH_RADIUS_KM;
 export const FINISH_DISTANCE = edge + 180;
+export const INTRO_ZOOM_IN = 1.5;
+export const INTRO_HOLD_END = 1.85;
+export const INTRO_ZOOM_OUT_END = 3.55;
+export const INTRO_DURATION = 4.2;
+const METEOR_DIRECTIONS = [[-1, 0], [1, 0], [0, 1], [0, -1], [-1, 1], [1, -1], [1, 1], [-1, -1]];
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 const random = game => { game.seed = (Math.imul(game.seed, 1664525) + 1013904223) >>> 0; return game.seed / 4294967296; };
-export function createAdventure(width, height, seed = 1) {
-  return { phase: 'intro', width, height, seed: seed >>> 0, ship: { x: width * .25, y: height * .5 }, introTime: 0, time: 0, progress: 0, nextMeteor: 4, meteors: [], meteorId: 0, angle: 0 };
+export function createAdventure(width, height, seed = 1, entry = null) {
+  return { phase: 'intro', width, height, seed: seed >>> 0, entry: entry || { x: width * .5, y: height * .5, scale: .8 }, ship: { x: width * .25, y: height * .5 }, introTime: 0, time: 0, progress: 0, nextMeteor: 2, meteors: [], meteorId: 0, angle: 0 };
 }
 export function startAdventure(game) {
-  game.phase = 'playing'; game.time = 0; game.progress = 0; game.meteors = []; game.nextMeteor = 4; game.angle = 0;
+  game.phase = 'playing'; game.time = 0; game.progress = 0; game.meteors = []; game.nextMeteor = 2; game.meteorId = 0; game.angle = 90;
   game.ship = { x: game.width * .25, y: game.height * .5 };
 }
 export function resizeAdventure(game, width, height) {
   game.ship.x *= width / game.width; game.ship.y *= height / game.height;
+  game.entry.x *= width / game.width; game.entry.y *= height / game.height;
   for (const meteor of game.meteors) { meteor.x *= width / game.width; meteor.y *= height / game.height; }
   game.width = width; game.height = height;
 }
@@ -32,11 +38,24 @@ export function meteorHits(from, to, radius) {
   const t = clamp(-(from.x * dx + from.y * dy) / (dx * dx + dy * dy || 1), 0, 1);
   return Math.hypot(from.x + t * dx, from.y + t * dy) <= radius;
 }
+function spawnMeteor(game, scrollSpeed) {
+  const radius = 20 + random(game) * 50;
+  const [dx, dy] = METEOR_DIRECTIONS[game.meteorId % METEOR_DIRECTIONS.length], length = Math.hypot(dx, dy);
+  const velocity = scrollSpeed + 55 + random(game) * 85, vx = dx / length * velocity, vy = dy / length * velocity;
+  // Trace backwards from an interior point to an incoming screen edge.
+  // Every horizontal, vertical and diagonal trajectory crosses visible space.
+  const target = { x: game.width * (.2 + random(game) * .6), y: game.height * (.2 + random(game) * .6) }, margin = radius + 25;
+  const backX = vx > 0 ? (target.x + margin) / vx : vx < 0 ? (game.width + margin - target.x) / -vx : Infinity;
+  const backY = vy > 0 ? (target.y + margin) / vy : vy < 0 ? (game.height + margin - target.y) / -vy : Infinity;
+  const back = Math.min(backX, backY);
+  return { id: ++game.meteorId, x: target.x - vx * back, y: target.y - vy * back, radius, vx, vy, angle: random(game) * 360, spin: (random(game) - .5) * 60 };
+}
 export function tickAdventure(game, seconds, dx = 0, dy = 0) {
   const dt = clamp(seconds, 0, .05);
   if (game.phase === 'intro') {
-    game.introTime += dt;
-    if (game.introTime >= 1) { game.phase = 'ready'; return 'ready'; }
+    game.introTime = game.reduced ? INTRO_DURATION : game.introTime + dt;
+    game.angle = 90 * clamp((game.introTime - INTRO_ZOOM_OUT_END) / (INTRO_DURATION - INTRO_ZOOM_OUT_END), 0, 1);
+    if (game.introTime >= INTRO_DURATION) { game.phase = 'ready'; game.angle = 90; return 'ready'; }
     return null;
   }
   if (game.phase !== 'playing') return null;
@@ -44,18 +63,17 @@ export function tickAdventure(game, seconds, dx = 0, dy = 0) {
   game.ship.x = clamp(game.ship.x + dx / length * 300 * dt, Math.min(65, game.width * .2), Math.max(game.width - 65, game.width * .8));
   game.ship.y = clamp(game.ship.y + dy / length * 300 * dt, Math.min(105, game.height * .3), Math.max(game.height - 55, game.height * .7));
   const speed = game.width < 650 ? 115 : 155;
-  game.time += dt; game.progress += speed * dt; game.angle = Math.min(90, game.time / .75 * 90);
+  game.time += dt; game.progress += speed * dt; game.angle = 90;
   if (game.time >= game.nextMeteor) {
-    const radius = 10 + random(game) * 25;
-    game.meteors.push({ id: ++game.meteorId, x: game.width + radius + 25, y: 90 + random(game) * Math.max(20, game.height - 145), radius, speed: speed + 55 + random(game) * 85, drift: (random(game) - .5) * 55, angle: random(game) * 360, spin: (random(game) - .5) * 60 });
-    game.nextMeteor = game.time + 1.35 + random(game) * 1.05;
+    game.meteors.push(spawnMeteor(game, speed));
+    game.nextMeteor = game.time + .675 + random(game) * .525;
   }
   for (const meteor of game.meteors) {
     const before = { x: meteor.x - oldShip.x, y: meteor.y - oldShip.y };
-    meteor.x -= meteor.speed * dt; meteor.y += meteor.drift * dt; meteor.angle += meteor.spin * dt;
+    meteor.x += meteor.vx * dt; meteor.y += meteor.vy * dt; meteor.angle += meteor.spin * dt;
     if (meteorHits(before, { x: meteor.x - game.ship.x, y: meteor.y - game.ship.y }, meteor.radius + 20)) { game.phase = 'crashed'; return 'crash'; }
   }
-  game.meteors = game.meteors.filter(m => m.x > -m.radius - 30 && m.y > -60 && m.y < game.height + 60);
+  game.meteors = game.meteors.filter(m => m.x > -m.radius - 30 && m.x < game.width + m.radius + 30 && m.y > -m.radius - 30 && m.y < game.height + m.radius + 30);
   if (game.progress + game.ship.x - game.width * .25 + 42 >= FINISH_DISTANCE) { game.phase = 'won'; return 'win'; }
   return null;
 }

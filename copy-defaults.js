@@ -1969,8 +1969,11 @@ export const COPY_GROUPS = [
       {
         "key": "rocket_crashed",
         "label": "Trefferhinweis",
-        "value": "Oh je, ein Meteorit! Wir landen auf der Wiese.",
-        "max": 180
+        "value": "Oh je, ein Meteorit! Die Rakete stürzt ab.",
+        "max": 180,
+        "previousValues": [
+          "Oh je, ein Meteorit! Wir landen auf der Wiese."
+        ]
       },
       {
         "key": "rocket_needs_tools",
@@ -2019,6 +2022,18 @@ export const COPY_GROUPS = [
         "label": "Rückgabehinweis",
         "value": "Die Werkzeugbox steht wieder an ihrem Platz.",
         "max": 180
+      },
+      {
+        "key": "rocket_wreckage",
+        "label": "Beschreibung der Trümmer",
+        "value": "Die zerbrochene Rakete: Spitze, Kabine, Flügel und weitere Trümmer.",
+        "max": 180
+      },
+      {
+        "key": "rocket_wrecked",
+        "label": "Hinweis nach dem Aufprall",
+        "value": "Die Rakete ist zerbrochen. Hol die Werkzeugbox aus dem Home sweet Home und repariere sie!",
+        "max": 600
       }
     ]
   }

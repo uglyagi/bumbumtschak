@@ -12,6 +12,7 @@ import { studioMarkup, studioInteraction, studioColors, STUDIO_CONTROLS, largeSu
 import { createAdventure, startAdventure, resizeAdventure, tickAdventure, FINISH_DISTANCE, landingPose } from './rocket-adventure.js';
 import { adventureMarkup, adventureShipPose, meteorMarkup } from './adventure-art.js';
 import { toolboxMarkup } from './toolbox.js';
+import { wreckageTransforms } from './rocket-wreckage.js';
 
 const previewMode = new URLSearchParams(location.search).get('preview') === '1';
 const contentStatus = await loadContent(previewMode);
@@ -28,6 +29,7 @@ const storage = {
 const savedAnimal = storage.get('animal', '');
 const paintStorageKey = previewMode ? 'paint-preview' : 'paint-world';
 const rocketStorageKey = previewMode ? 'rocket-preview-damaged' : 'rocket-damaged';
+const savedRocketDamage = storage.get(rocketStorageKey, '0') === '1';
 let savedPaint = {};
 try { savedPaint = cleanPaint(JSON.parse(storage.get(paintStorageKey, '{}'))); } catch { /* A damaged local drawing starts with the original colors. */ }
 const state = {
@@ -41,7 +43,7 @@ const state = {
   near: null, modal: null, playing: false, memberMelody: null,
   paint: savedPaint, paintCan: null, paintPage: 0, paintTarget: null,
   studio: null, pictureTouch: false,
-  rocket: { position: { ...GROUND_ROCKET }, riding: false, airborne: false, damaged: storage.get(rocketStorageKey, '0') === '1' },
+  rocket: { position: { ...GROUND_ROCKET }, riding: false, airborne: false, damaged: savedRocketDamage, broken: savedRocketDamage, impact: null },
   adventure: null, landing: null, toolbox: false,
   party: createParty(),
   volume: clamp(Number(storage.get('volume', '.6')) || 0, 0, 1),
@@ -205,7 +207,7 @@ function renderScene() {
   world = $('#world-svg'); player = $('#player'); playerUse = $('#player-use'); marker = $('#destination-marker');
   game.setAttribute('aria-label', state.scene === 'painting' ? text('studio_title') : state.scene === 'space' ? text('space_title') : state.scene === 'sky' ? text('sky_title') : state.scene === 'world' ? text('world_title') : ROOMS[state.scene].title);
   $('.wayfinder').hidden = state.scene !== 'world' || state.rocket.riding;
-  $('.exit-room').hidden = !!state.landing || state.scene === 'world' && !state.rocket.riding;
+  $('.exit-room').hidden = !!state.landing || state.adventure?.phase === 'intro' || state.scene === 'world' && !state.rocket.riding;
   $('.exit-room').textContent = text(state.scene === 'painting' ? 'studio_close' : state.rocket.riding ? state.rocket.airborne ? 'rocket_land_button' : 'rocket_exit' : 'exit_button');
   game.classList.toggle('in-room', !outsideScene(state.scene));
   player.toggleAttribute('hidden', state.rocket.riding);
@@ -213,7 +215,7 @@ function renderScene() {
   player.setAttribute('transform', `translate(${state.position.x} ${state.position.y})`);
 }
 function showPanel(id, focusSelector = '') {
-  if (state.landing) return;
+  if (state.landing || state.adventure?.phase === 'intro') return;
   if (state.adventure && !id.startsWith('space-')) id = state.adventure.phase === 'won' ? 'space-win' : state.adventure.phase === 'playing' ? 'space-pause' : 'space-launch';
   stopWalking(); clearPaintPreview(); state.modal = id; game.classList.add('paused');
   modal.classList.toggle('space-choice', id.startsWith('space-'));
@@ -357,21 +359,24 @@ function landRocket() {
 }
 function enterSpaceAdventure() {
   stopWalking(); state.paintTarget = null;
-  const r = game.getBoundingClientRect();
-  state.adventure = createAdventure(r.width || 1200, r.height || 700, Date.now());
+  const r = game.getBoundingClientRect(), matrix = world.getScreenCTM();
+  const point = matrix ? new DOMPoint(state.position.x, state.position.y - 86).matrixTransform(matrix) : null;
+  const entry = point ? { x: clamp(point.x - (r.left || 0), 0, r.width), y: clamp(point.y - (r.top || 0), 0, r.height), scale: Math.hypot(matrix.a, matrix.b) || .8 } : null;
+  state.adventure = createAdventure(r.width || 1200, r.height || 700, Date.now(), entry);
+  state.adventure.reduced = state.reduced;
   state.scene = 'space'; renderScene(); announce(text('space_entered'));
 }
 function playAdventure() {
-  if (!state.adventure) return;
+  if (!state.adventure || state.adventure.phase === 'intro') return;
   startAdventure(state.adventure); closePanel(); renderScene(); game.focus({ preventScroll: true }); announce(text('adventure_keys'));
 }
 function landFromAdventure(crashed = false) {
   if (!state.adventure) return;
   state.adventure = null;
-  if (crashed) { state.rocket.damaged = true; storage.set(rocketStorageKey, '1'); toast(text('rocket_crashed')); }
+  if (crashed) { state.rocket.damaged = true; state.rocket.broken = false; storage.set(rocketStorageKey, '1'); toast(text('rocket_crashed')); }
   stopWalking(); closePanel();
   state.landing = { from: { ...state.position }, elapsed: 0, crashed };
-  state.rocket.angle = 0; renderScene(); announce(text(crashed ? 'rocket_crashed' : 'rocket_returning'));
+  state.rocket.angle = crashed ? 180 : 0; renderScene(); announce(text(crashed ? 'rocket_crashed' : 'rocket_returning'));
 }
 function finishAdventureTick(event) {
   if (event === 'ready') showPanel('space-launch');
@@ -381,6 +386,10 @@ function finishAdventureTick(event) {
 function updateAdventure() {
   const adventure = state.adventure; if (!adventure) return;
   const pose = adventureShipPose(adventure), angle = adventure.angle;
+  const flight = ['playing', 'won'].includes(adventure.phase);
+  $('#adventure-course')?.toggleAttribute('hidden', !flight);
+  $('#adventure-hud')?.toggleAttribute('hidden', !flight);
+  $('.exit-room').hidden = adventure.phase === 'intro';
   $('#adventure-ship')?.setAttribute('transform', `translate(${pose.x.toFixed(2)} ${pose.y.toFixed(2)}) scale(${pose.scale.toFixed(3)})`);
   $('#rocket-hull')?.setAttribute('transform', `rotate(${angle.toFixed(2)} 0 -86)`);
   $('#rocket-pilot-upright')?.setAttribute('transform', `rotate(${-angle.toFixed(2)} 0 -86)`);
@@ -455,7 +464,7 @@ function performInteraction() {
   if (state.scene === 'painting') { studioAction(near); return; }
   stopWalking();
   if (near.kind === 'rocket-damaged') { toast(text('rocket_needs_tools')); return; }
-  if (near.kind === 'rocket-repair') { state.rocket.damaged = false; storage.set(rocketStorageKey, '0'); renderScene(); toast(text('rocket_repaired')); announce(text('rocket_repaired')); return; }
+  if (near.kind === 'rocket-repair') { state.rocket.damaged = false; state.rocket.broken = false; state.rocket.impact = null; state.rocket.angle = 0; state.toolbox = false; storage.set(rocketStorageKey, '0'); renderScene(); toast(text('rocket_repaired')); announce(text('rocket_repaired')); return; }
   if (near.kind === 'take-toolbox' || near.kind === 'return-toolbox') { state.toolbox = near.kind === 'take-toolbox'; renderScene(); announce(text(state.toolbox ? 'toolbox_taken' : 'toolbox_returned')); return; }
   if (near.kind === 'rocket-board') { boardRocket(); return; }
   if (near.kind === 'rocket-exit') { exitRocket(); return; }
@@ -687,7 +696,7 @@ game.addEventListener('keydown', e => {
 const directions = new Map([['ArrowUp', [0, -1]], ['KeyW', [0, -1]], ['ArrowDown', [0, 1]], ['KeyS', [0, 1]], ['ArrowLeft', [-1, 0]], ['KeyA', [-1, 0]], ['ArrowRight', [1, 0]], ['KeyD', [1, 0]]]);
 window.addEventListener('keydown', e => {
   if (modal.open || !state.started || state.landing) return;
-  if (state.adventure && e.key === 'Escape') { e.preventDefault(); if (!e.repeat) showPanel(state.adventure.phase === 'playing' ? 'space-pause' : state.adventure.phase === 'won' ? 'space-win' : 'space-launch'); return; }
+  if (state.adventure && e.key === 'Escape') { e.preventDefault(); if (!e.repeat) { if (state.adventure.phase === 'intro') landFromAdventure(); else showPanel(state.adventure.phase === 'playing' ? 'space-pause' : state.adventure.phase === 'won' ? 'space-win' : 'space-launch'); } return; }
   if (state.scene === 'painting' && e.key === 'Escape') { e.preventDefault(); if (!e.repeat) closePainting(); return; }
   if (e.key === 'Escape') { e.preventDefault(); if (!e.repeat) { if (state.paintCan) putPaintDown(); else outsideScene(state.scene) ? showPanel('pause') : leaveRoom(); } return; }
   if (!(document.activeElement === game || game.contains(document.activeElement))) {
@@ -757,6 +766,10 @@ function frame(time) {
     updateDanceGuests();
     if (departing && !state.party.departing) refreshDanceParty();
   }
+  if (state.rocket.broken && state.rocket.impact !== null && state.rocket.impact < .8 && !document.hidden) {
+    state.rocket.impact += dt;
+    for (const piece of wreckageTransforms(state.rocket.impact)) $(`#rocket-debris-${piece.id}`)?.setAttribute('transform', piece.transform);
+  }
   if (state.adventure) {
     if (!modal.open && !document.hidden) {
       let dx = 0, dy = 0;
@@ -776,7 +789,12 @@ function frame(time) {
       const scene = flightScene(pose.y);
       if (scene !== state.scene) { state.scene = scene; renderScene(); }
       $('#rocket')?.setAttribute('transform', `translate(${pose.x.toFixed(2)} ${pose.y.toFixed(2)})`); updateCamera(dt);
-      if (pose.done) { const crashed = state.landing.crashed; state.landing = null; landRocket(); exitRocket(); if (crashed) toast(text('rocket_needs_tools')); }
+      if (pose.done) {
+        const crashed = state.landing.crashed; state.landing = null;
+        if (crashed) { state.rocket.broken = true; state.rocket.impact = state.reduced ? .8 : 0; }
+        landRocket(); exitRocket();
+        if (crashed) { toast(text('rocket_wrecked')); announce(text('rocket_wrecked')); }
+      }
     }
     requestAnimationFrame(frame); return;
   }
