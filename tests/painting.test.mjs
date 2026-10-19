@@ -64,7 +64,7 @@ test('ground painting spots can be walked to; sky objects require a flight above
 });
 
 test('legacy content gains editable characters and palette while custom names survive', async () => {
-  const legacy = structuredClone(document); legacy.info.texts.cat_name = 'Meine Katze';
+  const legacy = structuredClone(document); delete legacy.info.animals; delete legacy.info.palette; legacy.info.texts.cat_name = 'Meine Katze';
   const valid = validateContent(legacy);
   assert.equal(valid.info.animals.length, 4); assert.equal(valid.info.animals[0].name, 'Meine Katze');
   assert.equal(valid.info.palette.length, DEFAULT_PALETTE.length);

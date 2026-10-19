@@ -670,3 +670,24 @@ preciseBrush.doc.elementsFromPoint = (x, y) => { screenPoint = { x, y }; return 
 assert.equal(preciseBrush.currentInteraction().id, 'home-roof', 'the rendered surface under the brush takes priority over rectangular approximations');
 assert.equal(screenPoint.x, preciseBrush.state.position.x); assert.equal(screenPoint.y, preciseBrush.state.position.y);
 console.log('PASS: brush selection uses the rendered SVG surface at its actual screen position and skips the separately painted flowers.');
+
+for (const [start, direction, away] of [
+  [{ x: 1110, y: 575 }, 'ArrowUp', 'ArrowDown'],
+  [{ x: 950, y: 400 }, 'ArrowRight', 'ArrowLeft'],
+  [{ x: 1270, y: 400 }, 'ArrowLeft', 'ArrowRight'],
+]) {
+  const h = await harness(false, 'cat'); h.enterRoom('wardrobe'); h.state.position = { ...start }; h.game.focus();
+  h.state.keys.add(direction); let frame = 0;
+  while (h.state.scene === 'wardrobe' && frame < 100) h.frame(++frame * 16);
+  assert.equal(h.state.scene, 'painting', 'touching the actual picture opens painting from either side and from below without confirmation');
+  assert(core.touchingHomePicture(h.state.studio.returnPosition));
+  h.press(h.windowHandlers, h.event('Escape', 'Escape', h.game));
+  for (let i = 0; i < 10; i++) h.frame(++frame * 16);
+  assert.equal(h.state.scene, 'wardrobe', 'closing painting waits until the animal leaves the picture');
+  h.state.keys.add(away); for (let i = 0; i < 30; i++) h.frame(++frame * 16); h.state.keys.clear();
+  assert(!core.touchingHomePicture(h.state.position));
+  h.state.keys.add(direction);
+  while (h.state.scene === 'wardrobe' && frame < 220) h.frame(++frame * 16);
+  assert.equal(h.state.scene, 'painting', 'touching the picture again reopens painting');
+}
+console.log('PASS: walking into the small picture from the left, right or below opens painting automatically, closes safely, and opens again after leaving and touching it anew.');

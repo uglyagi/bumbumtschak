@@ -1,4 +1,4 @@
-import { WORLD, WORLD_SPAWN, STATIONS, clamp, move, planPath, isActionKey, HOUSE_DOORS, worldTouch, canLandRocket, rocketExitPosition } from './game-core.js';
+import { WORLD, WORLD_SPAWN, STATIONS, clamp, move, planPath, isActionKey, HOUSE_DOORS, worldTouch, canLandRocket, rocketExitPosition, touchingHomePicture } from './game-core.js';
 import { ANIMALS, BAND, TRACKS, CONCERTS, CONTACT, INFO, PALETTE, loadContent, text } from './content.js';
 import { PAINT_SURFACES, PAINT_RESET, PAINT_NEXT, paintSlots, paintPages, nearbyPaintSurface, canPaintSurface, cleanPaint, paintCanMarkup, createPaintPreview } from './painting.js';
 import { icon, avatar, memberArt, worldMarkup } from './art.js';
@@ -384,7 +384,7 @@ function studioAction(near) {
 }
 function checkPictureTouch() {
   if (state.scene !== 'wardrobe') return;
-  const touching = Math.hypot(state.position.x - PICTURE_SPOT.x, state.position.y - PICTURE_SPOT.y) < 38;
+  const touching = touchingHomePicture(state.position);
   if (touching && !state.pictureTouch) openPainting();
   else if (!touching) state.pictureTouch = false;
 }

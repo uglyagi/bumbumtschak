@@ -2,6 +2,12 @@ import { SPACE, SKY, GROUND_ROCKET, rocketBody } from './sky-world.js';
 
 export const WORLD = { width: 1600, height: 1100, top: SPACE.top, radius: 18, speed: 205 };
 export const WORLD_SPAWN = { x: 650, y: 650 };
+export const HOME_PICTURE = { x: 1010, y: 270, w: 200, h: 190 };
+export function touchingHomePicture(position) {
+  // The displayed animal is 68 × 82 units, anchored at its feet.
+  return position.x + 34 >= HOME_PICTURE.x && position.x - 34 <= HOME_PICTURE.x + HOME_PICTURE.w
+    && position.y + 5 >= HOME_PICTURE.y && position.y - 77 <= HOME_PICTURE.y + HOME_PICTURE.h;
+}
 export const OBSTACLES = [
   { x: 530, y: 110, w: 555, h: 223 },
   { x: 170, y: 345, w: 270, h: 145 },
@@ -52,7 +58,7 @@ export function sceneObstacles(scene = 'world', parkedRocket = GROUND_ROCKET) {
   if (scene === 'world') return parkedRocket ? [...OBSTACLES, rocketBody(parkedRocket)] : OBSTACLES;
   if (scene === 'sky' || scene === 'space') return [];
   const props = scene === 'radio' ? [{ x: 615, y: 285, w: 370, h: 180 }, { x: 215, y: 300, w: 355, h: 195 }, { x: 980, y: 275, w: 420, h: 60 }]
-    : scene === 'wardrobe' ? [{ x: 910, y: 270, w: 400, h: 380 }]
+    : scene === 'wardrobe' ? [HOME_PICTURE]
     : [{ x: 500, y: 280, w: 600, h: 200 }];
   return [...WALLS, ...props];
 }

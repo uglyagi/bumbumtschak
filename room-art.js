@@ -4,6 +4,7 @@ import { paintSlots, paintPages, PAINT_RESET, PAINT_NEXT, paintCanMarkup } from 
 import { escapeXML as escape } from './utils.js';
 import { ROOMS, ROOM_PROPS, ANIMAL_SPOTS, slotsOnPage, tapePages, createCassetteState } from './rooms.js';
 import { danceGuests, dancePartyMarkup } from './dance-party.js';
+import { HOME_PICTURE } from './game-core.js';
 
 export function cassetteMarkup(track) {
   return `<g stroke="#101014" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round">
@@ -71,7 +72,7 @@ function wardrobeArt(selectedAnimal, paint) {
         ${selected ? fitted(0, 81, text('wardrobe_selected'), 145, 12) : ''}
       </g>`, `aria-pressed="${selected}"`);
     }).join('')}
-    ${target('painting', text('studio_open'), `<rect x="910" y="270" width="400" height="380" rx="8" fill="#d69c5b" stroke="#101014" stroke-width="7"/>${landscapeMarkup(paint.world || {}, 'home-picture', 930, 290, 360)}${fitted(1110, 677, text('studio_picture_label'), 420, 18)}`)}
+    ${target('painting', text('studio_open'), `<rect x="${HOME_PICTURE.x}" y="${HOME_PICTURE.y}" width="${HOME_PICTURE.w}" height="${HOME_PICTURE.h}" rx="4" fill="#d69c5b" stroke="#101014" stroke-width="3.5"/>${landscapeMarkup(paint.world || {}, 'home-picture', HOME_PICTURE.x + 10, HOME_PICTURE.y + 10, 180)}${fitted(HOME_PICTURE.x + HOME_PICTURE.w / 2, HOME_PICTURE.y + HOME_PICTURE.h + 27, text('studio_picture_label'), 260, 16)}`)}
     ${fitted(1165, 719, text('studio_cans'), 430, 22)}
     ${paintSlots(PALETTE, paint.page || 0).map(color => target(`paint:${color.id}`, text(paint.can === color.id ? 'paint_return' : 'paint_take', { farbe: color.name }), `<g transform="translate(${color.x} ${color.y})"><ellipse rx="32" ry="12" fill="#fffcee" stroke="#101014" stroke-width="2" stroke-dasharray="5 4"/>${paint.can === color.id ? '' : `<g transform="translate(-26 -63) scale(.65)">${paintCanMarkup(color.color)}</g>`}${fitted(0, 32, color.name, 135, 14)}</g>`)).join('')}
     ${paintPages(PALETTE) > 1 ? target('paint-next', text('paint_next'), `<g transform="translate(${PAINT_NEXT.x} ${PAINT_NEXT.y})"><rect x="-145" y="-27" width="290" height="54" rx="13" fill="#ff87ce" stroke="#101014" stroke-width="4"/>${fitted(0, -4, text('paint_next'), 264, 15)}${fitted(0, 16, text('paint_page', { seite: (paint.page || 0) + 1, anzahl: paintPages(PALETTE) }), 264, 12)}</g>`) : ''}

@@ -8,7 +8,9 @@ import { BAND, applyContent } from '../content.js';
 const original = JSON.parse(await readFile(new URL('../data/content.json', import.meta.url), 'utf8'));
 
 test('legacy members gain optional audio, unsafe audio is rejected and each melody reaches its public member', () => {
-  const data = validateContent(original);
+  const legacy = structuredClone(original);
+  for (const member of legacy.info.members || []) delete member.audio;
+  const data = validateContent(legacy);
   assert(data.info.members.every(member => member.audio === ''));
   data.info.members.forEach(member => { member.audio = `uploads/${member.id}.mp3`; });
   const valid = validateContent(data); applyContent(valid);

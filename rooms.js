@@ -1,4 +1,4 @@
-import { STATIONS, nearbyWorldObject } from './game-core.js';
+import { STATIONS, nearbyWorldObject, HOME_PICTURE } from './game-core.js';
 import { socialPads } from './social.js';
 import { TRACKS, BAND, ANIMALS, PALETTE, text } from './content.js';
 import { paintSlots, paintPages, PAINT_RESET, PAINT_NEXT } from './painting.js';
@@ -14,7 +14,7 @@ export const EXIT = { x: 800, y: 980 };
 export const RADIO = { x: 800, y: 550 };
 export const SHELF_SWITCH = { id: 'shelf', x: 800, y: 740 };
 export const ANIMAL_SPOTS = ['cat', 'dog', 'horse', 'monkey'].map((id, i) => ({ id, x: 300 + i % 2 * 160, y: 430 + Math.floor(i / 2) * 165 }));
-export const PICTURE_SPOT = { id: 'painting', x: 1110, y: 690 };
+export const PICTURE_SPOT = { id: 'painting', x: HOME_PICTURE.x + HOME_PICTURE.w / 2, y: HOME_PICTURE.y + HOME_PICTURE.h + 55 };
 export const SHELF_SIZE = 10;
 // Six positions on the right, four on the left. A position belongs to no song.
 export const TAPE_SLOTS = [
