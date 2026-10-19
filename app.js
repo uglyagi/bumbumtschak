@@ -381,7 +381,7 @@ function landFromAdventure(crashed = false) {
 }
 function finishAdventureTick(event) {
   if (event === 'ready') showPanel('space-launch');
-  if (event === 'sun-arrived') { stopWalking(); renderScene(); state.adventure.sunStage = 'landing'; announce(text('sun_story_landing')); }
+  if (event === 'sun-arrived') { stopWalking(); renderScene(); state.adventure.sunStage = 'arrival'; announce(text('sun_story_landing')); }
   if (event === 'win') { stopWalking(); showPanel('space-win'); announce(text('adventure_win')); }
   if (event === 'crash') landFromAdventure(true);
 }
@@ -404,6 +404,9 @@ function updateAdventure() {
 function updateSunHoliday() {
   if (!$('#sun-holiday')) return;
   const adventure = state.adventure, p = sunHolidayPose(adventure);
+  $('#sun-flight-background')?.setAttribute('opacity', (1 - p.surfaceOpacity).toFixed(3));
+  $('#sun-surface-background')?.setAttribute('opacity', p.surfaceOpacity.toFixed(3));
+  $('#sun-story')?.toggleAttribute('hidden', !p.storyVisible);
   $('#sun-shuttle')?.setAttribute('transform', holidayTransform({ ...p.shuttle, angle: 0 }));
   $('#rocket-hull')?.setAttribute('transform', `rotate(${p.shuttle.angle.toFixed(2)} 0 -86)`);
   $('#rocket-pilot-upright')?.setAttribute('transform', `rotate(${-p.shuttle.angle.toFixed(2)} 0 -86)`);
@@ -415,7 +418,7 @@ function updateSunHoliday() {
   $('#sun-hatch')?.toggleAttribute('hidden', !p.hatch);
   $('#sun-actor')?.setAttribute('transform', holidayTransform(p.actor));
   $('#sun-actor')?.toggleAttribute('hidden', !p.actorVisible);
-  $('#sun-actor-body')?.setAttribute('transform', p.walking && !state.reduced ? `translate(0 ${Math.sin(adventure.sunTime * 17) * 1.7})` : 'translate(0 0)');
+  $('#sun-actor-body')?.setAttribute('transform', p.walking && !state.reduced ? `translate(0 ${Math.sin(p.time * 17) * 1.7})` : 'translate(0 0)');
   $('#sun-folded-chair')?.toggleAttribute('hidden', !p.foldedChair);
   $('#sun-lounger')?.setAttribute('transform', holidayTransform(p.chair));
   $('#sun-lounger')?.toggleAttribute('hidden', !p.chairVisible);
