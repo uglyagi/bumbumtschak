@@ -1945,14 +1945,20 @@ export const COPY_GROUPS = [
       {
         "key": "adventure_win",
         "label": "Zielüberschrift",
-        "value": "Glückwunsch, du hast es geschafft!",
-        "max": 180
+        "value": "Herzlichen Glückwunsch, du hast es geschafft!",
+        "max": 180,
+        "previousValues": [
+          "Glückwunsch, du hast es geschafft!"
+        ]
       },
       {
         "key": "adventure_win_body",
         "label": "Zieltext",
-        "value": "Du bist vom BumBumPlaneten bis zur Sonne geflogen. Das war ein tolles Abenteuer!",
-        "max": 180
+        "value": "Du bist auf der Sonne gelandet. Nach deinem Abenteuer hast du dir eine Sonnenpause verdient!",
+        "max": 180,
+        "previousValues": [
+          "Du bist vom BumBumPlaneten bis zur Sonne geflogen. Das war ein tolles Abenteuer!"
+        ]
       },
       {
         "key": "adventure_replay",
@@ -2034,6 +2040,42 @@ export const COPY_GROUPS = [
         "label": "Hinweis nach dem Aufprall",
         "value": "Die Rakete ist zerbrochen. Hol die Werkzeugbox aus dem Home sweet Home und repariere sie!",
         "max": 600
+      },
+      {
+        "key": "sun_holiday_title",
+        "label": "Titel der Sonnenszene",
+        "value": "Sonnenpause auf der Sonne",
+        "max": 180
+      },
+      {
+        "key": "sun_story_landing",
+        "label": "Text bei der Sonnenlandung",
+        "value": "Hallo Sonne, wir sind da!",
+        "max": 180
+      },
+      {
+        "key": "sun_story_chair",
+        "label": "Text beim Holen der Liege",
+        "value": "Die Liege kommt mit!",
+        "max": 180
+      },
+      {
+        "key": "sun_story_unfolding",
+        "label": "Text beim Aufstellen",
+        "value": "Mach’s dir gemütlich!",
+        "max": 180
+      },
+      {
+        "key": "sun_story_glasses",
+        "label": "Text bei der Sonnenbrille",
+        "value": "Sonnenbrille auf!",
+        "max": 180
+      },
+      {
+        "key": "sun_story_relaxing",
+        "label": "Text beim Sonnenbaden",
+        "value": "Zeit für eine Sonnenpause!",
+        "max": 180
       }
     ]
   }

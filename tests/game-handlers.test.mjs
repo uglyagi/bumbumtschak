@@ -13,6 +13,7 @@ const adventure = await import(new URL(`rocket-adventure.${extension}`, root));
 const adventureArt = await import(new URL(`adventure-art.${extension}`, root));
 const toolbox = await import(new URL(`toolbox.${extension}`, root));
 const wreckage = await import(new URL(`rocket-wreckage.${extension}`, root));
+const holiday = await import(new URL(`sun-holiday.${extension}`, root));
 
 // Exercise the application's real registered handlers with DOM test doubles.
 // This checks app behavior, not browser rendering or native default actions.
@@ -92,7 +93,7 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null, d
   const game = get('#game'), modal = get('#modal'), modalContent = get('#modal-content'), audio = get('#audio');
   for (const node of [audio, get('#member-audio')]) Object.assign(node, { paused: true, ended: false, currentTime: 0, pause() { this.paused = true; }, play() { this.paused = false; this.ended = false; return Promise.resolve(); }, load() {} });
   const context = vm.createContext({
-    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky, ...dance, ...studio, ...adventure, ...adventureArt, ...toolbox, ...wreckage,
+    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky, ...dance, ...studio, ...adventure, ...adventureArt, ...toolbox, ...wreckage, ...holiday,
     loadContent: async () => ({ ok: true }), document: doc,
     window: { innerWidth: 1200, matchMedia: () => ({ matches: false }), addEventListener: (n, cb) => add(windowHandlers, n, cb), open(...args) { opened.push(args); } },
     location: { search: preview ? '?preview=1' : '' }, localStorage: { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value) },
@@ -306,11 +307,11 @@ for (const id of ['radio', 'concerts', 'wardrobe', 'grownups', 'help', 'social']
 console.log('PASS: walking routes to all three entrances, desk, relocated hint sign and outdoor contact area.');
 
 for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'NumpadEnter']]) {
-  const h = await harness(); h.state.started = true; h.closePanel(); h.enterRoom('wardrobe');
+  const h = await harness(false, 'dog'); h.enterRoom('wardrobe'); let clock = 0;
   const carried = content.TRACKS[0].id; h.state.tapes.carrying = carried;
   for (const spot of rooms.ANIMAL_SPOTS) {
-    h.state.position = { ...spot }; h.game.focus(); h.frame(16);
-    const previousAnimal = h.state.animal;
+    h.state.position = { x: spot.x + 52, y: spot.y + 30 }; h.game.focus(); h.frame(++clock * 16);
+    const previousAnimal = h.state.animal, previousPosition = { ...h.state.position };
     h.press(h.windowHandlers, h.event(key, code, h.game, true));
     assert.equal(h.state.animal, previousAnimal, 'holding confirmation does not change the character');
     h.press(h.windowHandlers, h.event(key, code, h.game));
@@ -318,18 +319,29 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
     assert.equal(h.state.scene, 'wardrobe'); assert.equal(h.modal.open, false);
     assert.equal(h.state.position.x, spot.x); assert.equal(h.state.position.y, spot.y);
     assert.equal(h.state.tapes.carrying, carried, 'changing characters preserves the carried cassette');
-    assert(h.game.innerHTML.includes(`data-room-target="animal:${spot.id}"`));
-    assert.equal((h.game.innerHTML.match(/aria-pressed="true"/g) || []).length, 1);
+    assert(!h.game.innerHTML.includes(`id="home-animal-${spot.id}"`), 'the controlled animal has no duplicate NPC');
+    assert.equal((h.game.innerHTML.match(/id="home-animal-/g) || []).length, 3);
     assert.equal(h.get('#player-use').attrs.get('href'), `#animal-${spot.id}`);
+    const returning = h.state.homeReturns.find(animal => animal.id === previousAnimal);
+    assert(returning); assert.deepEqual({ ...returning.position }, previousPosition, 'the old animal starts its walk where the player left it');
+    h.frame(++clock * 16); assert(Math.hypot(returning.position.x - previousPosition.x, returning.position.y - previousPosition.y) > 0);
+    let returnFrames = 0; while (h.state.homeReturns.length && returnFrames++ < 220) h.frame(++clock * 16);
+    assert.equal(h.state.homeReturns.length, 0); assert(h.game.innerHTML.includes(`data-room-target="animal:${previousAnimal}"`));
+    for (let i = 0; i < 15; i++) h.frame(++clock * 16);
+    assert.deepEqual({ ...h.state.position }, { x: spot.x, y: spot.y }, 'the newly selected animal stays at its selection position until moved');
+    assert.equal(h.currentInteraction(), null, 'the now-empty selection spot cannot select the same animal again');
   }
   h.state.position = { ...rooms.ROOM_SPAWN }; h.game.focus();
   const cat = new h.Element('cat choice', 'g', { roomTarget: 'animal:cat' });
   h.press(h.game.handlers, h.event(key, code, cat));
   let tick = 0;
-  while (h.state.path.length && tick < 1000) h.frame(++tick * 16);
+  while (h.state.path.length && tick++ < 1000) h.frame(++clock * 16);
   assert.equal(h.state.animal, 'monkey', 'walking to a different animal does not select it automatically');
   h.press(h.game.handlers, h.event(key, code, cat));
   assert.equal(h.state.animal, 'cat', 'confirmation on a focused nearby animal selects it');
+  assert.deepEqual({ ...h.state.position }, { x: rooms.ANIMAL_SPOTS[0].x, y: rooms.ANIMAL_SPOTS[0].y });
+  const standing = { ...h.state.position }; h.state.keys.add('ArrowDown'); h.frame(++clock * 16); h.state.keys.clear();
+  assert(h.state.position.y > standing.y, 'direction keys move the newly controlled animal');
   h.press(h.windowHandlers, h.event('Escape', 'Escape', h.game));
   assert.equal(h.state.scene, 'world'); assert.equal(h.state.animal, 'cat');
 }
@@ -338,7 +350,7 @@ assert.equal(restored.state.animal, 'monkey'); assert.equal(restored.state.start
 assert(core.canStand(restored.state.position.x, restored.state.position.y));
 assert.equal(core.worldTouch(restored.state.position), null, 'initial spawn does not enter a house automatically');
 assert(art.worldMarkup().includes('data-station="wardrobe"'));
-console.log('PASS: all four characters switch inside the house with Enter, Space or Numpad Enter, focused targets walk before confirming, selected sprite and saved choice update, cassette state survives, Escape exits and the initial spawn is safe.');
+console.log('PASS: all four characters switch at their exact selection positions, the previous animal walks home, no selected NPC is duplicated, the new player waits for movement, carried items survive and all confirmation keys work.');
 
 for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'NumpadEnter']]) {
   const h = await harness(); h.state.started = true; h.closePanel(); h.enterRoom('wardrobe');
@@ -378,7 +390,9 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
   assert.equal(h.state.paintCan, null); assert.equal(h.modal.open, false); assert.equal(h.state.scene, 'world');
   h.enterRoom('wardrobe'); h.state.position = { ...painting.PAINT_RESET }; h.game.focus();
   h.press(h.windowHandlers, h.event(key, code, h.game));
-  assert.equal(Object.keys(h.state.paint).length, 0); assert.equal(h.stored.get('bbt-paint-world'), '{}');
+  assert.equal(Object.keys(h.state.paint).length, painting.BUCKET_SURFACES.length); assert.equal(h.currentInteraction(), null);
+  assert(!h.game.innerHTML.includes('data-room-target="paint-reset"'), 'the reset button is removed from the house');
+  assert.equal(h.stored.get('bbt-paint-world'), JSON.stringify(h.state.paint));
   h.state.position = { ...blue }; h.game.focus();
   h.press(h.windowHandlers, h.event(key, code, h.game));
   h.press(h.windowHandlers, h.event(key, code, h.game));
@@ -395,7 +409,7 @@ try {
   h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game));
   assert.equal(h.state.paintCan, 'orange', 'a newly added color is usable on the next page');
 } finally { content.PALETTE.splice(0, content.PALETTE.length, ...basePalette); }
-console.log('PASS: taking, carrying and returning paint cans, all trees and flowers, rejecting every large picture surface, local save/reload, Escape, reset and newly added palette colors through the real keyboard handlers.');
+console.log('PASS: taking, carrying and returning paint cans, all trees and flowers, rejecting every large picture surface, local save/reload, Escape, removed house reset and newly added palette colors through the real keyboard handlers.');
 
 for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space']]) {
   const h = await harness(false, 'cat', { path: '#ff3935', 'flower-0': '#ff3935' });
@@ -518,7 +532,24 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
   const frozen = h.state.adventure.progress; h.frame(++clock * 16); assert.equal(h.state.adventure.progress, frozen, 'the flight pauses with its menu');
   h.press(h.documentHandlers, h.event(key, code, new h.Element('continue flight', 'button', { action: 'space-continue' })));
   assert(!h.modal.open); h.state.adventure.progress = adventure.FINISH_DISTANCE; h.state.adventure.meteors = []; h.state.adventure.nextMeteor = Infinity;
-  h.frame(++clock * 16); assert.equal(h.state.modal, 'space-win'); assert(h.modalContent.innerHTML.includes('Glückwunsch, du hast es geschafft!'));
+  h.frame(++clock * 16); assert.equal(h.state.adventure.phase, 'sun-finale'); assert(!h.modal.open, 'arrival does not show congratulations immediately');
+  assert(h.game.innerHTML.includes('id="sun-holiday"')); assert.equal(h.state.adventure.meteors.length, 0);
+  h.showPanel('space-win'); assert(!h.modal.open, 'the finale cannot open an early congratulations window');
+  new h.Element('premature replay', 'button', { action: 'space-replay' }).click(); assert.equal(h.state.adventure.phase, 'sun-finale');
+  const flightProgress = h.state.adventure.progress;
+  while (h.state.adventure.sunTime < 3.2) h.frame(++clock * 16);
+  assert(h.get('#rocket-pilot').attrs.has('hidden')); assert(!h.get('#sun-actor').attrs.has('hidden')); assert(!h.get('#sun-folded-chair').attrs.has('hidden'));
+  while (h.state.adventure.sunTime < 5.3) h.frame(++clock * 16);
+  assert(h.get('#sun-folded-chair').attrs.has('hidden')); assert(!h.get('#sun-lounger').attrs.has('hidden'));
+  while (h.state.adventure.sunTime < 6.2) h.frame(++clock * 16);
+  assert(!h.get('#sun-sunglasses').attrs.has('hidden')); assert(!h.modal.open);
+  while (h.state.adventure.sunTime < 8) h.frame(++clock * 16);
+  assert(h.get('#sun-actor').getAttribute('transform').includes('rotate(-62.00)')); assert(!h.modal.open, 'the player sunbathes before being congratulated');
+  assert.equal(h.state.adventure.progress, flightProgress);
+  h.doc.hidden = true; const sunPaused = h.state.adventure.sunTime; h.frame(++clock * 16); assert.equal(h.state.adventure.sunTime, sunPaused); h.doc.hidden = false;
+  while (h.state.adventure.phase === 'sun-finale') h.frame(++clock * 16);
+  assert.equal(h.state.modal, 'space-win'); assert(h.modalContent.innerHTML.includes('Herzlichen Glückwunsch'));
+
   h.press(h.documentHandlers, h.event(key, code, new h.Element('replay', 'button', { action: 'space-replay' })));
   assert.equal(h.state.adventure.phase, 'playing'); assert.equal(h.state.adventure.progress, 0); assert(!h.modal.open);
   const ship = h.state.adventure.ship; h.state.adventure.meteors = [{ id: 1, x: ship.x + 1, y: ship.y, radius: 18, vx: -250, vy: 0, angle: 0, spin: 0 }];
@@ -528,7 +559,9 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
   assert(h.game.innerHTML.includes('id="rocket-hull" transform="rotate(180 0 -86)"'));
   assert(h.game.innerHTML.includes('id="rocket-pilot-upright" transform="rotate(-180 0 -86)"'));
   assert(!h.state.rocket.broken, 'the rocket stays whole until impact');
-  const scenes = new Set(); while (h.state.landing && clock < 1200) { h.frame(++clock * 16); scenes.add(h.state.scene); }
+  h.frame(++clock * 16); const firstShake = h.get('#rocket-vibration').getAttribute('transform');
+  h.frame(++clock * 16); assert.notEqual(h.get('#rocket-vibration').getAttribute('transform'), firstShake, 'the shared rocket and pilot group vibrates during the crash');
+  const scenes = new Set(); while (h.state.landing && clock < 2200) { h.frame(++clock * 16); scenes.add(h.state.scene); }
   assert(scenes.has('space') && scenes.has('sky') && scenes.has('world'));
   assert(!h.state.rocket.riding && !h.state.rocket.airborne); assert.equal(h.state.paintCan, 'white'); assert.equal(h.state.paint.path, '#ff3935');
   assert(h.state.rocket.broken && h.state.rocket.impact === 0);
@@ -564,7 +597,7 @@ assert.equal(choosingLand.state.modal, 'space-launch'); choosingLand.closePanel(
 assert(choosingLand.state.landing && !choosingLand.state.rocket.damaged, 'Escape at the launch choice lands safely');
 for (let time = 4500; time < 10000; time += 16) choosingLand.frame(time);
 assert.equal(choosingLand.state.scene, 'world'); assert(!choosingLand.state.rocket.riding && !choosingLand.state.rocket.damaged);
-console.log('PASS: space entry at 6–7 seconds, original-size entry, full cockpit zoom, hidden planets, shrinking and turning before launch/land choices, four-direction flight, upright pilot, pause, win, replay, nose-down crash, scattering wreckage, persistent damage, consuming and replacing the toolbox, repair and restart work with Enter, Space and NumpadEnter.');
+console.log('PASS: space entry at 6–7 seconds, original-size entry, full cockpit zoom, hidden planets, shrinking and turning before launch/land choices, four-direction flight, upright pilot, pause, Sun landing, carried/unfolded lounger, sunglasses, sunbathing before congratulations, replay, vibrating nose-down crash, scattering wreckage, persistent damage, consuming and replacing the toolbox, repair and restart work with Enter, Space and NumpadEnter.');
 
 const dancingTrack = content.TRACKS.find(track => track.id === 'tanzen'), originalDanceAudio = dancingTrack.src;
 try {

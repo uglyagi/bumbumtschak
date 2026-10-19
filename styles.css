@@ -42,3 +42,5 @@ dialog{padding:0;border:var(--line);border-radius:25px;color:var(--ink);backgrou
 /* Keep the enlarged cockpit visible above the flight choices. */
 dialog.space-choice{width:min(640px,calc(100% - 28px));margin:auto auto 6vh;max-height:55dvh;overflow:auto}dialog.space-choice::backdrop{background:rgba(10,13,30,.2);backdrop-filter:none}.adventure-dialog{padding:25px 28px}.adventure-dialog h2{font-size:clamp(24px,3vw,32px);margin-right:0}.adventure-dialog .modal-actions{gap:12px;justify-content:flex-start;margin-top:20px}.adventure-dialog .modal-intro{font-size:13px}.adventure-hud{pointer-events:none}.game.paused #rocket .rocket-flame{animation-play-state:paused}
 @media(max-height:600px){dialog.space-choice{margin-bottom:3vh;max-height:52dvh}.adventure-dialog{padding:17px 21px}.adventure-dialog .modal-intro{font-size:11px;line-height:1.4}.adventure-dialog .modal-actions{margin-top:12px}}
+
+.home-returning .home-animal-body{transform-origin:0 0;animation:walk .24s ease-in-out infinite alternate}.game.paused .home-animal-body{animation-play-state:paused}

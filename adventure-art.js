@@ -2,6 +2,7 @@ import { defs, rocketMarkup, landscapeMarkup } from './art.js';
 import { planetMarkup } from './space-art.js';
 import { COURSE, FINISH_DISTANCE, SUN_DIAMETER, INTRO_ZOOM_IN, INTRO_HOLD_END, INTRO_ZOOM_OUT_END } from './rocket-adventure.js';
 import { text } from './content.js';
+import { sunHolidayMarkup } from './sun-holiday.js';
 import { escapeXML as esc } from './utils.js';
 
 const planetY = (planet, height) => height < planet.diameter + 110 ? height / 2 : Math.max(planet.diameter / 2 + 55, Math.min(height - planet.diameter / 2 - 55, height * planet.height));
@@ -26,6 +27,7 @@ export function adventureShipPose(game) {
   return { x: blend(close.x, flight.x, amount), y: blend(close.y, flight.y, amount), scale: zoom(close.scale, flight.scale, amount) };
 }
 export function adventureMarkup(game, animal, paint = {}) {
+  if (game.sunTime !== null && game.sunTime !== undefined) return sunHolidayMarkup(game, animal);
   const w = game.width, h = game.height, pose = adventureShipPose(game);
   let seed = 553311; const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
   const stars = Array.from({ length: 200 }, (_, i) => `<circle cx="${(random() * w * 2).toFixed(1)}" cy="${(random() * h).toFixed(1)}" r="${(1 + random() * 1.7).toFixed(1)}" fill="${['#fffcee','#fff20b','#aee5ff','#ffb5df'][i % 4]}" opacity="${i % 3 ? '.7' : '1'}"/>`).join('');

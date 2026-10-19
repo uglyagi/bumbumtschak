@@ -43,8 +43,8 @@ export function rocketMarkup(rocket, animal) {
   const interactionLabel = text(rocket.damaged ? 'rocket_needs_tools' : 'rocket_board');
   if (rocket.broken) return `<g id="rocket" class="world-station" data-station="rocket" role="button" tabindex="0" aria-label="${escape(interactionLabel)}" transform="translate(${position.x} ${position.y})">${rocketWreckageMarkup(rocket.impact ?? 1)}</g>`;
   return `<g id="rocket" transform="translate(${position.x} ${position.y})" ${rocket.riding ? '' : `class="world-station" data-station="rocket" role="button" tabindex="0" aria-label="${escape(interactionLabel)}"`}>
-    <g id="rocket-hull" transform="rotate(${rocket.angle || 0} 0 -86)" stroke="#101014" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
-      <ellipse cy="3" rx="36" ry="9" fill="#101014" stroke="none" opacity=".15" ${rocket.airborne ? 'hidden=""' : ''}/>
+    <g id="rocket-vibration"><g id="rocket-hull" transform="rotate(${rocket.angle || 0} 0 -86)" stroke="#101014" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+      <ellipse id="rocket-shadow" cy="3" rx="36" ry="9" fill="#101014" stroke="none" opacity=".15" ${rocket.airborne ? 'hidden=""' : ''}/>
       <path class="rocket-flame" d="M-12-30Q-16-8 0 0 17-10 12-30Z" fill="#fff20b" ${rocket.airborne && !rocket.damaged ? '' : 'hidden=""'}/>
       <path d="M-17-63q-23 8-25 40l26-15M17-63q23 8 25 40l-26-15" fill="#ff87ce"/>
       <path d="M-19-111Q-29-78-17-33h34q12-45 2-78Z" fill="${rocket.damaged ? '#d3d2c7' : '#ffffff'}"/>
@@ -52,14 +52,14 @@ export function rocketMarkup(rocket, animal) {
       <path d="M-17-34h34v9h-34Z" fill="#fff20b"/>
       <path d="m-21-25-9 23h12m39-23 9 23H18" fill="none"/>
       <circle cy="-86" r="20" fill="${SKY.color}"/>
-      ${rocket.riding ? `<clipPath id="rocket-window-clip"><circle cy="-86" r="17"/></clipPath><g clip-path="url(#rocket-window-clip)"><g id="rocket-pilot-upright" transform="rotate(${-1 * (rocket.angle || 0)} 0 -86)"><use id="rocket-pilot" href="#animal-${animal}" x="-23" y="-111" width="46" height="55"/></g></g>` : '<path d="m-9-94-3 7" stroke="#ffffff" stroke-width="5"/>'}
+      ${rocket.riding ? `<clipPath id="rocket-window-clip"><circle cy="-86" r="17"/></clipPath><g clip-path="url(#rocket-window-clip)"><g id="rocket-pilot-upright" transform="rotate(${-1 * (rocket.angle || 0)} 0 -86)"><use id="rocket-pilot" href="#animal-${animal}" x="-23" y="-111" width="46" height="55"${rocket.pilotHidden ? ' hidden=""' : ''}/></g></g>` : '<path d="m-9-94-3 7" stroke="#ffffff" stroke-width="5"/>'}
       <circle cy="-86" r="20" fill="none"/>
       <path d="M-8-54H8" stroke="#1d55ff" stroke-width="5"/>
       ${rocket.damaged ? '<path d="m-12-71 10 11-7 8 13 12M-13-122l13-5 9 10" fill="none" stroke-width="3"/><path d="M-13-48h24v10h-24Z" fill="#ffb76c" stroke-width="2"/><path d="M-7-43h12" stroke-width="2"/>' : ''}
     </g>
     ${rocket.damaged ? '<g class="rocket-smoke" fill="#aaa6b3" stroke="#101014" stroke-width="2"><circle cx="28" cy="-27" r="9"/><circle cx="35" cy="-44" r="11"/><circle cx="30" cy="-65" r="7"/></g>' : ''}
     <g id="rocket-paint" transform="translate(22 -82) scale(.28)" hidden=""></g>
-    <g id="rocket-toolbox" transform="translate(-44 -82) scale(.28)" hidden=""></g>
+    <g id="rocket-toolbox" transform="translate(-44 -82) scale(.28)" hidden=""></g></g>
   </g>`;
 }
 export const mapLabel = (x, y, text, width = 180, color = '#fffcee') => `<g class="map-label" transform="translate(${x} ${y})"><rect x="${-width / 2}" y="-23" width="${width}" height="38" rx="9" fill="${color}" stroke="#101014" stroke-width="3"/><text y="3" text-anchor="middle" font-size="${Math.min(17, (width - 18) / (text.length * .6 || 1))}" font-weight="900" fill="#101014">${escape(text)}</text></g>`;

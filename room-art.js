@@ -1,6 +1,6 @@
 import { defs, mapLabel, landscapeMarkup } from './art.js';
 import { TRACKS, ANIMALS, PALETTE, text } from './content.js';
-import { paintSlots, paintPages, PAINT_RESET, PAINT_NEXT, paintCanMarkup } from './painting.js';
+import { paintSlots, paintPages, PAINT_NEXT, paintCanMarkup } from './painting.js';
 import { escapeXML as escape } from './utils.js';
 import { ROOMS, ROOM_PROPS, ANIMAL_SPOTS, TOOLBOX_SPOT, slotsOnPage, tapePages, createCassetteState } from './rooms.js';
 import { danceGuests, dancePartyMarkup } from './dance-party.js';
@@ -64,21 +64,22 @@ function infoArt(scene) {
 
 function wardrobeArt(selectedAnimal, paint) {
   return `${fitted(390, 295, text('wardrobe_board'), 420, 26)}${fitted(390, 327, text('wardrobe_hint'), 440, 14)}
-    ${ANIMAL_SPOTS.map(spot => {
-      const animal = ANIMALS.find(animal => animal.id === spot.id), selected = animal.id === selectedAnimal;
-      return target(`animal:${animal.id}`, text('action_change_character', { tier: animal.name }), `<g transform="translate(${spot.x} ${spot.y})">
-        <ellipse rx="40" ry="15" fill="${selected ? '#fff20b' : animal.color}" stroke="#101014" stroke-width="${selected ? 4 : 2}"/>
-        <use href="#animal-${animal.id}" x="-34" y="-77" width="68" height="82"/>
-        ${mapLabel(0, 43, animal.name, 130, selected ? '#fff20b' : '#fffcee')}
-        ${selected ? fitted(0, 81, text('wardrobe_selected'), 145, 12) : ''}
-      </g>`, `aria-pressed="${selected}"`);
+    ${ANIMAL_SPOTS.filter(spot => spot.id !== selectedAnimal).map(spot => {
+      const animal = ANIMALS.find(animal => animal.id === spot.id), returning = paint.returns?.find(animal => animal.id === spot.id);
+      const position = returning?.position || spot;
+      const markup = `<g id="home-animal-${animal.id}" class="${returning ? 'home-returning' : ''}" transform="translate(${position.x} ${position.y})">
+        <ellipse rx="40" ry="15" fill="${animal.color}" stroke="#101014" stroke-width="2"/>
+        <g class="home-animal-body"><use href="#animal-${animal.id}" x="-34" y="-77" width="68" height="82"/></g>
+        ${mapLabel(0, 43, animal.name, 130, '#fffcee')}
+      </g>`;
+      return returning ? markup : target(`animal:${animal.id}`, text('action_change_character', { tier: animal.name }), markup);
     }).join('')}
     ${target('painting', text('studio_open'), `<rect x="${HOME_PICTURE.x}" y="${HOME_PICTURE.y}" width="${HOME_PICTURE.w}" height="${HOME_PICTURE.h}" rx="4" fill="#d69c5b" stroke="#101014" stroke-width="3.5"/>${landscapeMarkup(paint.world || {}, 'home-picture', HOME_PICTURE.x + 10, HOME_PICTURE.y + 10, 180)}${fitted(HOME_PICTURE.x + HOME_PICTURE.w / 2, HOME_PICTURE.y + HOME_PICTURE.h + 27, text('studio_picture_label'), 260, 16)}`)}
     ${target('toolbox', text(paint.toolbox ? 'toolbox_return' : 'toolbox_take'), `<g transform="translate(${TOOLBOX_SPOT.x} ${TOOLBOX_SPOT.y})"><ellipse rx="46" ry="13" fill="#fffcee" stroke="#101014" stroke-width="2" stroke-dasharray="5 4"/>${paint.toolbox ? '' : `<g transform="translate(-40 -59)">${toolboxMarkup()}</g>`}${fitted(0, 32, text('toolbox_title'), 200, 16)}</g>`)}
     ${fitted(1165, 719, text('studio_cans'), 430, 22)}
     ${paintSlots(PALETTE, paint.page || 0).map(color => target(`paint:${color.id}`, text(paint.can === color.id ? 'paint_return' : 'paint_take', { farbe: color.name }), `<g transform="translate(${color.x} ${color.y})"><ellipse rx="32" ry="12" fill="#fffcee" stroke="#101014" stroke-width="2" stroke-dasharray="5 4"/>${paint.can === color.id ? '' : `<g transform="translate(-26 -63) scale(.65)">${paintCanMarkup(color.color)}</g>`}${fitted(0, 32, color.name, 135, 14)}</g>`)).join('')}
     ${paintPages(PALETTE) > 1 ? target('paint-next', text('paint_next'), `<g transform="translate(${PAINT_NEXT.x} ${PAINT_NEXT.y})"><rect x="-145" y="-27" width="290" height="54" rx="13" fill="#ff87ce" stroke="#101014" stroke-width="4"/>${fitted(0, -4, text('paint_next'), 264, 15)}${fitted(0, 16, text('paint_page', { seite: (paint.page || 0) + 1, anzahl: paintPages(PALETTE) }), 264, 12)}</g>`) : ''}
-    ${target('paint-reset', text('paint_reset'), `<g transform="translate(${PAINT_RESET.x} ${PAINT_RESET.y})"><rect x="-145" y="-27" width="290" height="54" rx="13" fill="#fffcee" stroke="#101014" stroke-width="4"/>${fitted(0, 6, text('paint_reset'), 264, 17)}</g>`)}`;
+    `;
 }
 
 export function roomMarkup(scene, shelfPage = 0, tapes = createCassetteState(), selectedAnimal = 'cat', paint = {}) {

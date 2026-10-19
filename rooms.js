@@ -1,7 +1,7 @@
 import { STATIONS, nearbyWorldObject, HOME_PICTURE } from './game-core.js';
 import { socialPads } from './social.js';
 import { TRACKS, BAND, ANIMALS, PALETTE, text } from './content.js';
-import { paintSlots, paintPages, PAINT_RESET, PAINT_NEXT } from './painting.js';
+import { paintSlots, paintPages, PAINT_NEXT } from './painting.js';
 import { GROUND_ROCKET, ROCKET_REACH } from './sky-world.js';
 
 export const ROOMS = {
@@ -77,6 +77,7 @@ export function nearbyInteraction(scene, position, tapes, shelfPage = 0, paint =
   const candidates = [...links];
   if (distance(position, EXIT) < 95) candidates.push({ kind: 'exit', id: 'exit', label: text('back_world'), distance: distance(position, EXIT) });
   if (scene === 'wardrobe') for (const spot of ANIMAL_SPOTS) {
+    if (spot.id === paint.animal || paint.returns?.some(animal => animal.id === spot.id)) continue;
     const d = distance(position, spot), animal = ANIMALS.find(animal => animal.id === spot.id);
     if (d < 85) candidates.push({ ...spot, kind: 'change-character', label: text('action_change_character', { tier: animal.name }), distance: d });
   }
@@ -87,7 +88,6 @@ export function nearbyInteraction(scene, position, tapes, shelfPage = 0, paint =
       const d = distance(position, color);
       if (d < 70) candidates.push({ ...color, kind: paint.can === color.id ? 'return-paint' : 'take-paint', distance: d, label: text(paint.can === color.id ? 'paint_return' : 'paint_take', { farbe: color.name }) });
     }
-    if (distance(position, PAINT_RESET) < 75) candidates.push({ ...PAINT_RESET, id: 'paint-reset', kind: 'reset-paint', label: text('paint_reset'), distance: distance(position, PAINT_RESET) });
     if (paintPages(PALETTE) > 1 && distance(position, PAINT_NEXT) < 75) candidates.push({ ...PAINT_NEXT, id: 'paint-next', kind: 'paint-page', label: text('paint_next'), distance: distance(position, PAINT_NEXT) });
   }
   if (scene === 'radio') {

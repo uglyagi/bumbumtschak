@@ -36,7 +36,10 @@ test('the picture is the actual world, with isolated SVG references and identica
 
 test('home animals match the player size, remain in the upper left and all new destinations are reachable', () => {
   const room = roomMarkup('wardrobe');
-  for (const animal of ANIMALS) assert(room.includes(`<use href="#animal-${animal.id}" x="-34" y="-77" width="68" height="82"/>`));
+  for (const animal of ANIMALS.filter(animal => animal.id !== 'cat')) assert(room.includes(`<use href="#animal-${animal.id}" x="-34" y="-77" width="68" height="82"/>`));
+  assert(!room.includes('id="home-animal-cat"')); assert.equal((room.match(/id="home-animal-/g) || []).length, 3);
+  assert(!room.includes('data-room-target="paint-reset"'));
+  assert(studioMarkup({}, PALETTE, { color: null, page: 0 }).includes('data-studio-control="reset"'), 'the picture keeps its own reset control');
   for (const point of [...ANIMAL_SPOTS, PICTURE_SPOT]) {
     assert(canStand(point.x, point.y, undefined, 'wardrobe')); assert(planPath(ROOM_SPAWN, point, 'wardrobe').length);
   }

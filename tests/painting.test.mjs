@@ -85,7 +85,7 @@ test('custom character images and names reach every avatar and staged previews',
   assert(fileReferences(custom).has('uploads/cat.png'));
   try {
     applyContent(staged); refreshBandWayfinding();
-    const world = worldMarkup(), room = roomMarkup('wardrobe', 0, undefined, 'cat', { page: 1 });
+    const world = worldMarkup(), room = roomMarkup('wardrobe', 0, undefined, 'dog', { page: 1 });
     assert(world.includes('href="blob:local-cat" width="100" height="120" preserveAspectRatio="xMidYMax meet"'));
     assert(room.includes('Unsere Katze')); assert(room.includes('Orange')); assert.equal(PALETTE.length, DEFAULT_PALETTE.length + 1); assert.equal(ANIMALS[0].name, 'Unsere Katze');
     assert.equal(text('sign_radio'), 'Musikhaus'); assert.equal(text('sign_social'), 'Kontakt');

@@ -17,15 +17,17 @@ export const INTRO_ZOOM_IN = 1.5;
 export const INTRO_HOLD_END = 1.85;
 export const INTRO_ZOOM_OUT_END = 3.55;
 export const INTRO_DURATION = 4.2;
+export const SUN_HOLIDAY_DURATION = 10.2;
 const METEOR_DIRECTIONS = [[-1, 0], [1, 0], [0, 1], [0, -1], [-1, 1], [1, -1], [1, 1], [-1, -1]];
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 const random = game => { game.seed = (Math.imul(game.seed, 1664525) + 1013904223) >>> 0; return game.seed / 4294967296; };
 export function createAdventure(width, height, seed = 1, entry = null) {
-  return { phase: 'intro', width, height, seed: seed >>> 0, entry: entry || { x: width * .5, y: height * .5, scale: .8 }, ship: { x: width * .25, y: height * .5 }, introTime: 0, time: 0, progress: 0, nextMeteor: 2, meteors: [], meteorId: 0, angle: 0 };
+  return { phase: 'intro', width, height, seed: seed >>> 0, entry: entry || { x: width * .5, y: height * .5, scale: .8 }, ship: { x: width * .25, y: height * .5 }, introTime: 0, time: 0, progress: 0, nextMeteor: 2, meteors: [], meteorId: 0, angle: 0, sunTime: null, sunFrom: null };
 }
 export function startAdventure(game) {
   game.phase = 'playing'; game.time = 0; game.progress = 0; game.meteors = []; game.nextMeteor = 2; game.meteorId = 0; game.angle = 90;
   game.ship = { x: game.width * .25, y: game.height * .5 };
+  game.sunTime = null; game.sunFrom = null;
 }
 export function resizeAdventure(game, width, height) {
   game.ship.x *= width / game.width; game.ship.y *= height / game.height;
@@ -58,6 +60,11 @@ export function tickAdventure(game, seconds, dx = 0, dy = 0) {
     if (game.introTime >= INTRO_DURATION) { game.phase = 'ready'; game.angle = 90; return 'ready'; }
     return null;
   }
+  if (game.phase === 'sun-finale') {
+    game.sunTime = Math.min(SUN_HOLIDAY_DURATION, game.sunTime + dt);
+    if (game.sunTime >= SUN_HOLIDAY_DURATION) { game.phase = 'won'; return 'win'; }
+    return null;
+  }
   if (game.phase !== 'playing') return null;
   const oldShip = { ...game.ship }, length = Math.hypot(dx, dy) || 1;
   game.ship.x = clamp(game.ship.x + dx / length * 300 * dt, Math.min(65, game.width * .2), Math.max(game.width - 65, game.width * .8));
@@ -74,10 +81,17 @@ export function tickAdventure(game, seconds, dx = 0, dy = 0) {
     if (meteorHits(before, { x: meteor.x - game.ship.x, y: meteor.y - game.ship.y }, meteor.radius + 20)) { game.phase = 'crashed'; return 'crash'; }
   }
   game.meteors = game.meteors.filter(m => m.x > -m.radius - 30 && m.x < game.width + m.radius + 30 && m.y > -m.radius - 30 && m.y < game.height + m.radius + 30);
-  if (game.progress + game.ship.x - game.width * .25 + 42 >= FINISH_DISTANCE) { game.phase = 'won'; return 'win'; }
+  if (game.progress + game.ship.x - game.width * .25 + 42 >= FINISH_DISTANCE) {
+    game.phase = 'sun-finale'; game.sunTime = 0; game.sunFrom = { x: game.ship.x / game.width, y: game.ship.y / game.height }; game.meteors = [];
+    return 'sun-arrived';
+  }
   return null;
 }
 export function landingPose(from, seconds) {
   const t = clamp(seconds / 4.5, 0, 1), ease = t * t * (3 - 2 * t);
   return { x: from.x + (GROUND_ROCKET.x - from.x) * ease + Math.sin(t * Math.PI * 2) * 35 * (1 - t), y: from.y + (GROUND_ROCKET.y - from.y) * ease, done: t === 1 };
+}
+export function crashVibration(seconds, reduced = false) {
+  if (reduced) return 'translate(0 0) rotate(0 0 -86)';
+  return `translate(${(Math.sin(seconds * 80) * 3.5).toFixed(2)} ${(Math.sin(seconds * 97) * 2.5).toFixed(2)}) rotate(${(Math.sin(seconds * 61) * 2).toFixed(2)} 0 -86)`;
 }

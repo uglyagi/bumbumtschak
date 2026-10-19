@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { COURSE, ADVENTURE_PLANETS, SUN_DIAMETER, FINISH_DISTANCE, createAdventure, startAdventure, resizeAdventure, tickAdventure, meteorHits, landingPose, INTRO_DURATION, INTRO_ZOOM_IN, INTRO_HOLD_END, INTRO_ZOOM_OUT_END } from '../rocket-adventure.js';
+import { COURSE, ADVENTURE_PLANETS, SUN_DIAMETER, FINISH_DISTANCE, createAdventure, startAdventure, resizeAdventure, tickAdventure, meteorHits, landingPose, SUN_HOLIDAY_DURATION, INTRO_DURATION, INTRO_ZOOM_IN, INTRO_HOLD_END, INTRO_ZOOM_OUT_END } from '../rocket-adventure.js';
 import { CSS_PIXELS_PER_CM } from '../solar-system.js';
 import { GROUND_ROCKET } from '../sky-world.js';
 import { adventureMarkup, adventureShipPose, meteorMarkup } from '../adventure-art.js';
@@ -45,7 +45,9 @@ test('meteors vary in size, collide along their swept path and freeze a complete
   assert.equal(tickAdventure(game, .05), 'crash'); assert.equal(game.phase, 'crashed');
   const progress = game.progress; tickAdventure(game, .05, 1, 1); assert.equal(game.progress, progress);
   startAdventure(game); assert.equal(game.meteors.length, 0); assert.equal(game.progress, 0);
-  game.progress = FINISH_DISTANCE; assert.equal(tickAdventure(game, .05), 'win'); assert.equal(game.phase, 'won');
+  game.progress = FINISH_DISTANCE; assert.equal(tickAdventure(game, .05), 'sun-arrived'); assert.equal(game.phase, 'sun-finale');
+  assert.equal(game.sunTime, 0); assert.equal(game.meteors.length, 0);
+  while (game.phase === 'sun-finale') tickAdventure(game, .05); assert.equal(game.phase, 'won'); assert.equal(game.sunTime, SUN_HOLIDAY_DURATION);
 });
 
 test('the full course is survivable by steering and ends on the Sun, with a safe gradual descent', () => {
@@ -67,7 +69,8 @@ test('the full course is survivable by steering and ends on the Sun, with a safe
     tickAdventure(game, .016, ...chosen);
     for (const planet of COURSE) if (game.progress > planet.x) passed.add(planet.id);
   }
-  assert.equal(game.phase, 'won'); assert.equal(passed.size, 8);
+  assert.equal(game.phase, 'sun-finale'); assert.equal(passed.size, 8);
+  while (game.phase === 'sun-finale') tickAdventure(game, .05); assert.equal(game.phase, 'won');
   const from = { x: 900, y: -1600 }, first = landingPose(from, 0), halfway = landingPose(from, 2.25), end = landingPose(from, 4.5);
   assert.deepEqual(first, { ...from, done: false }); assert(halfway.y > from.y && halfway.y < GROUND_ROCKET.y);
   assert.deepEqual(end, { ...GROUND_ROCKET, done: true });
