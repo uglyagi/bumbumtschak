@@ -45,7 +45,7 @@ export function applyContent(document) {
   const members = bandMembers(document.info.members);
   for (const member of BAND) {
     const saved = members.find(item => item.id === member.id);
-    Object.assign(member, saved, { image: contentAssetURL(saved.image) });
+    Object.assign(member, saved, { image: contentAssetURL(saved.image), audio: contentAssetURL(saved.audio) });
   }
   const spotify = SOCIAL_LINKS.find(link => link.id === 'spotify');
   const artist = spotify?.url.match(/^https:\/\/open\.spotify\.com\/(?:intl-[a-z]+\/)?artist\/([a-zA-Z0-9]+)(?:[/?].*)?$/);

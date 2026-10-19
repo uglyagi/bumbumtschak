@@ -3,11 +3,12 @@ import { ANIMALS, BAND, TRACKS, CONCERTS, CONTACT, INFO, PALETTE, loadContent, t
 import { PAINT_SURFACES, PAINT_RESET, PAINT_NEXT, paintSlots, paintPages, nearbyPaintSurface, canPaintSurface, cleanPaint, paintCanMarkup, createPaintPreview } from './painting.js';
 import { icon, avatar, memberArt, worldMarkup } from './art.js';
 import { cassetteMarkup, cassetteSVG, roomMarkup, slotContents, slotDescription } from './room-art.js';
-import { ROOMS, ROOM_SPAWN, EXIT, RADIO, TAPE_SLOTS, SHELF_SWITCH, ROOM_PROPS, ANIMAL_SPOTS, slotsOnPage, tapePages, findTapeSlot, refreshBandWayfinding, roomFor, createCassetteState, tapeLocation, cassetteAction, nearbyInteraction, throughExit, nextMenuIndex } from './rooms.js';
+import { ROOMS, ROOM_SPAWN, EXIT, RADIO, TAPE_SLOTS, SHELF_SWITCH, ROOM_PROPS, ANIMAL_SPOTS, PICTURE_SPOT, slotsOnPage, tapePages, findTapeSlot, refreshBandWayfinding, roomFor, createCassetteState, tapeLocation, cassetteAction, nearbyInteraction, throughExit, nextMenuIndex } from './rooms.js';
 import { brandIcon, socialPads, contactLinks } from './social.js';
 import { adminURL } from './connection.js';
 import { SPACE, ROCKET_SPEED, GROUND_ROCKET, moveRocket, outsideScene, flightScene } from './sky-world.js';
-import { isDanceTrack, danceGuests, guestPose, dancePartyMarkup } from './dance-party.js';
+import { createParty, syncParty, tickParty, guestPose, guestExitPose, dancePartyMarkup } from './dance-party.js';
+import { studioMarkup, studioInteraction, studioColors, STUDIO_CONTROLS, largeSurfaces } from './painting-studio.js';
 
 const previewMode = new URLSearchParams(location.search).get('preview') === '1';
 const contentStatus = await loadContent(previewMode);
@@ -33,14 +34,15 @@ const state = {
   camera: { x: 800, y: 520 },
   viewport: { w: 1480, h: 850 },
   keys: new Set(), pad: new Map(), path: [], destination: null,
-  near: null, modal: null, playing: false,
+  near: null, modal: null, playing: false, memberMelody: null,
   paint: savedPaint, paintCan: null, paintPage: 0, paintTarget: null,
+  studio: null, pictureTouch: false,
   rocket: { position: { ...GROUND_ROCKET }, riding: false, airborne: false },
-  party: { active: false, elapsed: 0, castKey: '' },
+  party: createParty(),
   volume: clamp(Number(storage.get('volume', '.6')) || 0, 0, 1),
   reduced: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
 };
-const game = $('#game'), modal = $('#modal'), modalContent = $('#modal-content'), audio = $('#audio');
+const game = $('#game'), modal = $('#modal'), modalContent = $('#modal-content'), audio = $('#audio'), memberAudio = $('#member-audio');
 game.innerHTML = worldMarkup();
 let world = $('#world-svg'), player = $('#player'), playerUse = $('#player-use'), marker = $('#destination-marker');
 $('#radio-shortcut').innerHTML = icon('music');
@@ -52,7 +54,7 @@ for (const node of document.querySelectorAll('[data-copy-aria]')) node.setAttrib
 document.title = text('page_title');
 document.querySelector('meta[name=description]')?.setAttribute('content', text('page_description'));
 audio.volume = state.volume;
-let previousFocus = null, toastTimer, lastTime = 0, stuckTime = 0, paintPreview = null;
+let previousFocus = null, toastTimer, lastTime = 0, stuckTime = 0, paintPreview = null, memberRequest = 0;
 
 function announce(message) { $('#announcement').textContent = message; }
 function toast(message) { clearTimeout(toastTimer); const el = $('#toast'); el.textContent = message; el.hidden = false; toastTimer = setTimeout(() => { el.hidden = true; }, 3500); }
@@ -100,7 +102,7 @@ function bandPanel(id) {
   const member = BAND.find(b => b.id === id) || BAND[0];
   return wrap(T('band_kicker'), text('band_title'), `<div class="member-tabs" role="tablist" aria-label="${T('band_group')}">${BAND.map(b => `<button class="member-tab" id="tab-${b.id}" data-member="${b.id}" style="--member-color:${b.color}" role="tab" aria-controls="member-panel" aria-selected="${member.id === b.id}" tabindex="${member.id === b.id ? '0' : '-1'}">${escape(b.name)}</button>`).join('')}</div>
     <div id="member-panel" class="band-layout" role="tabpanel" aria-labelledby="tab-${member.id}"><div class="member-portrait" style="--member-color:${member.color}">${memberArt(member.id)}${member.sound ? `<span class="sound-sticker">${escape(member.sound)}</span>` : ''}</div><div class="member-story"><div class="member-role">${escape(member.role)}</div><h3>${escape(member.name)}</h3><p class="editable-prose">${escape(member.intro)}</p></div></div>
-    <div class="band-story"><h3>${T('band_story_title')}</h3><p class="editable-prose">${escape(INFO.about)}</p></div><div class="modal-actions"><button class="secondary-button" data-open="radio">${T('band_radio')} ${icon('arrow')}</button><button class="text-button" data-open="concerts">${T('band_concert')}</button></div>`);
+    ${member.audio ? `<button class="secondary-button" data-melody="${member.id}">${icon('music')} ${T('member_listen')}</button>` : ''}<div class="band-story"><h3>${T('band_story_title')}</h3><p class="editable-prose">${escape(INFO.about)}</p></div><div class="modal-actions"><button class="secondary-button" data-open="radio">${T('band_radio')} ${icon('arrow')}</button><button class="text-button" data-open="concerts">${T('band_concert')}</button></div>`);
 }
 function grownupsPanel() {
   const email = contactLinks().find(l => l.id === 'email');
@@ -146,7 +148,7 @@ function refreshCassettes() {
   const carriedGroup = $('#carried-tape');
   if (carriedGroup) { carriedGroup.toggleAttribute('hidden', !carried); carriedGroup.innerHTML = carried ? cassetteMarkup(carried) : ''; }
   const indicator = $('#carry-indicator');
-  indicator.hidden = !carried;
+  indicator.hidden = !carried || state.scene === 'painting';
   if (carried) indicator.innerHTML = `<img class="carry-cover" src="${escape(carried.image)}" alt=""><span><small>${T('carry_title')}</small><strong>${escape(carried.title)}</strong><span>${T('carry_hint')}</span></span>`;
   const loaded = TRACKS.find(t => t.id === state.tapes.loaded), slot = $('#radio-tape');
   if (slot) { slot.toggleAttribute('hidden', !loaded); slot.innerHTML = loaded ? cassetteMarkup(loaded) : ''; slot.classList.toggle('is-playing', state.playing); }
@@ -154,24 +156,22 @@ function refreshCassettes() {
   refreshDanceParty();
 }
 function refreshDanceParty() {
-  const layer = $('#dance-party'), active = state.scene === 'radio' && isDanceTrack(TRACKS.find(track => track.id === state.tapes.loaded));
-  if (!active) {
-    state.party.active = false; state.party.elapsed = 0; state.party.castKey = '';
-    layer?.setAttribute('hidden', ''); layer?.setAttribute('aria-hidden', 'true'); layer?.classList.remove('is-dancing'); return;
-  }
-  const castKey = danceGuests(ANIMALS, state.animal).map(animal => animal.id).join(',');
-  if (!state.party.active || state.party.castKey !== castKey) state.party = { active: true, elapsed: 0, castKey };
-  if (!layer) return;
-  if (layer.dataset.castKey !== castKey || !layer.innerHTML) { layer.innerHTML = dancePartyMarkup(ANIMALS, state.animal); layer.dataset.castKey = castKey; }
-  layer.removeAttribute('hidden'); layer.setAttribute('aria-hidden', 'false');
-  layer.classList.toggle('is-dancing', state.playing && !document.hidden);
+  syncParty(state.party, TRACKS.find(track => track.id === state.tapes.loaded), state.playing, audio.ended || !!audio.error, ANIMALS, state.animal, state.reduced);
+  const layer = $('#dance-party'), visible = state.scene === 'radio' && (state.party.active || state.party.departing);
+  if (!layer || state.scene !== 'radio') return;
+  const castKey = state.party.castKey;
+  if (visible && (layer.dataset.castKey !== castKey || !layer.innerHTML)) { layer.innerHTML = dancePartyMarkup(ANIMALS, state.animal, state.party.cast); layer.dataset.castKey = castKey; }
+  layer.toggleAttribute('hidden', !visible); layer.setAttribute('aria-hidden', String(!visible));
+  $('#party-effects')?.toggleAttribute('hidden', !state.party.active);
+  layer.classList.toggle('is-dancing', state.party.active && state.playing && !document.hidden);
+  layer.classList.toggle('is-departing', state.party.departing);
   updateDanceGuests();
 }
 function updateDanceGuests() {
-  if (!state.party.active || state.scene !== 'radio') return;
-  danceGuests(ANIMALS, state.animal).forEach((animal, i) => {
-    const node = $(`#party-dancer-${animal.id}`); if (!node) return;
-    const pose = guestPose(i, state.party.elapsed, state.reduced);
+  if (state.scene !== 'radio') return;
+  state.party.cast.forEach((id, i) => {
+    const node = $(`#party-dancer-${id}`); if (!node) return;
+    const pose = state.party.active ? guestPose(i, state.party.elapsed, state.reduced) : guestExitPose(state.party.exits[i], i, state.party.exitElapsed, state.reduced);
     node.setAttribute('transform', `translate(${pose.x.toFixed(2)} ${pose.y.toFixed(2)})`);
     node.toggleAttribute('hidden', !pose.visible); node.classList.toggle('has-arrived', pose.arrived);
   });
@@ -181,17 +181,17 @@ function refreshPaint() {
   if (carried) { carried.toggleAttribute('hidden', !color); carried.innerHTML = color ? paintCanMarkup(color.color) : ''; }
   const rocketPaint = $('#rocket-paint');
   if (rocketPaint) { rocketPaint.toggleAttribute('hidden', !color || !state.rocket.riding); rocketPaint.innerHTML = color ? paintCanMarkup(color.color) : ''; }
-  const indicator = $('#paint-indicator'); indicator.hidden = !color;
+  const indicator = $('#paint-indicator'); indicator.hidden = !color || state.scene === 'painting';
   if (color) indicator.innerHTML = `<svg viewBox="0 0 80 94" aria-hidden="true">${paintCanMarkup(color.color)}</svg><span><strong>${escape(color.name)}</strong><small>${T('paint_carry_hint')}</small><button data-action="put-paint">${T('paint_put_down')}</button></span>`;
 }
 function renderScene() {
   clearPaintPreview();
-  game.innerHTML = outsideScene(state.scene) ? worldMarkup(state.paint, !!state.paintCan, state.scene, state.rocket, state.animal) : roomMarkup(state.scene, state.shelfPage, state.tapes, state.animal, { can: state.paintCan, page: state.paintPage });
+  game.innerHTML = state.scene === 'painting' ? studioMarkup(state.paint, PALETTE, state.studio) : outsideScene(state.scene) ? worldMarkup(state.paint, !!state.paintCan, state.scene, state.rocket, state.animal) : roomMarkup(state.scene, state.shelfPage, state.tapes, state.animal, { can: state.paintCan, page: state.paintPage, world: state.paint });
   world = $('#world-svg'); player = $('#player'); playerUse = $('#player-use'); marker = $('#destination-marker');
-  game.setAttribute('aria-label', state.scene === 'space' ? text('space_title') : state.scene === 'sky' ? text('sky_title') : state.scene === 'world' ? text('world_title') : ROOMS[state.scene].title);
+  game.setAttribute('aria-label', state.scene === 'painting' ? text('studio_title') : state.scene === 'space' ? text('space_title') : state.scene === 'sky' ? text('sky_title') : state.scene === 'world' ? text('world_title') : ROOMS[state.scene].title);
   $('.wayfinder').hidden = state.scene !== 'world' || state.rocket.riding;
   $('.exit-room').hidden = state.scene === 'world' && !state.rocket.riding;
-  $('.exit-room').textContent = text(state.rocket.riding ? state.rocket.airborne ? 'rocket_land_button' : 'rocket_exit' : 'exit_button');
+  $('.exit-room').textContent = text(state.scene === 'painting' ? 'studio_close' : state.rocket.riding ? state.rocket.airborne ? 'rocket_land_button' : 'rocket_exit' : 'exit_button');
   game.classList.toggle('in-room', !outsideScene(state.scene));
   player.toggleAttribute('hidden', state.rocket.riding);
   state.near = null; updateAnimal(); refreshCassettes(); resize(); updateNear();
@@ -200,6 +200,7 @@ function renderScene() {
 function showPanel(id, focusSelector = '') {
   stopWalking(); clearPaintPreview(); state.modal = id; game.classList.add('paused');
   modalContent.innerHTML = renderPanel(id);
+  if (BAND.some(member => member.id === id)) playMemberMelody(id); else stopMemberMelody();
   if (!modal.open) modal.showModal();
   if (focusSelector) modalContent.querySelector(focusSelector)?.focus();
   else if (id === 'characters') modalContent.querySelector('[aria-pressed=true]')?.focus();
@@ -209,6 +210,7 @@ function closePanel() { if (modal.open) modal.close(); }
 modal.addEventListener('close', () => {
   if (modal.open) return;
   state.modal = null; game.classList.remove('paused'); clearInput();
+  stopMemberMelody();
   if (!state.started) beginWorld(false);
   game.focus({ preventScroll: true });
 });
@@ -225,6 +227,7 @@ function beginWorld(close = true) {
 }
 function enterRoom(id) {
   const room = roomFor(id); if (!room) return;
+  if (state.scene === 'painting') closePainting();
   if (state.rocket.riding) { closePanel(); toast(text('rocket_land_first')); return false; }
   if (!state.started) beginWorld(false);
   state.returnPosition = { ...HOUSE_DOORS.find(door => door.id === room).outside };
@@ -234,6 +237,7 @@ function enterRoom(id) {
   return true;
 }
 function leaveRoom() {
+  if (state.scene === 'painting') { closePainting(); return; }
   if (state.rocket.riding) { closePanel(); if (state.rocket.airborne) returnToGround(); else exitRocket(); return; }
   stopWalking(); closePanel();
   if (state.scene !== 'world') {
@@ -270,8 +274,28 @@ function loadRecording() {
 }
 for (const event of ['play', 'pause', 'ended']) audio.addEventListener(event, refreshPlayback);
 audio.addEventListener('error', () => { refreshPlayback(); toast(text('audio_error')); });
-document.addEventListener('input', e => { if (e.target.id === 'volume') { state.volume = Number(e.target.value); audio.volume = state.volume; storage.set('volume', state.volume); } });
+function stopMemberMelody() {
+  memberRequest++; state.memberMelody = null; memberAudio.pause(); memberAudio.removeAttribute('src'); memberAudio.load(); audio.volume = state.volume;
+}
+function playMemberMelody(id) {
+  stopMemberMelody();
+  const member = BAND.find(member => member.id === id), url = member?.audio ? new URL(member.audio, document.baseURI) : null;
+  if (!url || !(safeURL(url.href) || previewMode && url.protocol === 'blob:')) return;
+  const request = ++memberRequest;
+  state.memberMelody = id; memberAudio.src = member.audio; memberAudio.volume = state.volume;
+  audio.volume = state.volume * .2;
+  memberAudio.play().catch(() => { if (memberRequest === request) { stopMemberMelody(); toast(text('member_audio_error')); } });
+}
+for (const event of ['ended', 'error']) memberAudio.addEventListener(event, () => { if (state.memberMelody) stopMemberMelody(); });
+document.addEventListener('input', e => { if (e.target.id === 'volume') { state.volume = Number(e.target.value); memberAudio.volume = state.volume; audio.volume = state.volume * (state.memberMelody ? .2 : 1); storage.set('volume', state.volume); } });
 function currentInteraction() {
+  if (state.scene === 'painting') {
+    const interaction = studioInteraction(state.position, PALETTE, state.studio.page), matrix = world.getScreenCTM();
+    if (interaction?.kind !== 'studio-paint' || !document.elementsFromPoint || !matrix) return interaction;
+    const point = new DOMPoint(state.position.x, state.position.y).matrixTransform(matrix);
+    const surface = document.elementsFromPoint(point.x, point.y).map(node => node.closest('[data-paint-target]')).map(node => largeSurfaces.find(surface => surface.id === node?.dataset.paintTarget)).find(Boolean);
+    return surface ? { ...surface, kind: 'studio-paint', label: text(surface.key) } : null;
+  }
   if (state.rocket.riding && !state.rocket.airborne) return { id: 'rocket', kind: 'rocket-exit', label: text('rocket_exit') };
   if (state.rocket.riding && state.scene !== 'sky') return null;
   const interaction = nearbyInteraction(state.scene, state.position, state.tapes, state.shelfPage, { can: state.paintCan, page: state.paintPage }, state.rocket.position);
@@ -307,7 +331,8 @@ function landRocket() {
 function putPaintDown() { state.paintCan = null; state.paintTarget = null; stopWalking(); renderScene(); game.focus({ preventScroll: true }); }
 function clearPaintPreview() { paintPreview?.restore(); paintPreview = null; }
 function refreshPaintPreview(near) {
-  const color = state.started && outsideScene(state.scene) && !modal.open && near?.kind === 'paint' ? PALETTE.find(color => color.id === state.paintCan) : null;
+  const colorId = state.scene === 'painting' ? state.studio?.color : state.paintCan;
+  const color = state.started && !modal.open && (outsideScene(state.scene) && near?.kind === 'paint' || state.scene === 'painting' && near?.kind === 'studio-paint') ? PALETTE.find(color => color.id === colorId) : null;
   if (color && paintPreview?.id === near.id && paintPreview.color === color.color) return;
   clearPaintPreview();
   if (color) paintPreview = { id: near.id, color: color.color, restore: createPaintPreview(game, near.id, color.color) };
@@ -329,13 +354,49 @@ function activatePaintSurface(id, confirm = true) {
     if (canPaintSurface(state.position, surface)) updateNear(); else navigateTo(surface.walk.x, surface.walk.y);
   }
 }
+function openPainting() {
+  if (state.scene !== 'wardrobe') return;
+  stopWalking(); clearPaintPreview(); state.pictureTouch = true;
+  state.studio = { color: null, page: 0, returnPosition: { ...state.position } };
+  state.scene = 'painting'; state.position = { x: 1260, y: 245 };
+  renderScene(); game.focus({ preventScroll: true }); announce(text('studio_keys'));
+}
+function closePainting() {
+  if (state.scene !== 'painting') return;
+  stopWalking(); clearPaintPreview(); state.position = { ...state.studio.returnPosition };
+  state.studio = null; state.scene = 'wardrobe'; state.pictureTouch = true;
+  renderScene(); game.focus({ preventScroll: true });
+}
+function studioAction(near) {
+  stopWalking(); clearPaintPreview();
+  if (near?.kind === 'studio-color') state.studio.color = near.id;
+  else if (near?.kind === 'studio-control') {
+    if (near.id === 'close') { closePainting(); return; }
+    if (near.id === 'next') state.studio.page = (state.studio.page + 1) % paintPages(PALETTE);
+    if (near.id === 'reset') { state.paint = {}; storage.set(paintStorageKey, '{}'); }
+  } else if (near?.kind === 'studio-paint') {
+    const color = PALETTE.find(c => c.id === state.studio.color);
+    if (!color) { announce(text('studio_choose')); return; }
+    state.paint[near.id] = color.color; storage.set(paintStorageKey, JSON.stringify(state.paint));
+    announce(text('paint_done', { flaeche: text(near.key), farbe: color.name }));
+  } else return;
+  renderScene(); game.focus({ preventScroll: true });
+}
+function checkPictureTouch() {
+  if (state.scene !== 'wardrobe') return;
+  const touching = Math.hypot(state.position.x - PICTURE_SPOT.x, state.position.y - PICTURE_SPOT.y) < 38;
+  if (touching && !state.pictureTouch) openPainting();
+  else if (!touching) state.pictureTouch = false;
+}
 function performInteraction() {
   const near = currentInteraction();
   if (!near) return;
+  if (state.scene === 'painting') { studioAction(near); return; }
   stopWalking();
   if (near.kind === 'rocket-board') { boardRocket(); return; }
   if (near.kind === 'rocket-exit') { exitRocket(); return; }
   if (near.kind === 'paint') { paintSurface(near.id); return; }
+  if (near.kind === 'painting') { openPainting(); return; }
   if (near.kind === 'take-paint' || near.kind === 'return-paint') {
     state.paintCan = near.kind === 'take-paint' ? near.id : null; state.paintTarget = null; renderScene();
     announce(text(state.paintCan ? 'paint_taken' : 'paint_returned', { farbe: near.name })); return;
@@ -384,7 +445,7 @@ function activateSocial(id) {
   else navigateTo(p.x, p.y);
 }
 function navigateTo(x, y, destination = null) {
-  const path = state.rocket.riding ? [{ x: clamp(x, 65, 1535), y: clamp(y, SPACE.top + 160, 1040) }] : planPath(state.position, { x, y }, state.scene, state.rocket.position);
+  const path = state.scene === 'painting' ? [{ x: clamp(x, 30, 1570), y: clamp(y, 110, 1055) }] : state.rocket.riding ? [{ x: clamp(x, 65, 1535), y: clamp(y, SPACE.top + 160, 1040) }] : planPath(state.position, { x, y }, state.scene, state.rocket.position);
   if (!path.length) { toast(text('walk_blocked')); return; }
   state.path = path; state.destination = destination; stuckTime = 0;
   marker.removeAttribute('hidden'); marker.setAttribute('transform', `translate(${x} ${y})`); game.focus({ preventScroll: true });
@@ -428,13 +489,14 @@ document.addEventListener('click', e => {
   if (btn.dataset.open) { visit(btn.dataset.open); return; }
   if (btn.dataset.character) { chooseAnimal(btn.dataset.character); return; }
   if (btn.dataset.member) { showPanel(btn.dataset.member, `[data-member="${btn.dataset.member}"]`); return; }
+  if (btn.dataset.melody) { playMemberMelody(btn.dataset.melody); return; }
   if (btn.dataset.track) { goToTape(btn.dataset.track); return; }
   if (btn.dataset.goto) { goToStation(btn.dataset.goto); return; }
   const action = btn.dataset.action;
   if (action === 'put-paint') { putPaintDown(); return; }
   if (action === 'close') closePanel();
   if (action === 'leave') leaveRoom();
-  if (action === 'exit-walk') { if (state.rocket.riding) returnToGround(); else navigateTo(EXIT.x, 1020, { kind: 'exit' }); }
+  if (action === 'exit-walk') { if (state.scene === 'painting') closePainting(); else if (state.rocket.riding) returnToGround(); else navigateTo(EXIT.x, 1020, { kind: 'exit' }); }
   if (action === 'start') beginWorld();
   if (action === 'start-radio') { beginWorld(false); enterRoom('radio'); }
   if (action === 'world') { if (state.scene !== 'world') leaveRoom(); else { closePanel(); if (!state.started) showPanel('characters'); else game.focus(); } }
@@ -477,6 +539,7 @@ modalContent.addEventListener('keydown', e => {
   controls[nextMenuIndex(controls.indexOf(document.activeElement), e.key, controls.length)]?.focus();
 });
 function activateRoomTarget(id) {
+  if (id === 'painting') { if (currentInteraction()?.kind === 'painting') openPainting(); else navigateTo(PICTURE_SPOT.x, PICTURE_SPOT.y); return; }
   if (id.startsWith('paint:') || ['paint-reset', 'paint-next'].includes(id)) {
     if (state.scene !== 'wardrobe') return;
     const target = id === 'paint-reset' ? PAINT_RESET : id === 'paint-next' ? PAINT_NEXT : paintSlots(PALETTE, state.paintPage).find(color => color.id === id.slice(6));
@@ -511,6 +574,11 @@ function activateRoomTarget(id) {
 }
 game.addEventListener('click', e => {
   if (modal.open || !state.started) return;
+  if (state.scene === 'painting') {
+    const matrix = world.getScreenCTM(); if (!matrix) return;
+    const point = new DOMPoint(e.clientX, e.clientY).matrixTransform(matrix.inverse());
+    state.path = [{ x: clamp(point.x, 30, 1570), y: clamp(point.y, 110, 1055) }]; game.focus({ preventScroll: true }); return;
+  }
   if (state.paintCan && outsideScene(state.scene)) { state.paintTarget = null; walkToPointer(e); return; }
   const social = e.target.closest('[data-social]');
   if (social) { const pad = socialPads(state.scene).find(p => p.id === social.dataset.social); if (pad) navigateTo(pad.x, pad.y); return; }
@@ -527,6 +595,12 @@ function walkToPointer(event) {
 }
 game.addEventListener('keydown', e => {
   if (!isActionKey(e)) return;
+  if (state.scene === 'painting') {
+    const color = e.target.closest('[data-studio-color]'), control = e.target.closest('[data-studio-control]');
+    const point = color ? studioColors(PALETTE, state.studio.page).find(c => c.id === color.dataset.studioColor) : control ? STUDIO_CONTROLS[control.dataset.studioControl] : null;
+    if (point) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) { state.position = { x: point.x, y: point.y }; studioAction(currentInteraction()); } }
+    return;
+  }
   const surface = e.target.closest('[data-paint-target]');
   if (state.paintCan && outsideScene(state.scene) && surface) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) activatePaintSurface(surface.dataset.paintTarget); return; }
   const social = e.target.closest('[data-social]');
@@ -543,6 +617,7 @@ game.addEventListener('keydown', e => {
 const directions = new Map([['ArrowUp', [0, -1]], ['KeyW', [0, -1]], ['ArrowDown', [0, 1]], ['KeyS', [0, 1]], ['ArrowLeft', [-1, 0]], ['KeyA', [-1, 0]], ['ArrowRight', [1, 0]], ['KeyD', [1, 0]]]);
 window.addEventListener('keydown', e => {
   if (modal.open || !state.started) return;
+  if (state.scene === 'painting' && e.key === 'Escape') { e.preventDefault(); if (!e.repeat) closePainting(); return; }
   if (e.key === 'Escape') { e.preventDefault(); if (!e.repeat) { if (state.paintCan) putPaintDown(); else outsideScene(state.scene) ? showPanel('pause') : leaveRoom(); } return; }
   if (!(document.activeElement === game || game.contains(document.activeElement))) {
     if (e.key.startsWith('Arrow') && e.target.closest('.header,.footer')) {
@@ -572,7 +647,7 @@ function updateNear() {
   const near = currentInteraction();
   refreshPaintPreview(near);
   if (near?.kind === state.near?.kind && near?.id === state.near?.id && near?.slot === state.near?.slot) return;
-  state.near = near; const btn = $('#interact'); btn.hidden = !near || near.kind === 'paint';
+  state.near = near; const btn = $('#interact'); btn.hidden = !near || near.kind === 'paint' || state.scene === 'painting';
   if (near?.kind === 'paint') btn.innerHTML = '';
   else if (near) {
     const label = near.label;
@@ -581,6 +656,7 @@ function updateNear() {
 }
 function resize() {
   const r = game.getBoundingClientRect(); if (!r.width || !r.height) return;
+  if (state.scene === 'painting') { state.viewport = { w: 1600, h: 1100 }; world.setAttribute('viewBox', '0 0 1600 1100'); return; }
   if (state.scene === 'space') {
     const w = Math.min(r.width, WORLD.width);
     state.viewport = { w, h: w * r.height / r.width }; updateCamera(1, true); return;
@@ -590,6 +666,7 @@ function resize() {
   state.viewport = { w, h }; updateCamera(1, true);
 }
 function updateCamera(dt, snap = false) {
+  if (state.scene === 'painting') return;
   const { w, h } = state.viewport;
   const top = outsideScene(state.scene) ? WORLD.top : 0;
   const tx = clamp(state.position.x, w / 2, WORLD.width - w / 2), ty = clamp(state.position.y - (outsideScene(state.scene) ? 240 : 130), top + h / 2, WORLD.height - h / 2);
@@ -599,9 +676,14 @@ function updateCamera(dt, snap = false) {
 }
 function frame(time) {
   const dt = Math.min(.05, Math.max(0, (time - (lastTime || time)) / 1000)); lastTime = time;
+  if (state.started && !document.hidden) {
+    const departing = state.party.departing;
+    tickParty(state.party, dt, state.playing, state.reduced);
+    updateDanceGuests();
+    if (departing && !state.party.departing) refreshDanceParty();
+  }
   let walking = false;
   if (state.started && !modal.open && !document.hidden) {
-    if (state.party.active && state.playing) { state.party.elapsed += dt; updateDanceGuests(); }
     let dx = 0, dy = 0;
     for (const code of state.keys) { const v = directions.get(code); if (v) { dx += v[0]; dy += v[1]; } }
     for (const direction of state.pad.values()) { const v = padVectors[direction]; dx += v[0]; dy += v[1]; }
@@ -617,7 +699,7 @@ function frame(time) {
       }
     }
     if (dx || dy) {
-      const old = state.position, stepTime = state.path.length ? Math.min(dt, Math.hypot(dx, dy) / (state.rocket.riding ? ROCKET_SPEED : WORLD.speed)) : dt;
+      const old = state.position, stepTime = state.path.length ? Math.min(dt, Math.hypot(dx, dy) / (state.scene === 'painting' ? 400 : state.rocket.riding ? ROCKET_SPEED : WORLD.speed)) : dt;
       if (state.rocket.riding) {
         if (!state.rocket.airborne && dy < 0) { state.rocket.airborne = true; renderScene(); announce(text('rocket_flying')); }
         if (state.rocket.airborne) {
@@ -628,7 +710,8 @@ function frame(time) {
             landRocket();
           }
         }
-      } else state.position = move(old, dx, dy, stepTime, state.scene, state.rocket.position);
+      } else if (state.scene === 'painting') { const length = Math.hypot(dx, dy); state.position = { x: clamp(old.x + dx / length * 400 * stepTime, 30, 1570), y: clamp(old.y + dy / length * 400 * stepTime, 110, 1055) }; }
+      else state.position = move(old, dx, dy, stepTime, state.scene, state.rocket.position);
       walking = Math.hypot(state.position.x - old.x, state.position.y - old.y) > .05;
       if (state.path.length) {
         stuckTime = walking ? 0 : stuckTime + dt;
@@ -637,6 +720,7 @@ function frame(time) {
     }
     if (throughExit(state.scene, state.position)) leaveRoom();
     checkWorldTouch();
+    checkPictureTouch();
     updateNear(); updateCamera(dt);
   }
   player.classList.toggle('is-moving', walking); player.setAttribute('transform', `translate(${state.position.x.toFixed(2)} ${state.position.y.toFixed(2)})`);

@@ -548,19 +548,21 @@ export const COPY_GROUPS = [
       {
         "key": "wardrobe_board",
         "label": "Innenraum: Überschrift",
-        "value": "Such dir ein Tier oder eine Farbe aus.",
+        "value": "Such dir ein Tier aus.",
         "max": 180,
         "previousValues": [
-          "Welches Tier möchtest du sein?"
+          "Welches Tier möchtest du sein?",
+          "Such dir ein Tier oder eine Farbe aus."
         ]
       },
       {
         "key": "wardrobe_hint",
         "label": "Innenraum: Erklärung",
-        "value": "Tier oder Farbkanister: hingehen und Enter / Leertaste drücken.",
+        "value": "Enter / Leertaste: Tier wechseln.",
         "max": 2400,
         "previousValues": [
-          "Stelle dich vor ein Tier und drücke Enter oder die Leertaste."
+          "Stelle dich vor ein Tier und drücke Enter oder die Leertaste.",
+          "Tier oder Farbkanister: hingehen und Enter / Leertaste drücken."
         ]
       },
       {
@@ -856,6 +858,18 @@ export const COPY_GROUPS = [
         "label": "Schaltfläche zu Konzerten",
         "value": "Zur Konzerttafel",
         "max": 180
+      },
+      {
+        "key": "member_listen",
+        "label": "Melodie erneut starten",
+        "value": "Meine Melodie anhören",
+        "max": 180
+      },
+      {
+        "key": "member_audio_error",
+        "label": "Hinweis zur Bandmelodie",
+        "value": "Drücke auf „Meine Melodie anhören“, um die Aufnahme zu starten.",
+        "max": 500
       }
     ]
   },
@@ -1803,6 +1817,66 @@ export const COPY_GROUPS = [
         "label": "Planetenname: Neptun",
         "value": "Neptun",
         "max": 500
+      }
+    ]
+  },
+  {
+    "id": "studio",
+    "label": "Landschaftsbild & Pinsel",
+    "fields": [
+      {
+        "key": "studio_title",
+        "label": "Titel des großen Landschaftsbilds",
+        "value": "Male deine Bum Bum Welt",
+        "max": 180
+      },
+      {
+        "key": "studio_open",
+        "label": "Aktion am Landschaftsbild",
+        "value": "Landschaftsbild öffnen",
+        "max": 180
+      },
+      {
+        "key": "studio_picture_label",
+        "label": "Schild unter dem Bild",
+        "value": "Male deine Bum Bum Welt",
+        "max": 180
+      },
+      {
+        "key": "studio_cans",
+        "label": "Überschrift bei den Kanistern",
+        "value": "Farben für draußen",
+        "max": 180
+      },
+      {
+        "key": "studio_palette",
+        "label": "Überschrift der Farbpalette",
+        "value": "Deine Farben",
+        "max": 180
+      },
+      {
+        "key": "studio_choose",
+        "label": "Hinweis ohne Pinselfarbe",
+        "value": "Nimm zuerst eine Farbe auf.",
+        "max": 180
+      },
+      {
+        "key": "studio_take_color",
+        "label": "Aktion an der Palette",
+        "value": "{farbe} aufnehmen",
+        "max": 180
+      },
+      {
+        "key": "studio_close",
+        "label": "Ausgang vom Bild",
+        "value": "Zurück ins Haus",
+        "max": 180
+      },
+      {
+        "key": "studio_keys",
+        "label": "Pinselsteuerung",
+        "value": "Pfeile: Pinsel bewegen · Enter / Leertaste: Farbe aufnehmen oder Fläche färben · Escape: zurück",
+        "max": 600
       }
     ]
   }

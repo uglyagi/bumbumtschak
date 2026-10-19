@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ANIMALS } from '../content.js';
 import { canStand, WORLD } from '../game-core.js';
-import { isDanceTrack, danceGuests, guestPose, dancePartyMarkup } from '../dance-party.js';
+import { isDanceTrack, danceGuests, guestPose, guestExitPose, createParty, syncParty, tickParty, dancePartyMarkup } from '../dance-party.js';
 import { roomMarkup } from '../room-art.js';
 
 test('Tanzen activates the party and every selected animal is excluded from its guest list', () => {
@@ -14,6 +14,20 @@ test('Tanzen activates the party and every selected animal is excluded from its 
     assert(!svg.includes(`data-party-guest="${animal.id}"`));
     for (const guest of guests) assert(svg.includes(`href="#animal-${guest.id}"`));
   }
+});
+
+test('the song owns the party: room changes preserve it, pause freezes it and the ending sends guests out', () => {
+  const p = createParty(), song = { id: 'tanzen' };
+  syncParty(p, song, true, false, ANIMALS, 'cat'); tickParty(p, 10, true);
+  assert(p.active); const elapsed = p.elapsed;
+  syncParty(p, song, true, false, ANIMALS, 'cat'); assert.equal(p.elapsed, elapsed);
+  syncParty(p, song, false, false, ANIMALS, 'cat'); tickParty(p, 1, false); assert.equal(p.elapsed, elapsed);
+  syncParty(p, song, false, true, ANIMALS, 'cat'); assert(!p.active && p.departing);
+  for (let i = 0; i < 3; i++) {
+    for (let t = 0; t < 8; t += .05) { const pose = guestExitPose(p.exits[i], i, t); if (pose.visible) assert(canStand(pose.x, pose.y, WORLD.radius, 'radio')); }
+  }
+  tickParty(p, 10, false); assert(!p.departing);
+  syncParty(p, song, false, true, ANIMALS, 'cat'); assert(!p.active && !p.departing, 'a finished cassette does not restart the party');
 });
 
 test('the real music room already contains the disco scene and the three correct guest graphics', () => {

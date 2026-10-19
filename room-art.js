@@ -1,4 +1,4 @@
-import { defs, mapLabel } from './art.js';
+import { defs, mapLabel, landscapeMarkup } from './art.js';
 import { TRACKS, ANIMALS, PALETTE, text } from './content.js';
 import { paintSlots, paintPages, PAINT_RESET, PAINT_NEXT, paintCanMarkup } from './painting.js';
 import { escapeXML as escape } from './utils.js';
@@ -61,20 +61,19 @@ function infoArt(scene) {
 }
 
 function wardrobeArt(selectedAnimal, paint) {
-  return `${fitted(800, 291, text('wardrobe_board'), 1100, 31)}${fitted(800, 327, text('wardrobe_hint'), 1140, 17)}
+  return `${fitted(390, 295, text('wardrobe_board'), 420, 26)}${fitted(390, 327, text('wardrobe_hint'), 440, 14)}
     ${ANIMAL_SPOTS.map(spot => {
       const animal = ANIMALS.find(animal => animal.id === spot.id), selected = animal.id === selectedAnimal;
-      return target(`animal:${animal.id}`, text('action_change_character', { tier: animal.name }), `<g transform="translate(${spot.x} 0)">
-        <rect x="-100" y="350" width="200" height="245" rx="70" fill="${animal.color}" stroke="#101014" stroke-width="5"/>
-        <rect x="-88" y="362" width="176" height="219" rx="60" fill="#fffcee" stroke="#101014" stroke-width="2"/>
-        <use href="#animal-${animal.id}" x="-75" y="374" width="150" height="180"/>
-        ${mapLabel(0, 583, animal.name, 180, selected ? '#fff20b' : '#fffcee')}
-        <ellipse cy="${spot.y}" rx="65" ry="25" fill="${selected ? '#fff20b' : animal.color}" stroke="#101014" stroke-width="${selected ? 5 : 3}"/>
-        <path d="m-9 ${spot.y - 2} 7 7 12-13" fill="none" stroke="#101014" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="${selected ? 1 : 0}"/>
-        ${selected ? fitted(0, 741, text('wardrobe_selected'), 230, 17) : ''}
+      return target(`animal:${animal.id}`, text('action_change_character', { tier: animal.name }), `<g transform="translate(${spot.x} ${spot.y})">
+        <ellipse rx="40" ry="15" fill="${selected ? '#fff20b' : animal.color}" stroke="#101014" stroke-width="${selected ? 4 : 2}"/>
+        <use href="#animal-${animal.id}" x="-34" y="-77" width="68" height="82"/>
+        ${mapLabel(0, 43, animal.name, 130, selected ? '#fff20b' : '#fffcee')}
+        ${selected ? fitted(0, 81, text('wardrobe_selected'), 145, 12) : ''}
       </g>`, `aria-pressed="${selected}"`);
     }).join('')}
-    ${paintSlots(PALETTE, paint.page || 0).map(color => target(`paint:${color.id}`, text(paint.can === color.id ? 'paint_return' : 'paint_take', { farbe: color.name }), `<g transform="translate(${color.x} 0)"><ellipse cy="850" rx="48" ry="17" fill="#fffcee" stroke="#101014" stroke-width="3" stroke-dasharray="5 4"/>${paint.can === color.id ? '' : `<g transform="translate(-36 763) scale(.9)">${paintCanMarkup(color.color)}</g>`}${fitted(0, 893, color.name, 175, 16)}</g>`)).join('')}
+    ${target('painting', text('studio_open'), `<rect x="910" y="270" width="400" height="380" rx="8" fill="#d69c5b" stroke="#101014" stroke-width="7"/>${landscapeMarkup(paint.world || {}, 'home-picture', 930, 290, 360)}${fitted(1110, 677, text('studio_picture_label'), 420, 18)}`)}
+    ${fitted(1165, 719, text('studio_cans'), 430, 22)}
+    ${paintSlots(PALETTE, paint.page || 0).map(color => target(`paint:${color.id}`, text(paint.can === color.id ? 'paint_return' : 'paint_take', { farbe: color.name }), `<g transform="translate(${color.x} ${color.y})"><ellipse rx="32" ry="12" fill="#fffcee" stroke="#101014" stroke-width="2" stroke-dasharray="5 4"/>${paint.can === color.id ? '' : `<g transform="translate(-26 -63) scale(.65)">${paintCanMarkup(color.color)}</g>`}${fitted(0, 32, color.name, 135, 14)}</g>`)).join('')}
     ${paintPages(PALETTE) > 1 ? target('paint-next', text('paint_next'), `<g transform="translate(${PAINT_NEXT.x} ${PAINT_NEXT.y})"><rect x="-145" y="-27" width="290" height="54" rx="13" fill="#ff87ce" stroke="#101014" stroke-width="4"/>${fitted(0, -4, text('paint_next'), 264, 15)}${fitted(0, 16, text('paint_page', { seite: (paint.page || 0) + 1, anzahl: paintPages(PALETTE) }), 264, 12)}</g>`) : ''}
     ${target('paint-reset', text('paint_reset'), `<g transform="translate(${PAINT_RESET.x} ${PAINT_RESET.y})"><rect x="-145" y="-27" width="290" height="54" rx="13" fill="#fffcee" stroke="#101014" stroke-width="4"/>${fitted(0, 6, text('paint_reset'), 264, 17)}</g>`)}`;
 }
@@ -91,13 +90,13 @@ export function roomMarkup(scene, shelfPage = 0, tapes = createCassetteState(), 
     <path d="M155 225h1290" stroke="#101014" stroke-width="4"/>
     <text x="800" y="195" text-anchor="middle" font-size="${Math.min(40, 1100 / (room.title.length * .65 || 1))}" font-weight="900">${escape(room.title.toUpperCase())}</text>
     ${tiles.join('')}
-    <path d="M800 955V830q0-72-62-94" fill="none" stroke="#fff20b" stroke-width="75" stroke-linecap="round"/>
+    ${scene === 'wardrobe' ? '' : '<path d="M800 955V830q0-72-62-94" fill="none" stroke="#fff20b" stroke-width="75" stroke-linecap="round"/>'}
     ${scene === 'radio' ? radioArt(shelfPage, tapes) : scene === 'wardrobe' ? wardrobeArt(selectedAnimal, paint) : infoArt(scene)}
     ${scene === 'radio' ? `<g id="dance-party" class="dance-party-layer" data-cast-key="${danceGuests(ANIMALS, selectedAnimal).map(animal => animal.id).join(',')}" hidden="" aria-hidden="true">${dancePartyMarkup(ANIMALS, selectedAnimal)}</g>` : ''}
     <g data-room-target="exit" class="world-station" tabindex="0" role="button" aria-label="${escape(text('back_world'))}">
       <path d="M740 1000v-42q60-38 120 0v108H740Z" fill="#40cea1" stroke="#101014" stroke-width="5"/>
       <path d="M800 975v60m-17-18 17 18 17-18" stroke="#101014" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-      ${mapLabel(800, 934, text('exit_sign'), 420, '#fff20b')}
+      ${mapLabel(800, 934, text('exit_sign'), scene === 'wardrobe' ? 300 : 420, '#fff20b')}
     </g>
     <g id="destination-marker" hidden=""><ellipse rx="17" ry="8" fill="none" stroke="#101014" stroke-width="3" stroke-dasharray="4 4"/></g>
     ${room.spawn ? playerMarkup.replace('translate(800 870)', `translate(${room.spawn.x} ${room.spawn.y})`) : playerMarkup}

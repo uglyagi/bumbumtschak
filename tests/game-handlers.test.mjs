@@ -8,6 +8,7 @@ const [core, content, art, roomArt, rooms, social, painting] = await Promise.all
 const connection = await import(new URL(`connection.${extension}`, root));
 const sky = await import(new URL(`sky-world.${extension}`, root));
 const dance = await import(new URL(`dance-party.${extension}`, root));
+const studio = await import(new URL(`painting-studio.${extension}`, root));
 
 // Exercise the application's real registered handlers with DOM test doubles.
 // This checks app behavior, not browser rendering or native default actions.
@@ -56,7 +57,7 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null) {
       return this.name === '#game' && match ? (this.paintNodes || []).filter(node => node.dataset[match[1] === 'target' ? 'paintTarget' : 'paintInk'] === match[2]) : [];
     }
     getBoundingClientRect() { return { width: 1200, height: 700 }; }
-    getScreenCTM() { return { inverse: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }) }; }
+    getScreenCTM() { return { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0, inverse: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }) }; }
     getClientRects() { return [{}]; }
     showModal() { this.open = true; }
     close() { if (!this.open) return; this.open = false; for (const cb of this.handlers.get('close') || []) cb({}); }
@@ -70,6 +71,8 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null) {
         if (part === '[data-room-target]' && this.dataset.roomTarget) return this;
         if (part === '[data-social]' && this.dataset.social) return this;
         if (part === '[data-paint-target]' && this.dataset.paintTarget) return this;
+        if (part === '[data-studio-color]' && this.dataset.studioColor) return this;
+        if (part === '[data-studio-control]' && this.dataset.studioControl) return this;
         if (part.startsWith('button') && this.tag === 'button' && !this.disabled) return this;
         if (part === 'a[href]' && this.tag === 'a') return this;
       }
@@ -82,9 +85,9 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null) {
   doc.createElement = tag => new Element(tag);
   doc.body = { prepend() {}, classList: { add() {} } };
   const game = get('#game'), modal = get('#modal'), modalContent = get('#modal-content'), audio = get('#audio');
-  Object.assign(audio, { paused: true, ended: false, pause() { this.paused = true; }, play() { this.paused = false; return Promise.resolve(); }, load() {} });
+  for (const node of [audio, get('#member-audio')]) Object.assign(node, { paused: true, ended: false, currentTime: 0, pause() { this.paused = true; }, play() { this.paused = false; this.ended = false; return Promise.resolve(); }, load() {} });
   const context = vm.createContext({
-    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky, ...dance,
+    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky, ...dance, ...studio,
     loadContent: async () => ({ ok: true }), document: doc,
     window: { innerWidth: 1200, matchMedia: () => ({ matches: false }), addEventListener: (n, cb) => add(windowHandlers, n, cb), open(...args) { opened.push(args); } },
     location: { search: preview ? '?preview=1' : '' }, localStorage: { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value) },
@@ -96,7 +99,7 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null) {
   const app = await new vm.Script(`(async () => {${source.replace(/^import .*;\n/gm, '')}\nreturn {state, enterRoom, leaveRoom, showPanel, closePanel, goToStation, frame, renderPanel, loadRecording, checkWorldTouch, currentInteraction};})()`).runInContext(context);
   const event = (key, code, target, repeat = false) => ({ key, code, target, repeat, prevented: false, stopped: false, preventDefault() { this.prevented = true; }, stopPropagation() { this.stopped = true; } });
   function press(handlers, e) { for (const cb of handlers.get('keydown') || []) cb(e); return e; }
-  return { ...app, opened, stored, get, game, modal, modalContent, Element, event, press, documentHandlers, windowHandlers };
+  return { ...app, opened, stored, get, game, modal, modalContent, Element, event, press, documentHandlers, windowHandlers, doc };
 }
 
 function flyIntoSky(h, key = 'Enter', code = 'Enter', clock = 1000) {
@@ -563,15 +566,107 @@ try {
   h.showPanel('radio-info'); h.closePanel(); assert(layer.classList.contains('is-dancing'), 'the party resumes when a menu closes');
   h.state.position = { x: 800, y: 970 }; h.state.keys.add('ArrowDown');
   while (h.state.scene === 'radio' && partyTick < 450) h.frame(++partyTick * 16);
-  assert.equal(h.state.scene, 'world', 'dancing guests never block the exit'); assert.equal(h.state.party.active, false);
-  h.enterRoom('radio'); assert(h.state.party.active); assert.equal(h.state.party.elapsed, 0);
+  assert.equal(h.state.scene, 'world', 'dancing guests never block the exit'); assert.equal(h.state.party.active, true);
+  const beforeReturn = h.state.party.elapsed;
+  for (let i = 0; i < 100; i++) h.frame(++partyTick * 16);
+  h.enterRoom('radio'); assert(h.state.party.active); assert(h.state.party.elapsed > beforeReturn, 'the entrance clock continues outside');
+  assert.equal(h.get('#party-dancer-cat').getAttribute('transform'), 'translate(700.00 620.00)', 'returning preserves the dance positions instead of replaying the entrance');
   new h.Element('horse selection', 'button', { character: 'horse' }).click();
   assert.equal(h.state.party.castKey, 'cat,dog,monkey', 'guest images follow a changed player selection');
   h.state.position = { ...rooms.RADIO }; h.game.focus(); h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game));
-  assert.equal(h.state.party.active, false); assert.equal(layer.getAttribute('hidden'), '');
+  assert.equal(h.state.party.active, false); assert(h.state.party.departing);
+  assert.equal(h.get('#party-effects').getAttribute('hidden'), '', 'the room immediately returns to its usual colors');
+  for (let i = 0; i < 400; i++) h.frame(++partyTick * 16);
+  assert(!h.state.party.departing); assert.equal(layer.getAttribute('hidden'), '', 'the guests walk out and disappear');
   h.state.position = { ...rooms.TAPE_SLOTS[1] }; h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game));
   h.state.position = { ...rooms.TAPE_SLOTS[0] }; h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game));
   h.state.position = { ...rooms.RADIO }; h.press(h.windowHandlers, h.event(' ', 'Space', h.game));
   assert.notEqual(h.state.tapes.loaded, 'tanzen'); assert.equal(h.state.party.active, false, 'other songs do not keep the dance effect');
 } finally { dancingTrack.src = originalDanceAudio; }
-console.log('PASS: inserting Tanzen starts the guest entrance, dancing and disco ball; pause/resume, selection changes, cassette removal/song changes and walking out all behave correctly.');
+console.log('PASS: Tanzen guests continue dancing across room changes, pause/resume with the song, retain their positions on return, then walk out while disco effects turn off on cassette removal.');
+
+try {
+  dancingTrack.src = 'uploads/tanzen.mp3';
+  const h = await harness(false, 'cat'); h.enterRoom('radio'); h.state.tapes.loaded = 'tanzen'; h.loadRecording();
+  for (let i = 1; i <= 500; i++) h.frame(i * 16);
+  h.get('#audio').ended = true; h.get('#audio').paused = true;
+  for (const callback of h.get('#audio').handlers.get('ended')) callback({});
+  assert(!h.state.party.active && h.state.party.departing); assert.equal(h.get('#party-effects').getAttribute('hidden'), '');
+  for (let i = 501; i <= 1000; i++) h.frame(i * 16);
+  assert(!h.state.party.departing); h.leaveRoom(); h.enterRoom('radio');
+  assert(!h.state.party.active); assert.equal(h.get('#dance-party').getAttribute('hidden'), '');
+} finally { dancingTrack.src = originalDanceAudio; }
+console.log('PASS: the native song-ended event removes the disco and sends all guests out; returning cannot restart a finished song party.');
+
+for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'NumpadEnter']]) {
+  const h = await harness(false, 'monkey', { 'tree-0': '#123456', 'flower-0': '#abcdef' }); h.enterRoom('wardrobe');
+  h.state.position = { ...rooms.PICTURE_SPOT }; h.frame(16);
+  assert.equal(h.state.scene, 'painting', 'walking to the picture opens the brush view');
+  assert(h.game.innerHTML.includes('class="studio-brush"')); assert.equal(h.state.animal, 'monkey');
+  const blue = studio.studioColors(content.PALETTE).find(color => color.id === 'blue');
+  h.state.position = { ...blue }; h.game.focus(); h.press(h.windowHandlers, h.event(key, code, h.game));
+  assert.equal(h.state.studio.color, 'blue');
+  h.state.keys.add('ArrowLeft'); const beforeBrush = h.state.position.x; h.frame(32); h.frame(48); h.state.keys.clear();
+  assert(h.state.position.x < beforeBrush, 'direction keys move the brush');
+  for (const surface of studio.largeSurfaces) {
+    const p = surface.bounds ? { x: surface.bounds.x + surface.bounds.w / 2, y: surface.bounds.y + surface.bounds.h / 2 } : surface.id === 'path' ? { x: 650, y: 475 } : surface.id === 'grass' ? { x: 1000, y: 700 } : { x: 900, y: -150 };
+    h.state.position = { x: studio.CANVAS.x + p.x * studio.CANVAS.scale, y: studio.CANVAS.y + (p.y + 380) * studio.CANVAS.scale };
+    assert.equal(h.currentInteraction()?.id, surface.id);
+    const before = h.state.paint[surface.id];
+    h.press(h.windowHandlers, h.event(key, code, h.game, true)); assert.equal(h.state.paint[surface.id], before, 'holding a confirmation key does not paint repeatedly');
+    h.press(h.windowHandlers, h.event(key, code, h.game)); assert.equal(h.state.paint[surface.id], blue.color);
+  }
+  assert.equal(h.state.paint['tree-0'], '#123456'); assert.equal(h.state.paint['flower-0'], '#abcdef');
+  h.press(h.windowHandlers, h.event('Escape', 'Escape', h.game));
+  assert.equal(h.state.scene, 'wardrobe'); assert.equal(h.state.position.x, rooms.PICTURE_SPOT.x);
+  for (let i = 0; i < 10; i++) h.frame(64 + i * 16);
+  assert.equal(h.state.scene, 'wardrobe', 'closing the picture does not immediately reopen it');
+  h.leaveRoom(); assert.equal(h.state.scene, 'world');
+  assert(h.game.innerHTML.includes(`data-paint-target="path" data-paint-property="stroke" stroke="${blue.color}"`));
+  assert.equal(JSON.parse(h.stored.get('bbt-paint-world')).grass, blue.color);
+  h.enterRoom('wardrobe'); h.state.position = { ...rooms.PICTURE_SPOT }; h.game.focus(); h.press(h.windowHandlers, h.event(key, code, h.game));
+  assert.equal(h.state.scene, 'painting');
+  const close = new h.Element('picture exit', 'g', { studioControl: 'close' });
+  h.press(h.game.handlers, h.event(key, code, close)); assert.equal(h.state.scene, 'wardrobe');
+}
+console.log('PASS: the picture opens on approach, all three action keys take palette colors and paint every large object, arrows move the brush, Enter on the visible exit or Escape returns safely, and confirmed world colors persist without changing trees or flowers.');
+
+const originalMelodies = content.BAND.map(member => member.audio);
+const originalCassetteAudio = content.TRACKS[0].src;
+try {
+  content.TRACKS[0].src = 'uploads/hut.mp3';
+  for (const member of content.BAND) member.audio = `uploads/${member.id}.mp3`;
+  const h = await harness(false, 'cat'); h.state.tapes.loaded = 'hut'; h.loadRecording(); h.get('#audio').currentTime = 23;
+  for (const member of content.BAND) {
+    h.showPanel(member.id); assert.equal(h.state.memberMelody, member.id);
+    assert.equal(h.get('#member-audio').src, member.audio); assert.equal(h.get('#member-audio').paused, false);
+    assert.equal(h.get('#audio').paused, false); assert.equal(h.get('#audio').currentTime, 23, 'a biography melody never restarts the cassette');
+    assert.equal(h.get('#audio').volume, h.state.volume * .2); assert(h.renderPanel(member.id).includes(`data-melody="${member.id}"`));
+  }
+  h.closePanel(); assert.equal(h.get('#member-audio').paused, true); assert.equal(h.get('#audio').volume, h.state.volume);
+  h.showPanel('panda'); for (const cb of h.get('#member-audio').handlers.get('ended')) cb({});
+  assert.equal(h.state.memberMelody, null); assert.equal(h.get('#audio').volume, h.state.volume);
+  content.BAND[0].audio = 'blob:https://uglyagi.github.io/melody-preview';
+  const preview = await harness(true, 'cat'); preview.showPanel('panda'); assert.equal(preview.get('#member-audio').src, content.BAND[0].audio);
+  const publicGame = await harness(false, 'cat'); publicGame.showPanel('panda'); assert.equal(publicGame.get('#member-audio').paused, true, 'blob melodies remain local preview only');
+} finally { content.BAND.forEach((member, i) => { member.audio = originalMelodies[i]; }); content.TRACKS[0].src = originalCassetteAudio; }
+console.log('PASS: all three band members play their assigned melody, biography changes replace it, closing/stopping restores the cassette volume, and local preview audio stays private.');
+
+const carriedStudio = await harness(false, 'dog');
+carriedStudio.state.paintCan = 'red'; carriedStudio.enterRoom('wardrobe'); carriedStudio.state.position = { ...rooms.PICTURE_SPOT }; carriedStudio.frame(16);
+assert.equal(carriedStudio.state.scene, 'painting'); assert.equal(carriedStudio.state.paintCan, 'red');
+assert.equal(carriedStudio.get('#paint-indicator').hidden, true);
+new carriedStudio.Element('picture close', 'button', { action: 'exit-walk' }).click();
+assert.equal(carriedStudio.state.scene, 'wardrobe'); assert.equal(carriedStudio.state.paintCan, 'red');
+carriedStudio.leaveRoom(); assert.equal(carriedStudio.state.paintCan, 'red');
+console.log('PASS: painting keeps a carried bucket, hides its indicator while the brush is active and returns to the house through the visible close button.');
+
+const preciseBrush = await harness(false, 'cat'); preciseBrush.enterRoom('wardrobe'); preciseBrush.state.position = { ...rooms.PICTURE_SPOT }; preciseBrush.frame(16);
+preciseBrush.state.position = { x: studio.CANVAS.x + 1000 * studio.CANVAS.scale, y: studio.CANVAS.y + 1080 * studio.CANVAS.scale };
+const flowerHit = new preciseBrush.Element('flower', 'use', { paintTarget: 'flower-0' });
+const roofHit = new preciseBrush.Element('roof', 'path', { paintTarget: 'home-roof' });
+let screenPoint;
+preciseBrush.doc.elementsFromPoint = (x, y) => { screenPoint = { x, y }; return [flowerHit, roofHit]; };
+assert.equal(preciseBrush.currentInteraction().id, 'home-roof', 'the rendered surface under the brush takes priority over rectangular approximations');
+assert.equal(screenPoint.x, preciseBrush.state.position.x); assert.equal(screenPoint.y, preciseBrush.state.position.y);
+console.log('PASS: brush selection uses the rendered SVG surface at its actual screen position and skips the separately painted flowers.');

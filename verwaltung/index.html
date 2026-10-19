@@ -4,8 +4,8 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Bandverwaltung · Bum Bum Tschak</title><meta name="robots" content="noindex,nofollow">
   <meta name="referrer" content="no-referrer">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https:; media-src 'self' blob: https:; connect-src 'self' https://api.github.com; object-src 'none'; base-uri 'none'; form-action 'self'">
-  <link rel="icon" href="../assets/favicon.svg"><link rel="stylesheet" href="styles.css">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Nm4mBM1zZoCJu70blR6llpMJfILjjJIRCPSJl2ouVrM='; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https:; media-src 'self' blob: https:; connect-src 'self' https://api.github.com; object-src 'none'; base-uri 'none'; form-action 'self'">
+  <link rel="icon" href="../assets/favicon.svg"><link rel="stylesheet" href="styles.css?v=d0121f60f9adc874">
 </head>
 <body>
   <div class="top-stripe" aria-hidden="true"></div>
@@ -32,5 +32,21 @@
     </div>
   </main>
   <dialog id="confirm"><form method="dialog"><h2 id="confirm-title">Veröffentlichen?</h2><p id="confirm-text"></p><div class="actions"><button class="button" value="cancel" autofocus>Abbrechen</button><button id="confirm-button" class="button primary" value="ok">Veröffentlichen</button></div></form></dialog>
-  <script type="module" src="admin.js"></script>
+  <!-- versioned-game-assets -->
+  <script type="importmap">{
+  "imports": {
+    "../animal-defaults.js": "../animal-defaults.js?v=d0121f60f9adc874",
+    "../band-defaults.js": "../band-defaults.js?v=d0121f60f9adc874",
+    "../copy-defaults.js": "../copy-defaults.js?v=d0121f60f9adc874",
+    "../painting.js": "../painting.js?v=d0121f60f9adc874",
+    "../sky-world.js": "../sky-world.js?v=d0121f60f9adc874",
+    "../utils.js": "../utils.js?v=d0121f60f9adc874",
+    "../verwaltung/admin.js": "../verwaltung/admin.js?v=d0121f60f9adc874",
+    "../verwaltung/drafts.js": "../verwaltung/drafts.js?v=d0121f60f9adc874",
+    "../verwaltung/github-store.js": "../verwaltung/github-store.js?v=d0121f60f9adc874",
+    "../verwaltung/schema.js": "../verwaltung/schema.js?v=d0121f60f9adc874"
+  }
+}</script>
+  <script type="module" src="admin.js?v=d0121f60f9adc874"></script>
+  <!-- /versioned-game-assets -->
 </body></html>

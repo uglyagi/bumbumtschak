@@ -62,19 +62,19 @@ export function bandLabel(member, x, y, width, detail) {
   return `<g class="map-label" transform="translate(${x} ${y})"><title>${escape(`${member.name}${detail ? ` · ${detail}` : ''}`)}</title><rect x="${-width / 2}" y="-25" width="${width}" height="44" rx="9" fill="#fffcee" stroke="#101014" stroke-width="3"/><text y="-7" text-anchor="middle" font-size="${Math.min(15, (width - 18) / (Math.min(member.name.length, 25) * .66 || 1))}" font-weight="900">${escape(short(member.name, 25))}</text><text y="10" text-anchor="middle" font-size="${Math.min(11, (width - 18) / (Math.min(detail.length, 36) * .64 || 1))}" font-weight="700">${escape(short(detail, 36))}</text></g>`;
 }
 
-export function worldMarkup(paint = {}, painting = false, scene = 'world', rocket = {}, animal = ANIMALS[0].id) {
+export function worldMarkup(paint = {}, painting = false, scene = 'world', rocket = {}, animal = ANIMALS[0].id, snapshot = false) {
   const P = (id, original, property = 'fill') => {
     const surface = PAINT_SURFACES.find(surface => surface.id === id);
     return paintAttributes(id, original, paint, painting && (!rocket.riding || scene === 'sky') && !!surface?.sky === (scene === 'sky'), property, text(surface?.key || ''));
   };
-  const activeGround = scene === 'world' && !rocket.riding;
+  const activeGround = scene === 'world' && !rocket.riding && !snapshot;
   const station = (id, label, content) => stationMarkup(id, label, content, activeGround);
   const flowers = FLOWERS;
   const grass = [[175, 690], [480, 700], [1420, 520], [380, 230], [1170, 975], [650, 780], [890, 985], [1100, 265], [210, 1010]];
   return `<svg id="world-svg" xmlns="http://www.w3.org/2000/svg" viewBox="60 120 1480 850" font-family="Trebuchet MS, Arial, sans-serif" aria-hidden="false" aria-label="${escape(text('world_title'))}" preserveAspectRatio="xMidYMid meet">
     ${defs()}
     <rect x="0" y="${SKY.top}" width="1600" height="${WORLD.height - SKY.top}" ${P('sky', SKY.color)}/>
-    ${spaceMarkup(paint)}
+    ${snapshot ? '' : spaceMarkup(paint)}
     <path d="M0 12Q160-9 320 9T640 9 960 9 1280 9 1600 8V${WORLD.height}H0Z" ${P('grass', '#40cea1')}/>
     <path d="M0 12Q160-9 320 9T640 9 960 9 1280 9 1600 8" fill="none" stroke="#101014" stroke-width="4"/>
     <g fill="none" stroke="#101014" stroke-linecap="round" stroke-linejoin="round">
@@ -104,8 +104,19 @@ export function worldMarkup(paint = {}, painting = false, scene = 'world', rocke
     ${flowers.map(([x, y, color, size], i) => `<use href="#flower" x="${x}" y="${y}" width="${size}" height="${size * 1.2}" ${P(`flower-${i}`, color, 'color')}/>`).join('')}
     <g fill="#1d55ff" stroke="#101014" stroke-width="4"><path d="M0 1040q170-40 350-3t350-4 400 7 500-1v61H0Z" ${P('water', '#1d55ff')}/></g>
     ${socialPadsMarkup('world', activeGround)}
-    ${rocketMarkup(rocket, animal)}
+    ${snapshot ? '' : rocketMarkup(rocket, animal)}
+    ${snapshot ? '' : `
     <g id="destination-marker" hidden=""><ellipse rx="17" ry="8" fill="none" stroke="#101014" stroke-width="3" stroke-dasharray="4 4"/></g>
-    <g id="player" transform="translate(${WORLD_SPAWN.x} ${WORLD_SPAWN.y})"><ellipse cx="0" cy="0" rx="25" ry="9" fill="#101014" opacity=".18"/><g id="player-body"><use id="player-use" href="#animal-cat" x="-34" y="-77" width="68" height="82"/><g id="carried-tape" transform="translate(-29 -39) scale(.44)" hidden=""></g><g id="carried-paint" transform="translate(12 -44) scale(.38)" hidden=""></g></g><path d="m-5-91 5 6 5-6" fill="none" stroke="#101014" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g id="player" transform="translate(${WORLD_SPAWN.x} ${WORLD_SPAWN.y})"><ellipse cx="0" cy="0" rx="25" ry="9" fill="#101014" opacity=".18"/><g id="player-body"><use id="player-use" href="#animal-cat" x="-34" y="-77" width="68" height="82"/><g id="carried-tape" transform="translate(-29 -39) scale(.44)" hidden=""></g><g id="carried-paint" transform="translate(12 -44) scale(.38)" hidden=""></g></g><path d="m-5-91 5 6 5-6" fill="none" stroke="#101014" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>`}
   </svg>`;
+}
+
+export function landscapeMarkup(paint, prefix, x, y, width) {
+  const scale = width / 1600;
+  const source = worldMarkup(paint, false, 'world', {}, ANIMALS[0].id, true);
+  const body = source.slice(source.indexOf('>') + 1, source.lastIndexOf('</svg>'))
+    .replace(/\bid="([^"]+)"/g, (_, id) => `id="${prefix}-${id}"`)
+    .replace(/href="#([^"]+)"/g, (_, id) => `href="#${prefix}-${id}"`)
+    .replace(/url\(#([^\)]+)\)/g, (_, id) => `url(#${prefix}-${id})`);
+  return `<g transform="translate(${x} ${y + 380 * scale}) scale(${scale})"><defs><clipPath id="${prefix}-crop"><rect y="-380" width="1600" height="1480"/></clipPath></defs><g clip-path="url(#${prefix}-crop)">${body}</g></g>`;
 }

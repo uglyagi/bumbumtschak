@@ -11,15 +11,15 @@ export const DEFAULT_PALETTE = [
 ];
 export const PALETTE_LIMIT = 30;
 export const PAINT_PAGE_SIZE = 6;
-export const PAINT_RESET = { x: 1250, y: 940 };
-export const PAINT_NEXT = { x: 350, y: 940 };
+export const PAINT_RESET = { x: 350, y: 900 };
+export const PAINT_NEXT = { x: 1220, y: 980 };
 export function paletteColors(saved) {
   return (Array.isArray(saved) ? saved : DEFAULT_PALETTE).slice(0, PALETTE_LIMIT).map((item, i) => ({
     id: /^[a-z0-9][a-z0-9-]{0,63}$/.test(item?.id) ? item.id : `color-${i}`,
     name: typeof item?.name === 'string' ? item.name : '', color: /^#[a-f0-9]{6}$/i.test(item?.color) ? item.color : '#fff20b',
   }));
 }
-export const paintSlots = (palette, page = 0) => palette.slice(page * PAINT_PAGE_SIZE, (page + 1) * PAINT_PAGE_SIZE).map((color, i) => ({ ...color, x: 300 + i * 200, y: 850 }));
+export const paintSlots = (palette, page = 0) => palette.slice(page * PAINT_PAGE_SIZE, (page + 1) * PAINT_PAGE_SIZE).map((color, i) => ({ ...color, x: 1020 + i % 3 * 145, y: 790 + Math.floor(i / 3) * 110 }));
 export const paintPages = palette => Math.max(1, Math.ceil(palette.length / PAINT_PAGE_SIZE));
 export const FLOWERS = [
   [445, 560, '#ff87ce', 35], [105, 610, '#fff20b', 43], [1090, 595, '#ff87ce', 40],
@@ -74,7 +74,7 @@ curve({ x: 910, y: 810 }, { x: 670, y: 675 }, { x: 670, y: 670 });
 curve({ x: 670, y: 670 }, { x: 560, y: 610 }, { x: 570, y: 500 });
 line({ x: 815, y: 500 }, { x: 815, y: 320 });
 curve({ x: 800, y: 665 }, { x: 840, y: 660 }, { x: 895, y: 695 });
-function onPath(position) {
+export function onPath(position) {
   return pathSegments.some(([a, b]) => {
     const dx = b.x - a.x, dy = b.y - a.y, t = Math.max(0, Math.min(1, ((position.x - a.x) * dx + (position.y - a.y) * dy) / (dx * dx + dy * dy || 1)));
     return Math.hypot(position.x - a.x - t * dx, position.y - a.y - t * dy) < 53;

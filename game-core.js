@@ -52,7 +52,7 @@ export function sceneObstacles(scene = 'world', parkedRocket = GROUND_ROCKET) {
   if (scene === 'world') return parkedRocket ? [...OBSTACLES, rocketBody(parkedRocket)] : OBSTACLES;
   if (scene === 'sky' || scene === 'space') return [];
   const props = scene === 'radio' ? [{ x: 615, y: 285, w: 370, h: 180 }, { x: 215, y: 300, w: 355, h: 195 }, { x: 980, y: 275, w: 420, h: 60 }]
-    : scene === 'wardrobe' ? [380, 660, 940, 1220].map(x => ({ x: x - 100, y: 350, w: 200, h: 245 }))
+    : scene === 'wardrobe' ? [{ x: 910, y: 270, w: 400, h: 380 }]
     : [{ x: 500, y: 280, w: 600, h: 200 }];
   return [...WALLS, ...props];
 }

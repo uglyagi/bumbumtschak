@@ -86,6 +86,7 @@ export function validateContent(input) {
       role: str(member.role, 80, 'Instrument / Aufgabe'),
       sound: str(member.sound, 60, 'Ausruf'),
       image: url(member.image || DEFAULT_BAND[index].image, true),
+      audio: url(member.audio, true),
       color: /^#[a-f0-9]{6}$/i.test(member.color) ? member.color : DEFAULT_BAND[index].color,
       intro: str(member.intro, 1800, 'Bandmitglied'),
     })),

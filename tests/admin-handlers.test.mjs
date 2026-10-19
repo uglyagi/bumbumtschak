@@ -150,3 +150,34 @@ test('playable character graphics and extra paint colors publish with their edit
   await h.click(new h.Element('remove orange', { removeColor: String(DEFAULT_PALETTE.length) }));
   assert.equal(h.state.document.info.palette.length, DEFAULT_PALETTE.length);
 });
+
+test('each band member can upload, preview, publish and remove an independent melody without replacing its artwork', async () => {
+  const h = await harness(); await h.login(); await h.click(h.get('#tab-info'));
+  assert(h.get('#panel').innerHTML.includes('info.members.0.audio'));
+  assert(h.get('#panel').innerHTML.includes('data-upload="audio" data-member="panda"'));
+  const originalTracks = structuredClone(h.state.document.tracks), melodies = [];
+  for (const member of h.state.document.info.members) {
+    const image = member.image;
+    const bytes = new Uint8Array(80); bytes.set(new TextEncoder().encode('ID3')); bytes[20] = melodies.length + 1;
+    const input = new h.Element('member melody', { upload: 'audio', member: member.id });
+    input.files = [new File([bytes], member.id + '.mp3', { type: 'audio/mpeg' })];
+    await h.fire('#panel', 'change', input);
+    assert.equal(member.image, image); assert(member.audio.startsWith('uploads/'));
+    assert(fileReferences(h.state.document).has(member.audio));
+    assert(h.get('#member-audio-' + member.id).innerHTML.includes('<audio controls'));
+    melodies.push({ path: member.audio, bytes });
+  }
+  assert.equal(h.state.files.size, 3); assert.deepEqual(h.state.document.tracks, originalTracks);
+  assert(await h.save()); assert.equal(h.draft().files.length, 3);
+  assert(h.draft().document.info.members.every(member => member.audio.startsWith('uploads/')));
+  assert(await h.save(true));
+  for (const [i, member] of h.repo.document().info.members.entries()) {
+    assert.equal(member.audio, melodies[i].path);
+    assert.deepEqual(h.repo.blobs.get(h.repo.currentTree().get(member.audio)), Buffer.from(melodies[i].bytes));
+  }
+  assert.equal(h.repo.requests.filter(request => request.method === 'PATCH').length, 1);
+  await h.click(new h.Element('remove panda melody', { removeMemberAudio: 'panda' }));
+  assert.equal(h.state.document.info.members[0].audio, '');
+  assert(h.state.document.info.members[1].audio); assert(h.state.document.info.members[2].audio);
+  assert(await h.save(true)); assert.equal(h.repo.document().info.members[0].audio, '');
+});

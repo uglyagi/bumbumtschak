@@ -13,7 +13,8 @@ export const ROOM_SPAWN = { x: 800, y: 870 };
 export const EXIT = { x: 800, y: 980 };
 export const RADIO = { x: 800, y: 550 };
 export const SHELF_SWITCH = { id: 'shelf', x: 800, y: 740 };
-export const ANIMAL_SPOTS = ['cat', 'dog', 'horse', 'monkey'].map((id, i) => ({ id, x: 380 + i * 280, y: 670 }));
+export const ANIMAL_SPOTS = ['cat', 'dog', 'horse', 'monkey'].map((id, i) => ({ id, x: 300 + i % 2 * 160, y: 430 + Math.floor(i / 2) * 165 }));
+export const PICTURE_SPOT = { id: 'painting', x: 1110, y: 690 };
 export const SHELF_SIZE = 10;
 // Six positions on the right, four on the left. A position belongs to no song.
 export const TAPE_SLOTS = [
@@ -79,6 +80,7 @@ export function nearbyInteraction(scene, position, tapes, shelfPage = 0, paint =
     if (d < 85) candidates.push({ ...spot, kind: 'change-character', label: text('action_change_character', { tier: animal.name }), distance: d });
   }
   if (scene === 'wardrobe') {
+    if (distance(position, PICTURE_SPOT) < 85) candidates.push({ ...PICTURE_SPOT, kind: 'painting', label: text('studio_open'), distance: distance(position, PICTURE_SPOT) });
     for (const color of paintSlots(PALETTE, paint.page || 0)) {
       const d = distance(position, color);
       if (d < 70) candidates.push({ ...color, kind: paint.can === color.id ? 'return-paint' : 'take-paint', distance: d, label: text(paint.can === color.id ? 'paint_return' : 'paint_take', { farbe: color.name }) });
