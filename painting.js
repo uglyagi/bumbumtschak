@@ -29,7 +29,10 @@ export const FLOWERS = [
   [245, 165, '#fff20b', 30], [430, 100, '#ff87ce', 28], [505, 390, '#fff20b', 28],
   [665, 540, '#ff87ce', 32], [1115, 735, '#fff20b', 32], [880, 870, '#ff87ce', 30],
   [185, 825, '#fff20b', 28], [1460, 425, '#ff87ce', 32],
-];
+].map(([x, y, color, size]) => {
+  const larger = Math.round(size * 1.25), extra = larger - size;
+  return [x - extra / 2, y - extra * 1.2, color, larger];
+});
 export const TREES = [[35, 85, 150, 210, '#ff87ce'], [1390, 50, 170, 225, '#fff20b'], [1440, 500, 130, 210, '#ff87ce'], [30, 850, 145, 210, '#1d55ff'], [500, 805, 110, 155, '#ff87ce']];
 export const CLOUDS = [[356, -310, 140, 60], [1155, -285, 145, 60]];
 export const WORLD_PATH = 'M300 1020Q255 900 300 750T315 560Q280 466 440 475L1110 475Q1320 440 1280 610L1265 850Q1150 945 910 810T670 670Q560 610 570 500M815 500V320M800 665Q840 660 895 695';
@@ -54,6 +57,7 @@ export const PAINT_SURFACES = [
   { id: 'grass', key: 'paint_grass', walk: { x: 1000, y: 600 }, ground: true },
   { id: 'sky', key: 'paint_sky', walk: { x: 800, y: SKY.top + 230 }, ground: true, sky: true },
 ];
+export const BUCKET_SURFACES = PAINT_SURFACES.filter(surface => /^(tree|flower)-/.test(surface.id));
 export function cleanPaint(saved) {
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return {};
   return Object.fromEntries(PAINT_SURFACES.filter(surface => /^#[a-f0-9]{6}$/i.test(saved[surface.id])).map(surface => [surface.id, saved[surface.id]]));
@@ -81,8 +85,7 @@ export function onPath(position) {
   });
 }
 export function nearbyPaintSurface(position) {
-  return PAINT_SURFACES.filter(surface => !surface.ground && canPaintSurface(position, surface)).sort((a, b) => surfaceDistance(position, a) - surfaceDistance(position, b))[0]
-    || PAINT_SURFACES.find(surface => surface.id === (position.y < 0 ? 'sky' : onPath(position) ? 'path' : 'grass'));
+  return BUCKET_SURFACES.filter(surface => canPaintSurface(position, surface)).sort((a, b) => surfaceDistance(position, a) - surfaceDistance(position, b))[0] || null;
 }
 export function paintAttributes(id, original, paint = {}, interactive = false, property = 'fill', label = '') {
   const color = /^#[a-f0-9]{6}$/i.test(paint[id]) ? paint[id] : original;

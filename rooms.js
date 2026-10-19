@@ -15,6 +15,7 @@ export const RADIO = { x: 800, y: 550 };
 export const SHELF_SWITCH = { id: 'shelf', x: 800, y: 740 };
 export const ANIMAL_SPOTS = ['cat', 'dog', 'horse', 'monkey'].map((id, i) => ({ id, x: 300 + i % 2 * 160, y: 430 + Math.floor(i / 2) * 165 }));
 export const PICTURE_SPOT = { id: 'painting', x: HOME_PICTURE.x + HOME_PICTURE.w / 2, y: HOME_PICTURE.y + HOME_PICTURE.h + 55 };
+export const TOOLBOX_SPOT = { id: 'toolbox', x: 550, y: 790 };
 export const SHELF_SIZE = 10;
 // Six positions on the right, four on the left. A position belongs to no song.
 export const TAPE_SLOTS = [
@@ -80,6 +81,7 @@ export function nearbyInteraction(scene, position, tapes, shelfPage = 0, paint =
     if (d < 85) candidates.push({ ...spot, kind: 'change-character', label: text('action_change_character', { tier: animal.name }), distance: d });
   }
   if (scene === 'wardrobe') {
+    if (distance(position, TOOLBOX_SPOT) < 75) candidates.push({ ...TOOLBOX_SPOT, kind: paint.toolbox ? 'return-toolbox' : 'take-toolbox', label: text(paint.toolbox ? 'toolbox_return' : 'toolbox_take'), distance: distance(position, TOOLBOX_SPOT) });
     if (distance(position, PICTURE_SPOT) < 85) candidates.push({ ...PICTURE_SPOT, kind: 'painting', label: text('studio_open'), distance: distance(position, PICTURE_SPOT) });
     for (const color of paintSlots(PALETTE, paint.page || 0)) {
       const d = distance(position, color);

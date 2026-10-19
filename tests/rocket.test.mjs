@@ -13,7 +13,7 @@ test('walking stops at the horizon; only the rocket can cross into the sky', () 
   assert.equal(canStand(SKY.spawn.x, SKY.spawn.y), false);
   const sky = PAINT_SURFACES.filter(surface => surface.sky);
   for (const surface of sky) assert.equal(canPaintSurface(walking, surface), false);
-  assert.equal(nearbyPaintSurface({ x: 800, y: -400 }).id, 'sky');
+  assert.equal(nearbyPaintSurface({ x: 800, y: -400 }), null, 'sky colors belong to the landscape picture');
   assert.equal(canPaintSurface(flying, PAINT_SURFACES.find(surface => surface.id === 'grass')), false);
 });
 
@@ -37,5 +37,5 @@ test('the rendered flight keeps the selected animal inside and disables ground d
   assert(svg.includes('<use id="rocket-pilot" href="#animal-monkey"'));
   assert(!svg.includes('data-station="panda"')); assert(!svg.includes('data-social="facebook"'));
   const interactive = [...svg.matchAll(/data-paint-target="([^"]+)"[^>]*tabindex="0"/g)].map(match => match[1]);
-  assert.deepEqual(interactive.sort(), ['sky', 'sun', 'cloud-0', 'cloud-1'].sort());
+  assert.deepEqual(interactive, [], 'the carried bucket cannot color anything while flying');
 });

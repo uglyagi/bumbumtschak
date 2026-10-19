@@ -1497,10 +1497,11 @@ export const COPY_GROUPS = [
       {
         "key": "paint_carry_hint",
         "label": "Hinweis beim Tragen",
-        "value": "Vorschau · Enter / Leertaste: übernehmen",
+        "value": "Nur Bäume und Blumen: Pfeile bewegen · Enter / Leertaste färben.",
         "max": 500,
         "previousValues": [
-          "Enter / Leertaste: Fläche anmalen"
+          "Enter / Leertaste: Fläche anmalen",
+          "Vorschau · Enter / Leertaste: übernehmen"
         ]
       },
       {
@@ -1845,8 +1846,11 @@ export const COPY_GROUPS = [
       {
         "key": "studio_cans",
         "label": "Überschrift bei den Kanistern",
-        "value": "Farben für draußen",
-        "max": 180
+        "value": "Farben für Bäume & Blumen",
+        "max": 180,
+        "previousValues": [
+          "Farben für draußen"
+        ]
       },
       {
         "key": "studio_palette",
@@ -1877,6 +1881,144 @@ export const COPY_GROUPS = [
         "label": "Pinselsteuerung",
         "value": "Pfeile: Pinsel bewegen · Enter / Leertaste: Farbe aufnehmen oder Fläche färben · Escape: zurück",
         "max": 600
+      }
+    ]
+  },
+  {
+    "id": "adventure",
+    "label": "Weltraumabenteuer & Werkzeugbox",
+    "fields": [
+      {
+        "key": "adventure_title",
+        "label": "Spielname",
+        "value": "Weltraumabenteuer",
+        "max": 180
+      },
+      {
+        "key": "adventure_home_planet",
+        "label": "Heimatplanet",
+        "value": "BumBumPlanet",
+        "max": 180
+      },
+      {
+        "key": "adventure_sun",
+        "label": "Ziel",
+        "value": "Sonne",
+        "max": 180
+      },
+      {
+        "key": "adventure_ready",
+        "label": "Startüberschrift",
+        "value": "Bereit fürs Weltraumabenteuer?",
+        "max": 180
+      },
+      {
+        "key": "adventure_start",
+        "label": "Startknopf",
+        "value": "Weltraumabenteuer starten",
+        "max": 180
+      },
+      {
+        "key": "adventure_land",
+        "label": "Landeknopf",
+        "value": "Landen",
+        "max": 180
+      },
+      {
+        "key": "adventure_keys",
+        "label": "Spielsteuerung",
+        "value": "Steuere die Rakete mit den Pfeiltasten. Weiche den Meteoriten aus und fliege bis zur Sonne! Escape macht Pause.",
+        "max": 600
+      },
+      {
+        "key": "adventure_pause",
+        "label": "Pausenüberschrift",
+        "value": "Kleine Weltraumpause",
+        "max": 180
+      },
+      {
+        "key": "adventure_continue",
+        "label": "Weiterspielen",
+        "value": "Weiterfliegen",
+        "max": 180
+      },
+      {
+        "key": "adventure_win",
+        "label": "Zielüberschrift",
+        "value": "Glückwunsch, du hast es geschafft!",
+        "max": 180
+      },
+      {
+        "key": "adventure_win_body",
+        "label": "Zieltext",
+        "value": "Du bist vom BumBumPlaneten bis zur Sonne geflogen. Das war ein tolles Abenteuer!",
+        "max": 180
+      },
+      {
+        "key": "adventure_replay",
+        "label": "Wiederholung",
+        "value": "Noch einmal spielen",
+        "max": 180
+      },
+      {
+        "key": "adventure_back",
+        "label": "Rückkehr",
+        "value": "Zurück zur Bum Bum Welt",
+        "max": 180
+      },
+      {
+        "key": "rocket_crashed",
+        "label": "Trefferhinweis",
+        "value": "Oh je, ein Meteorit! Wir landen auf der Wiese.",
+        "max": 180
+      },
+      {
+        "key": "rocket_needs_tools",
+        "label": "Reparaturhinweis",
+        "value": "Die Rakete braucht die Werkzeugbox aus dem Home sweet Home.",
+        "max": 180
+      },
+      {
+        "key": "rocket_repair",
+        "label": "Reparaturaktion",
+        "value": "Rakete reparieren",
+        "max": 180
+      },
+      {
+        "key": "rocket_repaired",
+        "label": "Reparatur abgeschlossen",
+        "value": "Geschafft! Die Rakete ist wieder startklar.",
+        "max": 180
+      },
+      {
+        "key": "toolbox_title",
+        "label": "Name der Werkzeugbox",
+        "value": "Werkzeugbox",
+        "max": 180
+      },
+      {
+        "key": "toolbox_take",
+        "label": "Aufnehmen",
+        "value": "Werkzeugbox nehmen",
+        "max": 180
+      },
+      {
+        "key": "toolbox_return",
+        "label": "Zurückstellen",
+        "value": "Werkzeugbox zurückstellen",
+        "max": 180
+      },
+      {
+        "key": "toolbox_taken",
+        "label": "Tragehinweis",
+        "value": "Werkzeugbox dabei! Bring sie zur beschädigten Rakete und drücke Enter oder die Leertaste.",
+        "max": 180
+      },
+      {
+        "key": "toolbox_returned",
+        "label": "Rückgabehinweis",
+        "value": "Die Werkzeugbox steht wieder an ihrem Platz.",
+        "max": 180
       }
     ]
   }

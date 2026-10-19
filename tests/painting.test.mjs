@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, access } from 'node:fs/promises';
 import { DEFAULT_ANIMALS, playableAnimals } from '../animal-defaults.js';
-import { PAINT_SURFACES, DEFAULT_PALETTE, PALETTE_LIMIT, PAINT_RESET, PAINT_NEXT, paintSlots, cleanPaint, canPaintSurface, createPaintPreview } from '../painting.js';
+import { PAINT_SURFACES, BUCKET_SURFACES, FLOWERS, DEFAULT_PALETTE, PALETTE_LIMIT, PAINT_RESET, PAINT_NEXT, paintSlots, cleanPaint, canPaintSurface, createPaintPreview } from '../painting.js';
 import { worldMarkup } from '../art.js';
 import { roomMarkup } from '../room-art.js';
 import { ANIMALS, PALETTE, applyContent, text } from '../content.js';
@@ -113,4 +113,15 @@ test('temporary previews restore each original fill, tree color and readable lab
   assert.equal(frame.getAttribute('fill'), '#fff20b'); assert.equal(wall.getAttribute('fill'), '#1d55ff'); assert.equal(label.getAttribute('fill'), '#ffffff');
   const restoreTree = createPaintPreview(root, 'tree-0', '#ffffff'); assert.equal(tree.style.color, '#ffffff');
   restoreTree(); assert.equal(tree.style.color, '#ff87ce'); assert.equal(tree.getAttribute('stroke'), '#101014');
+});
+
+test('buckets offer only trees and flowers, with larger flowers and preserved stem positions', () => {
+  assert.equal(BUCKET_SURFACES.length, 24);
+  assert(BUCKET_SURFACES.every(surface => /^(tree|flower)-/.test(surface.id)));
+  const svg = worldMarkup({}, true);
+  const focusable = [...svg.matchAll(/data-paint-target="([^"]+)"[^>]*tabindex="0"/g)].map(match => match[1]);
+  assert.deepEqual(focusable.sort(), BUCKET_SURFACES.map(surface => surface.id).sort());
+  assert.equal(FLOWERS[0][3], 44); assert.equal(FLOWERS[7][3], 63);
+  assert.equal(FLOWERS[0][0] + FLOWERS[0][3] / 2, 445 + 35 / 2);
+  assert(Math.abs(FLOWERS[0][1] + FLOWERS[0][3] * 1.2 - (560 + 35 * 1.2)) < 1e-8);
 });

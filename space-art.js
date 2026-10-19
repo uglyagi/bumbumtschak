@@ -23,7 +23,7 @@ const details = {
   uranus: `<g fill="none" stroke="#c1f5ec" stroke-width=".13"><path d="M-1-.4Q0-.58 1-.4M-1 .12Q0-.03 1 .12M-.8.6Q0 .46.8.6"/></g>`,
   neptune: `<g fill="none" stroke="#83a8ff" stroke-width=".12"><path d="M-1-.55Q0-.7 1-.55M-1 .05Q0-.1 1 .05M-.8.58Q0 .4.8.58"/></g><ellipse cx=".32" cy=".3" rx=".25" ry=".1" fill="#3151ba"/><path d="m-.45-.2.4-.03" fill="none" stroke="#fffcee" stroke-width=".06" stroke-linecap="round"/>`,
 };
-function planetMarkup(planet) {
+export function planetMarkup(planet) {
   const r = planet.diameter / 2, name = escapeXML(text(planet.key));
   const ring = front => `<g transform="rotate(-15)" fill="none" stroke-linecap="round">${front
     ? '<path d="M-1.6 0A1.6 .3 0 0 0 1.6 0" stroke="#101014" stroke-width=".15"/><path d="M-1.6 0A1.6 .3 0 0 0 1.6 0" stroke="#ffb5d6" stroke-width=".09"/>'

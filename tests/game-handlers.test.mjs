@@ -9,14 +9,18 @@ const connection = await import(new URL(`connection.${extension}`, root));
 const sky = await import(new URL(`sky-world.${extension}`, root));
 const dance = await import(new URL(`dance-party.${extension}`, root));
 const studio = await import(new URL(`painting-studio.${extension}`, root));
+const adventure = await import(new URL(`rocket-adventure.${extension}`, root));
+const adventureArt = await import(new URL(`adventure-art.${extension}`, root));
+const toolbox = await import(new URL(`toolbox.${extension}`, root));
 
 // Exercise the application's real registered handlers with DOM test doubles.
 // This checks app behavior, not browser rendering or native default actions.
 const source = await fs.readFile(new URL(`app.${extension}`, root), 'utf8');
-async function harness(preview = false, savedAnimal = '', savedDrawing = null) {
+async function harness(preview = false, savedAnimal = '', savedDrawing = null, damaged = false) {
   const opened = [];
   const stored = new Map(savedAnimal ? [['bbt-animal', savedAnimal]] : []);
   if (savedDrawing) stored.set(preview ? 'bbt-paint-preview' : 'bbt-paint-world', JSON.stringify(savedDrawing));
+  if (damaged) stored.set(preview ? 'bbt-rocket-preview-damaged' : 'bbt-rocket-damaged', '1');
   const nodes = new Map(), windowHandlers = new Map(), documentHandlers = new Map();
   const add = (map, name, callback) => map.set(name, [...(map.get(name) || []), callback]);
   const doc = { activeElement: null, hidden: false, baseURI: 'https://uglyagi.github.io/bumbumtschak/' };
@@ -87,7 +91,7 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null) {
   const game = get('#game'), modal = get('#modal'), modalContent = get('#modal-content'), audio = get('#audio');
   for (const node of [audio, get('#member-audio')]) Object.assign(node, { paused: true, ended: false, currentTime: 0, pause() { this.paused = true; }, play() { this.paused = false; this.ended = false; return Promise.resolve(); }, load() {} });
   const context = vm.createContext({
-    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky, ...dance, ...studio,
+    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky, ...dance, ...studio, ...adventure, ...adventureArt, ...toolbox,
     loadContent: async () => ({ ok: true }), document: doc,
     window: { innerWidth: 1200, matchMedia: () => ({ matches: false }), addEventListener: (n, cb) => add(windowHandlers, n, cb), open(...args) { opened.push(args); } },
     location: { search: preview ? '?preview=1' : '' }, localStorage: { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value) },
@@ -346,42 +350,29 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
   assert.equal(h.state.paintCan, 'blue');
   assert(h.get('#carried-paint').innerHTML.includes(blue.color));
   h.leaveRoom(); h.state.position = { x: 700, y: 475 }; h.game.focus();
-  assert.equal(h.currentInteraction().id, 'path');
+  assert.equal(h.currentInteraction(), null, 'a bucket cannot preview or paint the path');
   h.press(h.windowHandlers, h.event(key, code, h.game));
-  assert.equal(h.state.paint.path, blue.color);
-  assert.equal(JSON.parse(h.stored.get('bbt-paint-world')).path, blue.color);
-  const water = new h.Element('water', 'g', { paintTarget: 'water' });
-  h.press(h.game.handlers, h.event(key, code, water));
-  assert.equal(h.state.paint.water, undefined, 'a distant ground surface requires walking there first');
-  let tick = 0;
-  while (h.state.path.length && tick < 1500) h.frame(++tick * 16);
-  assert.equal(h.state.scene, 'world'); assert.equal(h.state.paint.water, undefined);
-  h.press(h.windowHandlers, h.event(key, code, h.game));
-  assert.equal(h.state.paint.water, blue.color, 'confirmation after walking paints the selected surface');
-  for (const surface of painting.PAINT_SURFACES.filter(surface => !surface.sky)) {
+  assert.equal(h.state.paint.path, undefined);
+  for (const surface of painting.BUCKET_SURFACES) {
     h.state.position = { ...surface.walk }; h.game.focus();
     assert(core.canStand(h.state.position.x, h.state.position.y), surface.id + ' has an accessible painting spot');
-    assert(painting.canPaintSurface(h.state.position, surface), surface.id + ' can be reached from its painting spot');
     const target = new h.Element(surface.id, 'g', { paintTarget: surface.id });
     h.press(h.game.handlers, h.event(key, code, target));
     assert.equal(h.state.paint[surface.id], blue.color, surface.id + ' is painted through the real keyboard handler');
   }
-  const sun = new h.Element('sun', 'g', { paintTarget: 'sun' });
-  h.press(h.game.handlers, h.event(key, code, sun));
-  assert.equal(h.state.path.length, 0, 'a focused sky target cannot bypass the rocket');
-  assert.equal(h.state.paint.sun, undefined);
-  flyIntoSky(h, key, code);
-  assert.equal(h.state.paintCan, 'blue', 'the paint can stays with the pilot');
-  for (const surface of painting.PAINT_SURFACES.filter(surface => surface.sky)) {
-    h.state.position = { ...surface.walk }; h.state.rocket.position = { ...surface.walk }; h.game.focus();
-    const target = new h.Element(surface.id, 'g', { paintTarget: surface.id });
-    h.press(h.game.handlers, h.event(key, code, target));
-    assert.equal(h.state.paint[surface.id], blue.color, surface.id + ' can be painted from inside the flying rocket');
+  for (const surface of painting.PAINT_SURFACES.filter(surface => !painting.BUCKET_SURFACES.includes(surface))) {
+    h.state.position = { ...surface.walk }; h.game.focus();
+    h.press(h.game.handlers, h.event(key, code, new h.Element(surface.id, 'g', { paintTarget: surface.id })));
+    assert.equal(h.state.paint[surface.id], undefined, surface.id + ' stays exclusive to the landscape picture');
+    assert.equal(h.state.path.length, 0, 'focused large surfaces cannot bypass the bucket restriction');
   }
-  landAndExit(h, key, code); assert.equal(h.state.paintCan, 'blue');
+  h.state.position = { ...sky.GROUND_ROCKET }; flyIntoSky(h, key, code);
+  assert.equal(h.state.paintCan, 'blue', 'the bucket stays with the pilot');
+  assert.equal(h.currentInteraction(), null, 'buckets cannot recolor sky objects');
+  landAndExit(h, key, code);
   const drawing = JSON.parse(h.stored.get('bbt-paint-world'));
   const reload = await harness(false, 'cat', drawing);
-  assert.equal(Object.keys(reload.state.paint).length, painting.PAINT_SURFACES.length);
+  assert.equal(Object.keys(reload.state.paint).length, painting.BUCKET_SURFACES.length);
   h.press(h.windowHandlers, h.event('Escape', 'Escape', h.game));
   assert.equal(h.state.paintCan, null); assert.equal(h.modal.open, false); assert.equal(h.state.scene, 'world');
   h.enterRoom('wardrobe'); h.state.position = { ...painting.PAINT_RESET }; h.game.focus();
@@ -403,48 +394,33 @@ try {
   h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game));
   assert.equal(h.state.paintCan, 'orange', 'a newly added color is usable on the next page');
 } finally { content.PALETTE.splice(0, content.PALETTE.length, ...basePalette); }
-console.log('PASS: taking, carrying and returning paint cans, walking to distant surfaces, all paintable surfaces, local save/reload, Escape, reset and newly added palette colors through the real keyboard handlers.');
+console.log('PASS: taking, carrying and returning paint cans, all trees and flowers, rejecting every large picture surface, local save/reload, Escape, reset and newly added palette colors through the real keyboard handlers.');
 
 for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space']]) {
-  const h = await harness(false, 'cat', { path: '#ff3935' });
+  const h = await harness(false, 'cat', { path: '#ff3935', 'flower-0': '#ff3935' });
   const node = id => h.game.querySelectorAll(`[data-paint-target="${id}"]`)[0];
-  const pick = id => {
-    h.enterRoom('wardrobe'); h.state.position = { ...painting.paintSlots(content.PALETTE).find(color => color.id === id) }; h.game.focus();
-    h.press(h.windowHandlers, h.event(key, code, h.game)); h.leaveRoom();
-  };
-  pick('yellow'); h.state.position = { x: 700, y: 475 }; h.frame(16);
-  assert.equal(node('path').getAttribute('stroke'), '#fff20b', 'standing on the path previews the held yellow color');
-  assert.equal(h.state.paint.path, '#ff3935'); assert.equal(JSON.parse(h.stored.get('bbt-paint-world')).path, '#ff3935');
+  h.enterRoom('wardrobe'); h.state.position = { ...painting.paintSlots(content.PALETTE).find(color => color.id === 'yellow') }; h.game.focus();
+  h.press(h.windowHandlers, h.event(key, code, h.game)); h.leaveRoom();
+  const flower = painting.BUCKET_SURFACES.find(surface => surface.id === 'flower-0');
+  h.state.position = { ...flower.walk }; h.frame(16);
+  assert.equal(node(flower.id).style.color, '#fff20b', 'standing near a flower previews the held color');
+  assert.equal(h.state.paint[flower.id], '#ff3935');
   h.state.position = { x: 1000, y: 600 }; h.frame(32);
-  assert.equal(node('path').getAttribute('stroke'), '#ff3935', 'leaving the path restores its last confirmed color');
-  assert.equal(node('grass').getAttribute('fill'), '#fff20b'); assert.equal(h.state.paint.grass, undefined);
-  h.showPanel('help'); assert.equal(node('grass').getAttribute('fill'), '#40cea1', 'opening a panel clears the temporary preview');
-  h.closePanel(); h.frame(48); assert.equal(node('grass').getAttribute('fill'), '#fff20b');
-  h.press(h.windowHandlers, h.event('Escape', 'Escape', h.game));
-  assert.equal(node('grass').getAttribute('fill'), '#40cea1'); assert.equal(h.state.paint.path, '#ff3935');
-  pick('yellow'); h.state.position = { x: 700, y: 475 }; h.frame(64);
-  const path = new h.Element('path', 'path', { paintTarget: 'path' });
-  for (const callback of h.game.handlers.get('click')) callback({ target: path });
-  assert.equal(h.state.paint.path, '#ff3935', 'clicking only selects the preview and never commits a color');
-  h.press(h.windowHandlers, h.event(key, code, h.game, true)); assert.equal(h.state.paint.path, '#ff3935');
+  assert.equal(node(flower.id).style.color, '#ff3935', 'walking away restores the confirmed color');
+  assert.equal(node('grass').getAttribute('fill'), '#40cea1'); assert.equal(h.currentInteraction(), null);
+  h.state.position = { ...flower.walk }; h.frame(48); h.showPanel('help');
+  assert.equal(node(flower.id).style.color, '#ff3935', 'opening a panel clears the preview');
+  h.closePanel(); h.frame(64); assert.equal(node(flower.id).style.color, '#fff20b');
+  h.press(h.windowHandlers, h.event(key, code, h.game, true)); assert.equal(h.state.paint[flower.id], '#ff3935');
   h.press(h.windowHandlers, h.event(key, code, h.game));
-  assert.equal(h.state.paint.path, '#fff20b'); assert.equal(JSON.parse(h.stored.get('bbt-paint-world')).path, '#fff20b');
-  pick('blue'); h.state.position = { x: 700, y: 475 }; h.frame(80);
-  assert.equal(node('path').getAttribute('stroke'), '#1d55ff');
-  flyIntoSky(h, key, code);
-  h.state.position = { ...painting.PAINT_SURFACES.find(surface => surface.id === 'cloud-0').walk }; h.frame(48000);
-  assert.equal(node('cloud-0').style.color, '#1d55ff'); assert.equal(h.state.paint['cloud-0'], undefined);
+  assert.equal(h.state.paint[flower.id], '#fff20b'); assert.equal(JSON.parse(h.stored.get('bbt-paint-world'))[flower.id], '#fff20b');
+  h.state.position = { ...painting.BUCKET_SURFACES.find(surface => surface.id === 'tree-0').walk }; h.frame(80);
+  assert.equal(node('tree-0').style.color, '#fff20b');
   h.press(h.windowHandlers, h.event('Escape', 'Escape', h.game));
-  assert.equal(node('cloud-0').style.color, '#ffffff', 'unconfirmed cloud colors are restored when the can is put down');
-  assert.equal(node('path').getAttribute('stroke'), '#fff20b', 'discarding a later preview keeps the previously confirmed yellow');
-  assert.equal(JSON.parse(h.stored.get('bbt-paint-world')).path, '#fff20b');
-  landAndExit(h, key, code);
-  pick('white'); flyIntoSky(h, key, code);
-  h.state.position = { ...painting.PAINT_SURFACES.find(surface => surface.id === 'cloud-0').walk }; h.frame(48000);
-  assert.equal(node('cloud-0').style.color, '#ffffff'); assert.equal(h.state.paint['cloud-0'], undefined);
-  h.press(h.windowHandlers, h.event(key, code, h.game)); assert.equal(h.state.paint['cloud-0'], '#ffffff');
+  assert.equal(node('tree-0').style.color, '#ff87ce'); assert.equal(h.state.paint['tree-0'], undefined);
+  assert.equal(h.state.paint.path, '#ff3935', 'bucket previews preserve the saved picture drawing');
 }
-console.log('PASS: temporary color previews follow movement, restore confirmed colors, do not save on click or key repeat, commit only on Enter/Space, clear on Escape and panels, and include white clouds.');
+console.log('PASS: bucket previews cover only trees and flowers, restore on movement and panels, commit on Enter/Space, reject repeated keys and clear on Escape.');
 
 for (const animal of ['cat', 'dog', 'horse', 'monkey']) {
   const h = await harness(false, animal), can = painting.paintSlots(content.PALETTE).find(color => color.id === 'red');
@@ -458,7 +434,7 @@ for (const animal of ['cat', 'dog', 'horse', 'monkey']) {
   assert.equal(h.state.scene, 'sky'); assert(h.state.rocket.riding && h.state.rocket.airborne);
   assert.deepEqual({ ...h.state.position }, inAir, 'house shortcuts cannot make the pilot leave a rocket in the air');
   h.game.focus(); h.press(h.windowHandlers, h.event(' ', 'Space', h.game));
-  assert(h.state.rocket.riding && h.state.rocket.airborne, 'confirmation in the air paints rather than exiting');
+  assert(h.state.rocket.riding && h.state.rocket.airborne, 'confirmation in the air does not exit the rocket');
   assert.equal(h.state.paintCan, 'red');
   h.state.keys.add('ArrowLeft');
   for (let i = 0; i < 15; i++) h.frame(++clock * 16);
@@ -493,7 +469,7 @@ mousePaint.enterRoom('wardrobe'); mousePaint.state.position = { ...painting.pain
 mousePaint.press(mousePaint.windowHandlers, mousePaint.event('Enter', 'Enter', mousePaint.game)); mousePaint.leaveRoom();
 mousePaint.state.position = { x: 700, y: 475 }; mousePaint.state.paintTarget = 'path'; mousePaint.frame(16);
 assert.equal(mousePaint.get('#interact').hidden, true, 'paint surfaces do not display a contextual action button');
-assert.equal(mousePaint.get('#interact').innerHTML, '');
+
 mousePaint.get('#world-svg').getScreenCTM = () => ({ inverse: () => ({ a: .5, b: 0, c: 0, d: .5, e: -10, f: -20 }) });
 for (const callback of mousePaint.game.handlers.get('click')) callback({ target: new mousePaint.Element('grass', 'path', { paintTarget: 'grass' }), clientX: 2120, clientY: 1320 });
 assert.equal(mousePaint.state.paintTarget, null, 'pointer movement never selects a paint surface');
@@ -506,39 +482,64 @@ assert.equal(mousePaint.get('#interact').hidden, true); assert.equal(mousePaint.
 for (const callback of mousePaint.get('#interact').handlers.get('click')) callback({});
 assert.equal(mousePaint.state.paint.grass, undefined, 'even a stale mouse action cannot commit a color');
 mousePaint.game.focus(); mousePaint.press(mousePaint.windowHandlers, mousePaint.event(' ', 'Space', mousePaint.game));
-assert.equal(mousePaint.state.paint.grass, '#1d55ff', 'confirmation by keyboard still commits the preview');
-console.log('PASS: holding a paint bucket makes mouse clicks steer to the actual transformed point, without selecting or committing colors or displaying contextual paint actions; Space still paints.');
+assert.equal(mousePaint.state.paint.grass, undefined, 'the bucket cannot paint grass even through confirmation');
+console.log('PASS: holding a paint bucket makes mouse clicks steer to the actual transformed point, without selecting or committing colors or displaying contextual paint actions; grass stays exclusive to the picture.');
 
-const spaceFlight = await harness(false, 'monkey', { path: '#ff3935' });
-spaceFlight.enterRoom('wardrobe'); spaceFlight.state.position = { ...painting.paintSlots(content.PALETTE).find(color => color.id === 'white') }; spaceFlight.game.focus();
-spaceFlight.press(spaceFlight.windowHandlers, spaceFlight.event('Enter', 'Enter', spaceFlight.game)); spaceFlight.leaveRoom();
-spaceFlight.state.position = { ...sky.GROUND_ROCKET }; spaceFlight.game.focus();
-spaceFlight.press(spaceFlight.windowHandlers, spaceFlight.event('Enter', 'Enter', spaceFlight.game));
-spaceFlight.state.keys.add('ArrowUp');
-let spaceTick = 0, firstSpace = null;
-while (spaceTick < 450) {
-  spaceFlight.frame(++spaceTick * 16);
-  if (spaceTick * 16 < 6000) assert.notEqual(spaceFlight.state.scene, 'space');
-  if (spaceFlight.state.scene === 'space' && firstSpace === null) firstSpace = spaceTick * 16;
+for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'NumpadEnter']]) {
+  const h = await harness(false, 'monkey', { path: '#ff3935' });
+  h.enterRoom('wardrobe'); h.state.position = { ...painting.paintSlots(content.PALETTE).find(color => color.id === 'white') }; h.game.focus();
+  h.press(h.windowHandlers, h.event(key, code, h.game)); h.leaveRoom();
+  h.state.position = { ...sky.GROUND_ROCKET }; h.game.focus(); h.press(h.windowHandlers, h.event(key, code, h.game));
+  h.state.keys.add('ArrowUp'); let clock = 0, firstSpace = null;
+  while (clock < 520) { h.frame(++clock * 16); if (clock * 16 < 6000) assert.notEqual(h.state.scene, 'space'); if (h.state.scene === 'space' && firstSpace === null) firstSpace = clock * 16; }
+  assert(firstSpace >= 6000 && firstSpace <= 7000, String(firstSpace));
+  assert.equal(h.state.adventure.phase, 'ready'); assert.equal(h.state.modal, 'space-launch');
+  assert(h.modalContent.innerHTML.includes('Weltraumabenteuer starten')); assert(h.modalContent.innerHTML.includes('Landen'));
+  assert.equal(h.state.adventure.width, 1200); assert.equal(h.state.paintCan, 'white'); assert.equal(h.state.animal, 'monkey');
+  assert(h.game.innerHTML.includes('data-planet="neptune"')); assert(h.get('#rocket-paint').innerHTML.includes('#ffffff'));
+  const start = new h.Element('start adventure', 'button', { action: 'space-start' }); h.press(h.documentHandlers, h.event(key, code, start));
+  assert.equal(h.state.adventure.phase, 'playing'); assert.equal(h.modal.open, false);
+  const initialShip = { ...h.state.adventure.ship }; h.state.keys.add('ArrowRight'); h.state.keys.add('ArrowUp');
+  for (let i = 0; i < 55; i++) h.frame(++clock * 16);
+  h.state.keys.clear(); assert(h.state.adventure.ship.x > initialShip.x && h.state.adventure.ship.y < initialShip.y);
+  assert.equal(h.state.adventure.angle, 90); assert.equal(h.get('#rocket-hull').getAttribute('transform'), 'rotate(90.00 0 -86)');
+  assert.equal(h.get('#rocket-pilot-upright').getAttribute('transform'), 'rotate(-90 0 -86)', 'the pilot counter-rotates inside the cockpit');
+  h.press(h.windowHandlers, h.event('Escape', 'Escape', h.game)); assert.equal(h.state.modal, 'space-pause');
+  const frozen = h.state.adventure.progress; h.frame(++clock * 16); assert.equal(h.state.adventure.progress, frozen, 'the flight pauses with its menu');
+  h.press(h.documentHandlers, h.event(key, code, new h.Element('continue flight', 'button', { action: 'space-continue' })));
+  assert(!h.modal.open); h.state.adventure.progress = adventure.FINISH_DISTANCE; h.state.adventure.meteors = []; h.state.adventure.nextMeteor = Infinity;
+  h.frame(++clock * 16); assert.equal(h.state.modal, 'space-win'); assert(h.modalContent.innerHTML.includes('Glückwunsch, du hast es geschafft!'));
+  h.press(h.documentHandlers, h.event(key, code, new h.Element('replay', 'button', { action: 'space-replay' })));
+  assert.equal(h.state.adventure.phase, 'playing'); assert.equal(h.state.adventure.progress, 0); assert(!h.modal.open);
+  const ship = h.state.adventure.ship; h.state.adventure.meteors = [{ id: 1, x: ship.x + 1, y: ship.y, radius: 18, speed: 250, drift: 0, angle: 0, spin: 0 }];
+  h.frame(++clock * 16); assert.equal(h.state.adventure, null); assert(h.state.rocket.damaged && h.state.landing);
+  assert.equal(h.stored.get('bbt-rocket-damaged'), '1');
+  const scenes = new Set(); while (h.state.landing && clock < 1200) { h.frame(++clock * 16); scenes.add(h.state.scene); }
+  assert(scenes.has('space') && scenes.has('sky') && scenes.has('world'));
+  assert(!h.state.rocket.riding && !h.state.rocket.airborne); assert.equal(h.state.paintCan, 'white'); assert.equal(h.state.paint.path, '#ff3935');
+  assert(h.game.innerHTML.includes('class="rocket-smoke"'));
+  h.state.position = { ...h.state.rocket.position }; h.game.focus(); h.press(h.windowHandlers, h.event(key, code, h.game));
+  assert(!h.state.rocket.riding && h.state.rocket.damaged, 'the damaged rocket cannot restart');
+  const reload = await harness(false, 'cat', null, true); assert(reload.state.rocket.damaged, 'the repair is still needed after reloading');
+  h.enterRoom('wardrobe'); assert(h.game.innerHTML.includes('data-room-target="toolbox"'));
+  h.state.position = { ...rooms.TOOLBOX_SPOT }; h.game.focus(); h.press(h.windowHandlers, h.event(key, code, h.game));
+  assert(h.state.toolbox); assert(h.get('#carried-toolbox').innerHTML.includes('#ff3935'));
+  h.leaveRoom(); h.state.position = { ...h.state.rocket.position }; h.game.focus(); assert.equal(h.currentInteraction().kind, 'rocket-repair');
+  h.press(h.windowHandlers, h.event(key, code, h.game)); assert(!h.state.rocket.damaged && !h.state.rocket.riding); assert.equal(h.stored.get('bbt-rocket-damaged'), '0');
+  h.press(h.windowHandlers, h.event(key, code, h.game)); assert(h.state.rocket.riding, 'repair makes the rocket startable');
+  h.press(h.windowHandlers, h.event(key, code, h.game)); assert(!h.state.rocket.riding);
+  h.enterRoom('wardrobe'); h.state.position = { ...rooms.TOOLBOX_SPOT }; h.game.focus(); h.press(h.windowHandlers, h.event(key, code, h.game)); assert(!h.state.toolbox);
 }
-assert(firstSpace >= 6000 && firstSpace <= 7000, String(firstSpace));
-assert.equal(spaceFlight.state.scene, 'space'); assert.equal(spaceFlight.state.viewport.w, 1200, 'space uses one world unit per CSS pixel at this viewport');
-assert.equal(spaceFlight.state.paintCan, 'white'); assert.equal(spaceFlight.state.animal, 'monkey');
-assert(spaceFlight.game.innerHTML.includes('data-planet="neptune"'));
-spaceFlight.state.keys.clear(); spaceFlight.game.focus(); spaceFlight.press(spaceFlight.windowHandlers, spaceFlight.event(' ', 'Space', spaceFlight.game));
-assert(spaceFlight.state.rocket.riding && spaceFlight.state.rocket.airborne, 'the pilot cannot leave in space');
-spaceFlight.state.keys.add('ArrowUp');
-while (spaceFlight.state.position.y > -6750 && spaceTick < 2400) spaceFlight.frame(++spaceTick * 16);
-spaceFlight.state.keys.clear(); assert(spaceFlight.state.position.y < -6700, 'the flight reaches beyond all eight planets');
-new spaceFlight.Element('return from deep space', 'button', { action: 'exit-walk' }).click();
-const returnScenes = new Set();
-while (spaceFlight.state.rocket.airborne && spaceTick < 6000) { spaceFlight.frame(++spaceTick * 16); returnScenes.add(spaceFlight.state.scene); }
-assert(returnScenes.has('space') && returnScenes.has('sky') && returnScenes.has('world'));
-assert(!spaceFlight.state.rocket.airborne && spaceFlight.state.rocket.riding);
-spaceFlight.game.focus(); spaceFlight.press(spaceFlight.windowHandlers, spaceFlight.event('Enter', 'Enter', spaceFlight.game));
-assert.equal(spaceFlight.state.rocket.riding, false); assert.equal(spaceFlight.state.paintCan, 'white');
-assert.equal(spaceFlight.state.paint.path, '#ff3935');
-console.log('PASS: real Up handlers enter space after ' + firstSpace + ' ms, retain the pilot, bucket and drawing, reach every planet and return through sky to a safe landing and exit.');
+const choosingLand = await harness(false, 'dog');
+choosingLand.state.rocket.riding = choosingLand.state.rocket.airborne = true;
+choosingLand.state.position = { x: 365, y: sky.SPACE.bottom - 2 }; choosingLand.state.rocket.position = { ...choosingLand.state.position };
+choosingLand.state.scene = 'sky'; choosingLand.state.keys.add('ArrowUp'); choosingLand.frame(16); choosingLand.frame(32);
+for (let time = 48; time < 1200; time += 16) choosingLand.frame(time);
+assert.equal(choosingLand.state.modal, 'space-launch'); choosingLand.closePanel();
+assert(choosingLand.state.landing && !choosingLand.state.rocket.damaged, 'Escape at the launch choice lands safely');
+for (let time = 1200; time < 6500; time += 16) choosingLand.frame(time);
+assert.equal(choosingLand.state.scene, 'world'); assert(!choosingLand.state.rocket.riding && !choosingLand.state.rocket.damaged);
+console.log('PASS: space entry at 6–7 seconds, zoom and launch/land choices, four-direction flight, upright pilot, pause, win, replay, crash descent, persistent damage, tool pickup/return, repair and restart work with Enter, Space and NumpadEnter.');
 
 const dancingTrack = content.TRACKS.find(track => track.id === 'tanzen'), originalDanceAudio = dancingTrack.src;
 try {

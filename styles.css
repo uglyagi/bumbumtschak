@@ -38,3 +38,7 @@ dialog{padding:0;border:var(--line);border-radius:25px;color:var(--ink);backgrou
 @keyframes party-wash{from{opacity:.27}to{opacity:.4}}@keyframes party-light{from{opacity:.18}to{opacity:.46}}@keyframes party-sparkle{from{opacity:.3}to{opacity:.85}}@keyframes party-walk{from{transform:translateY(0)}to{transform:translateY(-2px)}}@keyframes party-dance{from{transform:translate(-3px,0) rotate(-7deg)}to{transform:translate(3px,-7px) rotate(7deg)}}
 
 .is-dancing .party-beam-green{animation-delay:-1.5s}.is-dancing .party-beam-violet{animation-delay:-3.5s}.is-dancing .party-lamp{animation:party-sparkle 3.5s ease-in-out infinite alternate}.is-departing .party-body{animation:party-walk .4s ease-in-out infinite alternate}
+
+/* Keep the enlarged cockpit visible above the flight choices. */
+dialog.space-choice{width:min(640px,calc(100% - 28px));margin:auto auto 6vh;max-height:55dvh;overflow:auto}dialog.space-choice::backdrop{background:rgba(10,13,30,.2);backdrop-filter:none}.adventure-dialog{padding:25px 28px}.adventure-dialog h2{font-size:clamp(24px,3vw,32px);margin-right:0}.adventure-dialog .modal-actions{gap:12px;justify-content:flex-start;margin-top:20px}.adventure-dialog .modal-intro{font-size:13px}.adventure-hud{pointer-events:none}.game.paused #rocket .rocket-flame{animation-play-state:paused}
+@media(max-height:600px){dialog.space-choice{margin-bottom:3vh;max-height:52dvh}.adventure-dialog{padding:17px 21px}.adventure-dialog .modal-intro{font-size:11px;line-height:1.4}.adventure-dialog .modal-actions{margin-top:12px}}
