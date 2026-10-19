@@ -7,13 +7,14 @@ import { ROOMS, ROOM_SPAWN, EXIT, RADIO, TAPE_SLOTS, SHELF_SWITCH, ROOM_PROPS, A
 import { brandIcon, socialPads, contactLinks } from './social.js';
 import { adminURL } from './connection.js';
 import { SPACE, ROCKET_SPEED, GROUND_ROCKET, moveRocket, outsideScene, flightScene } from './sky-world.js';
-import { createParty, syncParty, tickParty, guestPose, guestExitPose, dancePartyMarkup } from './dance-party.js';
+import { createParty, syncParty, tickParty, guestPose, guestExitPose, dancePartyMarkup, discoLightPoses } from './dance-party.js';
 import { studioMarkup, studioInteraction, studioColors, studioPages, STUDIO_CONTROLS, largeSurfaces } from './painting-studio.js';
 import { createAdventure, startAdventure, resizeAdventure, tickAdventure, FINISH_DISTANCE, landingPose, crashVibration } from './rocket-adventure.js';
 import { adventureMarkup, adventureShipPose, meteorMarkup } from './adventure-art.js';
 import { toolboxMarkup } from './toolbox.js';
 import { wreckageTransforms } from './rocket-wreckage.js';
 import { sunHolidayPose, holidayTransform } from './sun-holiday.js';
+import { createHatQuest, savedHatQuest, startHatQuest, tickHatQuest, hatInteraction, findHat, toggleHat, wearsHat, animalHref, hatEffectsMarkup, isHatTrack, hatSpot, HAT_STAND, HAT_HEADS } from './hat-quest.js';
 
 const previewMode = new URLSearchParams(location.search).get('preview') === '1';
 const contentStatus = await loadContent(previewMode);
@@ -31,6 +32,9 @@ const savedAnimal = storage.get('animal', '');
 const paintStorageKey = previewMode ? 'paint-preview' : 'paint-world';
 const rocketStorageKey = previewMode ? 'rocket-preview-damaged' : 'rocket-damaged';
 const savedRocketDamage = storage.get(rocketStorageKey, '0') === '1';
+const hatStorageKey = previewMode ? 'hat-preview' : 'hat-world';
+let savedHat = null;
+try { savedHat = JSON.parse(storage.get(hatStorageKey, 'null')); } catch { /* An invalid local quest starts afresh. */ }
 let savedPaint = {};
 try { savedPaint = cleanPaint(JSON.parse(storage.get(paintStorageKey, '{}')), PALETTE); } catch { /* A damaged local drawing starts with the original colors. */ }
 const state = {
@@ -47,6 +51,7 @@ const state = {
   rocket: { position: { ...GROUND_ROCKET }, riding: false, airborne: false, damaged: savedRocketDamage, broken: savedRocketDamage, impact: null },
   adventure: null, landing: null, toolbox: false, homeReturns: [],
   party: createParty(),
+  hat: createHatQuest(savedHat), hatActive: false,
   volume: clamp(Number(storage.get('volume', '.6')) || 0, 0, 1),
   reduced: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
 };
@@ -68,9 +73,11 @@ function announce(message) { $('#announcement').textContent = message; }
 function toast(message) { clearTimeout(toastTimer); const el = $('#toast'); el.textContent = message; el.hidden = false; toastTimer = setTimeout(() => { el.hidden = true; }, 3500); }
 function updateAnimal() {
   const animal = ANIMALS.find(a => a.id === state.animal);
-  playerUse.setAttribute('href', `#animal-${animal.id}`);
-  $('#rocket-pilot')?.setAttribute('href', `#animal-${animal.id}`);
-  $('#player-chip').innerHTML = `${avatar(animal.id)}<span><strong>${animal.name}</strong><small>${T('character_change')}</small></span>`;
+  const hat = wearsHat(state.hat, state.hatActive), href = animalHref(animal.id, hat);
+  playerUse.setAttribute('href', href);
+  $('#rocket-pilot')?.setAttribute('href', href);
+  $('#sun-actor-use')?.setAttribute('href', href);
+  $('#player-chip').innerHTML = `${avatar(animal.id, '', hat)}<span><strong>${animal.name}</strong><small>${T('character_change')}</small></span>`;
   $('#player-chip').setAttribute('aria-label', text('player_label', { tier: animal.name }));
   if (state.scene === 'radio') refreshDanceParty();
 }
@@ -174,7 +181,7 @@ function refreshDanceParty() {
   const layer = $('#dance-party'), visible = state.scene === 'radio' && (state.party.active || state.party.departing);
   if (!layer || state.scene !== 'radio') return;
   const castKey = state.party.castKey;
-  if (visible && (layer.dataset.castKey !== castKey || !layer.innerHTML)) { layer.innerHTML = dancePartyMarkup(ANIMALS, state.animal, state.party.cast); layer.dataset.castKey = castKey; }
+  if (visible && (layer.dataset.castKey !== castKey || !layer.innerHTML)) { layer.innerHTML = dancePartyMarkup(ANIMALS, state.animal, state.party.cast, state.party.elapsed, state.reduced); layer.dataset.castKey = castKey; }
   layer.toggleAttribute('hidden', !visible); layer.setAttribute('aria-hidden', String(!visible));
   $('#party-effects')?.toggleAttribute('hidden', !state.party.active);
   layer.classList.toggle('is-dancing', state.party.active && state.playing && !document.hidden);
@@ -183,6 +190,13 @@ function refreshDanceParty() {
 }
 function updateDanceGuests() {
   if (state.scene !== 'radio') return;
+  if (state.party.active) {
+    const lights = discoLightPoses(state.party.elapsed, state.reduced);
+    lights.beams.forEach((light, i) => {
+      for (const id of ['beam', 'head']) $(`#party-${id}-${i}`)?.setAttribute('transform', `rotate(${light.angle.toFixed(2)})`);
+    });
+    lights.pools.forEach((light, i) => { $(`#party-pool-${i}`)?.setAttribute('cx', light.x.toFixed(2)); $(`#party-pool-${i}`)?.setAttribute('cy', light.y.toFixed(2)); });
+  }
   state.party.cast.forEach((id, i) => {
     const node = $(`#party-dancer-${id}`); if (!node) return;
     const pose = state.party.active ? guestPose(i, state.party.elapsed, state.reduced) : guestExitPose(state.party.exits[i], i, state.party.exitElapsed, state.reduced);
@@ -202,9 +216,34 @@ function refreshPaint() {
     if (node) { node.toggleAttribute('hidden', !state.toolbox || id === 'rocket-toolbox' && !state.rocket.riding); node.innerHTML = state.toolbox ? toolboxMarkup() : ''; }
   }
 }
+function saveHat() { storage.set(hatStorageKey, JSON.stringify(savedHatQuest(state.hat))); }
+function refreshHatEffects() {
+  const layer = $('#hat-effects');
+  if (layer) layer.innerHTML = state.adventure || state.landing || state.scene === 'painting' ? '' : hatEffectsMarkup(state.hat, state.scene, state.reduced, text('hat_find'), state.hatActive);
+}
+function refreshHatQuest() {
+  const active = state.playing && !audio.ended && !audio.error && isHatTrack(TRACKS.find(track => track.id === state.tapes.loaded));
+  const changed = active !== state.hatActive; state.hatActive = active;
+  const started = startHatQuest(state.hat, TRACKS.find(track => track.id === state.tapes.loaded), state.started && active);
+  if (started) { saveHat(); toast(text('hat_started')); announce(text('hat_started')); }
+  if (changed || started) { updateAnimal(); refreshHatEffects(); state.near = null; updateNear(true); }
+}
+function tickHats(dt) {
+  const head = HAT_HEADS[state.animal], before = !!state.hat.celebration;
+  const origin = { x: state.position.x + (head.x - 50) * .68, y: state.position.y + (state.rocket.riding ? -100 : -77 + head.y * 82 / 120) };
+  const event = tickHatQuest(state.hat, dt, state.scene, origin, state.hatActive);
+  if (event) {
+    saveHat(); updateAnimal(); state.near = null;
+    if (event === 'flying') { toast(text('hat_flew')); announce(text('hat_flew')); }
+  }
+  if (event || state.hat.phase === 'flying' || state.hat.celebration || before) refreshHatEffects();
+}
 function renderScene() {
   clearPaintPreview();
-  game.innerHTML = state.adventure ? adventureMarkup(state.adventure, state.animal, state.paint) : state.scene === 'painting' ? studioMarkup(state.paint, PALETTE, state.studio) : outsideScene(state.scene) ? worldMarkup(state.paint, !!state.paintCan, state.scene, state.rocket, state.animal) : roomMarkup(state.scene, state.shelfPage, state.tapes, state.animal, { can: state.paintCan, page: state.paintPage, world: state.paint, toolbox: state.toolbox, returns: state.homeReturns });
+  const hat = wearsHat(state.hat, state.hatActive);
+  const markup = state.adventure ? adventureMarkup(state.adventure, state.animal, state.paint, hat) : state.scene === 'painting' ? studioMarkup(state.paint, PALETTE, state.studio) : outsideScene(state.scene) ? worldMarkup(state.paint, !!state.paintCan, state.scene, { ...state.rocket, hat }, state.animal) : roomMarkup(state.scene, state.shelfPage, state.tapes, state.animal, { can: state.paintCan, page: state.paintPage, world: state.paint, toolbox: state.toolbox, returns: state.homeReturns, hat: state.hat });
+  const end = markup.lastIndexOf('</svg>');
+  game.innerHTML = markup.slice(0, end) + '<g id="hat-effects"></g>' + markup.slice(end);
   world = $('#world-svg'); player = $('#player'); playerUse = $('#player-use'); marker = $('#destination-marker');
   game.setAttribute('aria-label', state.adventure?.sunTime != null ? text('sun_holiday_title') : state.scene === 'painting' ? text('studio_title') : state.scene === 'space' ? text('space_title') : state.scene === 'sky' ? text('sky_title') : state.scene === 'world' ? text('world_title') : ROOMS[state.scene].title);
   $('.wayfinder').hidden = state.scene !== 'world' || state.rocket.riding;
@@ -212,7 +251,7 @@ function renderScene() {
   $('.exit-room').textContent = text(state.adventure?.sunTime != null ? 'adventure_back' : state.scene === 'painting' ? 'studio_close' : state.rocket.riding ? state.rocket.airborne ? 'rocket_land_button' : 'rocket_exit' : 'exit_button');
   game.classList.toggle('in-room', !outsideScene(state.scene));
   player.toggleAttribute('hidden', state.rocket.riding);
-  state.near = null; updateAnimal(); refreshCassettes(); resize(); updateNear(true);
+  state.near = null; updateAnimal(); refreshCassettes(); refreshHatEffects(); resize(); updateNear(true);
   player.setAttribute('transform', `translate(${state.position.x} ${state.position.y})`);
 }
 function showPanel(id, focusSelector = '') {
@@ -280,6 +319,7 @@ function checkWorldTouch() {
 function refreshPlayback() {
   state.playing = !audio.paused && !audio.ended;
   refreshDanceParty();
+  refreshHatQuest();
   $('#radio-shortcut').setAttribute('aria-label', text('room_radio'));
   $('#radio-shortcut').style.background = state.playing ? 'var(--yellow)' : '';
   $('#radio-tape')?.classList.toggle('is-playing', state.playing);
@@ -323,6 +363,8 @@ function currentInteraction() {
     const surface = document.elementsFromPoint(point.x, point.y).map(node => node.closest('[data-paint-target]')).map(node => largeSurfaces.find(surface => surface.id === node?.dataset.paintTarget)).find(Boolean);
     return surface ? { ...surface, kind: 'studio-paint', label: text(surface.key) } : null;
   }
+  const hat = hatInteraction(state.hat, state.scene, state.position, state.hatActive);
+  if (hat) return { ...hat, label: text(hat.kind === 'find-hat' ? 'hat_find' : hat.kind === 'wear-hat' ? 'hat_wear' : 'hat_return') };
   if (state.rocket.riding && !state.rocket.airborne) return { id: 'rocket', kind: 'rocket-exit', label: text('rocket_exit') };
   if (state.rocket.riding && state.scene !== 'sky') return null;
   const interaction = nearbyInteraction(state.scene, state.position, state.tapes, state.shelfPage, { can: state.paintCan, page: state.paintPage, toolbox: state.toolbox, animal: state.animal, returns: state.homeReturns }, state.rocket.position);
@@ -492,6 +534,14 @@ function performInteraction() {
   if (!near) return;
   if (state.scene === 'painting') { studioAction(near); return; }
   stopWalking();
+  if (near.kind === 'find-hat') {
+    if (findHat(state.hat, state.scene, state.position, state.hatActive)) { saveHat(); renderScene(); toast(text('hat_found')); announce(text('hat_found')); }
+    return;
+  }
+  if (near.kind === 'wear-hat' || near.kind === 'return-hat') {
+    if (toggleHat(state.hat)) { saveHat(); renderScene(); announce(text(state.hat.wearing ? 'hat_worn' : 'hat_returned')); }
+    return;
+  }
   if (near.kind === 'rocket-damaged') { toast(text('rocket_needs_tools')); return; }
   if (near.kind === 'rocket-repair') { state.rocket.damaged = false; state.rocket.broken = false; state.rocket.impact = null; state.rocket.angle = 0; state.toolbox = false; storage.set(rocketStorageKey, '0'); renderScene(); toast(text('rocket_repaired')); announce(text('rocket_repaired')); return; }
   if (near.kind === 'take-toolbox' || near.kind === 'return-toolbox') { state.toolbox = near.kind === 'take-toolbox'; renderScene(); announce(text(state.toolbox ? 'toolbox_taken' : 'toolbox_returned')); return; }
@@ -699,6 +749,12 @@ function activateRoomTarget(id) {
   if (near && (near.id === id || id === 'radio' && ['insert', 'eject', 'radio-help'].includes(near.kind))) performInteraction();
   else navigateTo(target.x, target.y);
 }
+function activateHatTarget(id, walkOnly = false) {
+  const spot = id === 'hat-stand' && state.hat.phase === 'unlocked' ? HAT_STAND : id === 'lost-hat' && state.hat.phase === 'lost' && state.hatActive ? hatSpot(state.hat) : null;
+  if (!spot || spot.scene !== state.scene) return;
+  if (!walkOnly && currentInteraction()?.id === id) performInteraction();
+  else navigateTo(spot.x, spot.y);
+}
 game.addEventListener('click', e => {
   if (modal.open || !state.started || state.adventure || state.landing) return;
   if (state.scene === 'painting') {
@@ -707,6 +763,8 @@ game.addEventListener('click', e => {
     state.path = [{ x: clamp(point.x, 30, 1570), y: clamp(point.y, 110, 1055) }]; game.focus({ preventScroll: true }); return;
   }
   if (state.paintCan && outsideScene(state.scene)) { state.paintTarget = null; walkToPointer(e); return; }
+  const hat = e.target.closest('[data-hat-target]');
+  if (hat) { activateHatTarget(hat.dataset.hatTarget, true); return; }
   const social = e.target.closest('[data-social]');
   if (social) { const pad = socialPads(state.scene).find(p => p.id === social.dataset.social); if (pad) navigateTo(pad.x, pad.y); return; }
   const station = e.target.closest('[data-station]');
@@ -729,6 +787,8 @@ game.addEventListener('keydown', e => {
     if (point) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) { state.position = { x: point.x, y: point.y }; studioAction(currentInteraction()); } }
     return;
   }
+  const hat = e.target.closest('[data-hat-target]');
+  if (hat) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) activateHatTarget(hat.dataset.hatTarget); return; }
   const surface = e.target.closest('[data-paint-target]');
   if (state.paintCan && outsideScene(state.scene) && surface) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) activatePaintSurface(surface.dataset.paintTarget); return; }
   const social = e.target.closest('[data-social]');
@@ -811,6 +871,7 @@ function frame(time) {
   const dt = Math.min(.05, Math.max(0, (time - (lastTime || time)) / 1000)); lastTime = time;
   if (state.started && !document.hidden) {
     if (!modal.open && state.homeReturns.length) tickHomeReturns(dt);
+    if (!modal.open) tickHats(dt);
     const departing = state.party.departing;
     tickParty(state.party, dt, state.playing, state.reduced);
     updateDanceGuests();

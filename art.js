@@ -7,6 +7,7 @@ import { FLOWERS, TREES, CLOUDS, WORLD_PATH, PAINT_SURFACES, BUCKET_SURFACES, pa
 import { SKY, GROUND_ROCKET } from './sky-world.js';
 import { spaceMarkup } from './space-art.js';
 import { rocketWreckageMarkup } from './rocket-wreckage.js';
+import { animalHref } from './hat-quest.js';
 export const icon = (name, cls = '') => {
   const paths = {
     music: '<path d="M9 17V5l11-2v12M9 8l11-2"/><ellipse cx="6" cy="18" rx="3" ry="2"/><ellipse cx="17" cy="16" rx="3" ry="2"/>',
@@ -24,7 +25,7 @@ export const icon = (name, cls = '') => {
   };
   return `<svg class="icon ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.music}</svg>`;
 };
-export const avatar = (id, cls = '') => `<svg class="animal-art ${cls}" viewBox="0 0 100 120" aria-hidden="true"><use href="#animal-${id}"/></svg>`;
+export const avatar = (id, cls = '', hat = false) => `<svg class="animal-art ${cls}" viewBox="0 0 100 120" aria-hidden="true"><use href="${animalHref(id, hat)}"/></svg>`;
 export const memberArt = id => `<svg class="member-art" viewBox="0 0 170 190" aria-hidden="true"><use href="#band-${id}"/></svg>`;
 
 export const defs = () => `<defs>${brandSymbols}
@@ -52,7 +53,7 @@ export function rocketMarkup(rocket, animal) {
       <path d="M-17-34h34v9h-34Z" fill="#fff20b"/>
       <path d="m-21-25-9 23h12m39-23 9 23H18" fill="none"/>
       <circle cy="-86" r="20" fill="${SKY.color}"/>
-      ${rocket.riding ? `<clipPath id="rocket-window-clip"><circle cy="-86" r="17"/></clipPath><g clip-path="url(#rocket-window-clip)"><g id="rocket-pilot-upright" transform="rotate(${-1 * (rocket.angle || 0)} 0 -86)"><use id="rocket-pilot" href="#animal-${animal}" x="-23" y="-111" width="46" height="55"${rocket.pilotHidden ? ' hidden=""' : ''}/></g></g>` : '<path d="m-9-94-3 7" stroke="#ffffff" stroke-width="5"/>'}
+      ${rocket.riding ? `<clipPath id="rocket-window-clip"><circle cy="-86" r="17"/></clipPath><g clip-path="url(#rocket-window-clip)"><g id="rocket-pilot-upright" transform="rotate(${-1 * (rocket.angle || 0)} 0 -86)"><use id="rocket-pilot" href="${animalHref(animal, rocket.hat)}" x="-23" y="-111" width="46" height="55"${rocket.pilotHidden ? ' hidden=""' : ''}/></g></g>` : '<path d="m-9-94-3 7" stroke="#ffffff" stroke-width="5"/>'}
       <circle cy="-86" r="20" fill="none"/>
       <path d="M-8-54H8" stroke="#1d55ff" stroke-width="5"/>
       ${rocket.damaged ? '<path d="m-12-71 10 11-7 8 13 12M-13-122l13-5 9 10" fill="none" stroke-width="3"/><path d="M-13-48h24v10h-24Z" fill="#ffb76c" stroke-width="2"/><path d="M-7-43h12" stroke-width="2"/>' : ''}

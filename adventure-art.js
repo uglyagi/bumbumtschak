@@ -43,13 +43,13 @@ function adventureBackdropMarkup(game, paint = {}) {
 `;
 }
 
-export function adventureMarkup(game, animal, paint = {}) {
+export function adventureMarkup(game, animal, paint = {}, hat = false) {
   const backdrop = adventureBackdropMarkup(game, paint);
-  if (game.sunTime != null) return sunHolidayMarkup(game, animal, backdrop);
+  if (game.sunTime != null) return sunHolidayMarkup(game, animal, backdrop, hat);
   const w = game.width, h = game.height, pose = adventureShipPose(game);
   return `<svg id="world-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" font-family="Trebuchet MS,Arial,sans-serif" aria-label="${esc(text('adventure_title'))}">
     ${defs()}${backdrop}
-    <g id="adventure-ship" transform="translate(${pose.x} ${pose.y}) scale(${pose.scale})">${rocketMarkup({ position: { x: 0, y: 86 }, riding: true, airborne: game.phase === 'playing', angle: game.angle }, animal)}</g>
+    <g id="adventure-ship" transform="translate(${pose.x} ${pose.y}) scale(${pose.scale})">${rocketMarkup({ position: { x: 0, y: 86 }, riding: true, airborne: game.phase === 'playing', angle: game.angle, hat }, animal)}</g>
     <g id="player" hidden=""><use id="player-use"/></g><g id="destination-marker" hidden=""></g>
   </svg>`;
 }

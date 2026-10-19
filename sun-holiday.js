@@ -1,5 +1,6 @@
 import { defs, rocketMarkup } from './art.js';
 import { text } from './content.js';
+import { animalHref } from './hat-quest.js';
 import { escapeXML as esc } from './utils.js';
 import { SUN_ZOOM_IN, SUN_BACKGROUND_SWAP, SUN_ZOOM_OUT_START, sunTransitionDuration } from './rocket-adventure.js';
 
@@ -49,7 +50,7 @@ export function sunHolidayPose(game) {
 const sunglassesMarkup = '<g fill="#101014" stroke="#101014" stroke-width="3" stroke-linejoin="round"><path d="M-20-8h17l-2 17h-13ZM3-8h17l-2 17H5Z"/><path d="M-3-3h6m-23-2-6-3m46 3 6-3" fill="none"/><path d="m-15-3 5 1M8-3l5 1" stroke="#ffffff" stroke-width="2.5"/></g>';
 const foldedChairMarkup = '<g stroke="#101014" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M-12-30 12 31M12-30-12 31" fill="none"/><path d="M-12-30H12L7 16H-7Z" fill="#ff87ce"/><path d="M-4-28h8L2 15H-2Z" fill="#fffcee" stroke="none"/></g>';
 const loungerMarkup = '<g stroke="#101014" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"><path d="M-68-51-38 19M-28-6-49 19M40-6 63 19M-52 19h25M51 19h24" fill="none"/><path d="m-68-55 53 39H65V-3H-19l-57-43Z" fill="#ff87ce"/><path d="m-62-49 9 6 47 35h13l-51-39ZM22-14h14v9H22Zm28 0h12v9H50Z" fill="#fffcee" stroke="none"/></g>';
-export function sunHolidayMarkup(game, animal, flightBackdrop = '') {
+export function sunHolidayMarkup(game, animal, flightBackdrop = '', hat = false) {
   const p = sunHolidayPose(game), w = game.width, h = game.height;
   let seed = 7331; const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
   const stars = Array.from({ length: 100 }, (_, i) => `<circle cx="${(random() * w).toFixed(1)}" cy="${(random() * h * .58).toFixed(1)}" r="${i % 4 ? 1.4 : 2.4}" fill="${i % 3 ? '#fffcee' : '#ffb5df'}" opacity=".8"/>`).join('');
@@ -60,8 +61,8 @@ export function sunHolidayMarkup(game, animal, flightBackdrop = '') {
       <path d="M0 ${h - 26}Q${w * .3} ${h - 72} ${w * .54} ${h - 25}T${w} ${h - 32}" fill="none" stroke="#ffc647" stroke-width="26" stroke-linecap="round"/>
       <ellipse cx="${w * .43}" cy="${h * .88}" rx="${45 * p.scale}" ry="${12 * p.scale}" fill="#ffc647"/><ellipse cx="${w * .85}" cy="${h * .92}" rx="${33 * p.scale}" ry="${8 * p.scale}" fill="#ffc647"/>
       </g><text id="sun-story" x="${w / 2}" y="${Math.min(92, h * .14)}" text-anchor="middle" fill="#fffcee" font-size="${w < 500 ? 19 : 27}" font-weight="900" ${p.storyVisible ? '' : 'hidden=""'}>${esc(text(p.caption))}</text>
-      <g id="sun-shuttle" transform="${holidayTransform({ ...p.shuttle, angle: 0 })}">${rocketMarkup({ position: { x: 0, y: 86 }, riding: true, airborne: p.airborne, angle: p.shuttle.angle, pilotHidden: !p.pilot }, animal)}<g id="sun-hatch" ${p.hatch ? '' : 'hidden=""'}><path d="M14 17h20v35H14Z" fill="#1d55ff" stroke="#101014" stroke-width="3"/><path d="m34 17 14 7v35l-14-7Z" fill="#ff87ce" stroke="#101014" stroke-width="3"/></g></g>
+      <g id="sun-shuttle" transform="${holidayTransform({ ...p.shuttle, angle: 0 })}">${rocketMarkup({ position: { x: 0, y: 86 }, riding: true, airborne: p.airborne, angle: p.shuttle.angle, pilotHidden: !p.pilot, hat }, animal)}<g id="sun-hatch" ${p.hatch ? '' : 'hidden=""'}><path d="M14 17h20v35H14Z" fill="#1d55ff" stroke="#101014" stroke-width="3"/><path d="m34 17 14 7v35l-14-7Z" fill="#ff87ce" stroke="#101014" stroke-width="3"/></g></g>
       <g id="sun-lounger" transform="${holidayTransform(p.chair)}" ${p.chairVisible ? '' : 'hidden=""'}><g id="sun-lounger-open" transform="scale(${p.chairOpen} 1)">${loungerMarkup}</g></g>
-      <g id="sun-actor" transform="${holidayTransform(p.actor)}" ${p.actorVisible ? '' : 'hidden=""'}><g id="sun-actor-body"><use href="#animal-${animal}" x="-34" y="-77" width="68" height="82"/><g id="sun-sunglasses" transform="translate(0 ${p.glassesY})" ${p.glasses ? '' : 'hidden=""'}>${sunglassesMarkup}</g><g id="sun-folded-chair" transform="translate(30 -26) rotate(-12) scale(.72)" ${p.foldedChair ? '' : 'hidden=""'}>${foldedChairMarkup}</g></g></g>
+      <g id="sun-actor" transform="${holidayTransform(p.actor)}" ${p.actorVisible ? '' : 'hidden=""'}><g id="sun-actor-body"><use href="${animalHref(animal, hat)}" x="-34" y="-77" width="68" height="82" id="sun-actor-use"/><g id="sun-sunglasses" transform="translate(0 ${p.glassesY})" ${p.glasses ? '' : 'hidden=""'}>${sunglassesMarkup}</g><g id="sun-folded-chair" transform="translate(30 -26) rotate(-12) scale(.72)" ${p.foldedChair ? '' : 'hidden=""'}>${foldedChairMarkup}</g></g></g>
     </g><g id="player" hidden=""><use id="player-use"/></g><g id="destination-marker" hidden=""></g></svg>`;
 }

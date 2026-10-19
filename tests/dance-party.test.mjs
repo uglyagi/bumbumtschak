@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ANIMALS } from '../content.js';
 import { canStand, WORLD } from '../game-core.js';
-import { isDanceTrack, danceGuests, guestPose, guestExitPose, createParty, syncParty, tickParty, dancePartyMarkup } from '../dance-party.js';
+import { isDanceTrack, danceGuests, guestPose, guestExitPose, createParty, syncParty, tickParty, dancePartyMarkup, discoLightPoses } from '../dance-party.js';
 import { roomMarkup } from '../room-art.js';
 
 test('Tanzen activates the party and every selected animal is excluded from its guest list', () => {
@@ -52,4 +52,17 @@ test('three guests enter through the real doorway and reach accessible dance spo
     }
     assert(guestPose(i, 8).arrived); assert(guestPose(i, 0, true).arrived, 'reduced motion skips the walk-in animation');
   }
+});
+
+test('the spotlight heads, beams and floor pools move gently and respect reduced motion', () => {
+  const a = discoLightPoses(0), b = discoLightPoses(2);
+  assert.equal(a.beams.length, 4);
+  for (let i = 0; i < 4; i++) {
+    assert.notEqual(a.beams[i].angle, b.beams[i].angle);
+    assert(Math.abs(a.beams[i].angle - b.beams[i].angle) < 50);
+    const svg = dancePartyMarkup(ANIMALS, 'cat', undefined, 2);
+    for (const part of ['head', 'beam']) assert(svg.includes(`id="party-${part}-${i}"`));
+  }
+  assert.notDeepEqual(a.pools, b.pools);
+  assert.deepEqual(discoLightPoses(0, true), discoLightPoses(100, true));
 });

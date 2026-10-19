@@ -31,7 +31,7 @@ test('all four animals use their actual artwork, leave an empty cockpit, and wea
   for (const animal of ['cat', 'dog', 'horse', 'monkey']) {
     const game = arrive(); game.sunTime = SUN_TRANSITION_DURATION + 8;
     const svg = sunHolidayMarkup(game, animal);
-    assert(svg.includes(`<use href="#animal-${animal}" x="-34" y="-77" width="68" height="82"/>`));
+    assert(svg.includes(`<use href="#animal-${animal}" x="-34" y="-77" width="68" height="82" id="sun-actor-use"/>`));
     assert(new RegExp(`<use id="rocket-pilot"[^>]*hidden=""`).test(svg), 'the animal is no longer visible inside the rocket');
     assert(svg.includes('id="sun-sunglasses" transform="translate(0 -48)" >'));
     assert(!/id="sun-lounger"[^>]*hidden=/.test(svg));

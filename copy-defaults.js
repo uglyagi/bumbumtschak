@@ -2083,6 +2083,17 @@ export const COPY_GROUPS = [
     ]
   }
 ];
+COPY_GROUPS.push({ id: 'hat', label: 'Hut-Suche & Kleidung', fields: [
+  { key: 'hat_started', label: 'Beginn der Hut-Suche', value: 'Du hast einen Hut auf! Pass gut auf ihn auf …', max: 300 },
+  { key: 'hat_flew', label: 'Der Hut fliegt weg', value: 'Hui, der Hut ist weggeflogen! Such ihn draußen, in den Häusern oder im Himmel. Du kannst ihn nur finden, solange „Hut“ läuft.', max: 600 },
+  { key: 'hat_find', label: 'Hut aufheben', value: 'Hut aufheben', max: 120 },
+  { key: 'hat_found', label: 'Hut gefunden', value: 'Gefunden! Dein Hut wartet jetzt im Home sweet Home auf dich.', max: 300 },
+  { key: 'hat_stand', label: 'Schild am Hutplatz', value: 'Dein Hut', max: 120 },
+  { key: 'hat_wear', label: 'Hut aufsetzen', value: 'Hut aufsetzen', max: 120 },
+  { key: 'hat_return', label: 'Hut zurücklegen', value: 'Hut zurücklegen', max: 120 },
+  { key: 'hat_worn', label: 'Hut aufgesetzt', value: 'Hut auf! Er begleitet dich auch im Weltraum.', max: 300 },
+  { key: 'hat_returned', label: 'Hut zurückgelegt', value: 'Dein Hut liegt wieder an seinem Platz.', max: 300 },
+] });
 export const COPY_FIELDS = COPY_GROUPS.flatMap(group => group.fields);
 export const DEFAULT_TEXTS = Object.fromEntries(COPY_FIELDS.map(field => [field.key, field.value]));
 export function normalizeTexts(saved) {
