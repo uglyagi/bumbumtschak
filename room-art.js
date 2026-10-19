@@ -64,13 +64,15 @@ function infoArt(scene) {
 
 function wardrobeArt(selectedAnimal, paint) {
   return `${fitted(390, 295, text('wardrobe_board'), 420, 26)}${fitted(390, 327, text('wardrobe_hint'), 440, 14)}
+    ${ANIMAL_SPOTS.map(spot => {
+      const animal = ANIMALS.find(animal => animal.id === spot.id);
+      return `<g data-home-slot="${animal.id}" transform="translate(${spot.x} ${spot.y})"><ellipse rx="40" ry="15" fill="${animal.color}" stroke="#101014" stroke-width="2"/>${mapLabel(0, 43, animal.name, 130, '#fffcee')}</g>`;
+    }).join('')}
     ${ANIMAL_SPOTS.filter(spot => spot.id !== selectedAnimal).map(spot => {
       const animal = ANIMALS.find(animal => animal.id === spot.id), returning = paint.returns?.find(animal => animal.id === spot.id);
       const position = returning?.position || spot;
       const markup = `<g id="home-animal-${animal.id}" class="${returning ? 'home-returning' : ''}" transform="translate(${position.x} ${position.y})">
-        <ellipse rx="40" ry="15" fill="${animal.color}" stroke="#101014" stroke-width="2"/>
         <g class="home-animal-body"><use href="#animal-${animal.id}" x="-34" y="-77" width="68" height="82"/></g>
-        ${mapLabel(0, 43, animal.name, 130, '#fffcee')}
       </g>`;
       return returning ? markup : target(`animal:${animal.id}`, text('action_change_character', { tier: animal.name }), markup);
     }).join('')}

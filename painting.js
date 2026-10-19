@@ -2,25 +2,51 @@ import { escapeXML } from './utils.js';
 import { SKY } from './sky-world.js';
 
 export const DEFAULT_PALETTE = [
+  { id: 'yellow-dark', name: 'Dunkelgelb', color: '#d5a600' },
   { id: 'yellow', name: 'Gelb', color: '#fff20b' },
-  { id: 'blue', name: 'Blau', color: '#1d55ff' },
-  { id: 'green', name: 'Grün', color: '#40cea1' },
+  { id: 'yellow-light', name: 'Hellgelb', color: '#fff6a3' },
+  { id: 'red-dark', name: 'Dunkelrot', color: '#b82332' },
   { id: 'red', name: 'Rot', color: '#ff3935' },
+  { id: 'red-light', name: 'Hellrot', color: '#ffaaa0' },
+  { id: 'green-dark', name: 'Dunkelgrün', color: '#178346' },
+  { id: 'green', name: 'Grün', color: '#4acb59' },
+  { id: 'green-light', name: 'Hellgrün', color: '#b5ed9b' },
+  { id: 'blue-dark', name: 'Dunkelblau', color: '#1238a8' },
+  { id: 'blue', name: 'Blau', color: '#1d55ff' },
+  { id: 'blue-light', name: 'Hellblau', color: SKY.color },
+  { id: 'pink-dark', name: 'Dunkelrosa', color: '#ce3890' },
   { id: 'pink', name: 'Rosa', color: '#ff87ce' },
+  { id: 'pink-light', name: 'Hellrosa', color: '#ffd0e8' },
+  { id: 'black', name: 'Schwarz', color: '#000000' },
+  { id: 'gray', name: 'Grau', color: '#969ba5' },
   { id: 'white', name: 'Weiß', color: '#ffffff' },
 ];
+export const BUCKET_COLOR_IDS = ['yellow', 'red', 'green', 'blue', 'pink'];
+export const WORLD_COLOR_IDS = {
+  sky: 'blue-light', water: 'blue-dark', grass: 'green', path: 'yellow-light', sun: 'yellow',
+  'cloud-0': 'white', 'cloud-1': 'white',
+  'radio-wall': 'pink-light', 'radio-roof': 'red-dark',
+  'concert-wall': 'blue-light', 'concert-roof': 'red-light',
+  'home-wall': 'yellow-light', 'home-roof': 'red',
+  'office-wall': 'white', 'office-roof': 'red-dark',
+  'stage-wall': 'white', 'stage-roof': 'red-light',
+};
 export const PALETTE_LIMIT = 30;
 export const PAINT_PAGE_SIZE = 6;
 export const PAINT_RESET = { x: 350, y: 900 };
 export const PAINT_NEXT = { x: 1220, y: 980 };
 export function paletteColors(saved) {
-  return (Array.isArray(saved) ? saved : DEFAULT_PALETTE).slice(0, PALETTE_LIMIT).map((item, i) => ({
+  const colors = (Array.isArray(saved) ? saved : []).slice(0, PALETTE_LIMIT).map((item, i) => ({
     id: /^[a-z0-9][a-z0-9-]{0,63}$/.test(item?.id) ? item.id : `color-${i}`,
     name: typeof item?.name === 'string' ? item.name : '', color: /^#[a-f0-9]{6}$/i.test(item?.color) ? item.color : '#fff20b',
   }));
+  // Older documents have six colors. Keep their edits and add the missing shades.
+  return [...DEFAULT_PALETTE.map(base => ({ ...(colors.find(color => color.id === base.id) || base) })),
+    ...colors.filter(color => !DEFAULT_PALETTE.some(base => base.id === color.id))].slice(0, PALETTE_LIMIT);
 }
-export const paintSlots = (palette, page = 0) => palette.slice(page * PAINT_PAGE_SIZE, (page + 1) * PAINT_PAGE_SIZE).map((color, i) => ({ ...color, x: 1020 + i % 3 * 145, y: 790 + Math.floor(i / 3) * 110 }));
-export const paintPages = palette => Math.max(1, Math.ceil(palette.length / PAINT_PAGE_SIZE));
+export const bucketColors = (palette = DEFAULT_PALETTE) => BUCKET_COLOR_IDS.map(id => palette.find(color => color.id === id) || DEFAULT_PALETTE.find(color => color.id === id));
+export const paintSlots = (palette, page = 0) => bucketColors(palette).slice(page * PAINT_PAGE_SIZE, (page + 1) * PAINT_PAGE_SIZE).map((color, i) => ({ ...color, x: 1020 + i % 3 * 145, y: 790 + Math.floor(i / 3) * 110 }));
+export const paintPages = palette => Math.max(1, Math.ceil(bucketColors(palette).length / PAINT_PAGE_SIZE));
 export const FLOWERS = [
   [445, 560, '#ff87ce', 35], [105, 610, '#fff20b', 43], [1090, 595, '#ff87ce', 40],
   [1385, 600, '#fff20b', 33], [1030, 920, '#fff20b', 44], [710, 915, '#ff87ce', 36],
@@ -58,9 +84,10 @@ export const PAINT_SURFACES = [
   { id: 'sky', key: 'paint_sky', walk: { x: 800, y: SKY.top + 230 }, ground: true, sky: true },
 ];
 export const BUCKET_SURFACES = PAINT_SURFACES.filter(surface => /^(tree|flower)-/.test(surface.id));
-export function cleanPaint(saved) {
+export function cleanPaint(saved, palette = DEFAULT_PALETTE) {
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return {};
-  return Object.fromEntries(PAINT_SURFACES.filter(surface => /^#[a-f0-9]{6}$/i.test(saved[surface.id])).map(surface => [surface.id, saved[surface.id]]));
+  const allowed = new Set(bucketColors(palette).map(color => color.color.toLowerCase()));
+  return Object.fromEntries(PAINT_SURFACES.filter(surface => /^#[a-f0-9]{6}$/i.test(saved[surface.id]) && (!BUCKET_SURFACES.includes(surface) || allowed.has(saved[surface.id].toLowerCase()))).map(surface => [surface.id, saved[surface.id]]));
 }
 export const surfaceDistance = (position, surface) => surface.ground ? 0 : Math.hypot(position.x - Math.max(surface.bounds.x, Math.min(surface.bounds.x + surface.bounds.w, position.x)), position.y - Math.max(surface.bounds.y, Math.min(surface.bounds.y + surface.bounds.h, position.y)));
 export const canPaintSurface = (position, surface) => !!surface && !!surface.sky === (position.y < 0) && surfaceDistance(position, surface) <= (surface.reach ?? 85);
@@ -87,17 +114,23 @@ export function onPath(position) {
 export function nearbyPaintSurface(position) {
   return BUCKET_SURFACES.filter(surface => canPaintSurface(position, surface)).sort((a, b) => surfaceDistance(position, a) - surfaceDistance(position, b))[0] || null;
 }
-export function paintAttributes(id, original, paint = {}, interactive = false, property = 'fill', label = '') {
-  const color = /^#[a-f0-9]{6}$/i.test(paint[id]) ? paint[id] : original;
+export function paintColor(id, original, paint = {}, palette = DEFAULT_PALETTE) {
+  const buckets = bucketColors(palette), plant = /^(tree|flower)-/.test(id);
+  const originalId = WORLD_COLOR_IDS[id] || (plant ? DEFAULT_PALETTE.find(color => BUCKET_COLOR_IDS.includes(color.id) && color.color === original)?.id : null);
+  const fallback = palette.find(color => color.id === originalId)?.color || DEFAULT_PALETTE.find(color => color.id === originalId)?.color || (plant ? buckets[0].color : original);
+  return /^#[a-f0-9]{6}$/i.test(paint[id]) && (!plant || buckets.some(color => color.color.toLowerCase() === paint[id].toLowerCase())) ? paint[id] : fallback;
+}
+export function paintAttributes(id, original, paint = {}, interactive = false, property = 'fill', label = '', palette = DEFAULT_PALETTE) {
+  const color = paintColor(id, original, paint, palette);
   return `data-paint-target="${id}" data-paint-property="${property}" ${property === 'color' ? `style="color:${color}"` : `${property}="${color}"`}${interactive ? ` tabindex="0" role="button" aria-label="${escapeXML(label)}" class="paint-surface"` : ''}`;
 }
 export function readableInk(color) {
   const rgb = [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16) / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4);
   return rgb[0] * .2126 + rgb[1] * .7152 + rgb[2] * .0722 > .3 ? '#101014' : '#ffffff';
 }
-export function createPaintPreview(root, id, color) {
+export function createPaintPreview(root, id, color, palette = DEFAULT_PALETTE) {
   const undo = [];
-  if (!PAINT_SURFACES.some(surface => surface.id === id) || !/^#[a-f0-9]{6}$/i.test(color)) return () => {};
+  if (!PAINT_SURFACES.some(surface => surface.id === id) || !/^#[a-f0-9]{6}$/i.test(color) || /^(tree|flower)-/.test(id) && !bucketColors(palette).some(bucket => bucket.color.toLowerCase() === color.toLowerCase())) return () => {};
   const change = (node, property, value) => {
     if (property === 'color') {
       const previous = node.style.color; node.style.color = value; undo.push(() => { node.style.color = previous; });

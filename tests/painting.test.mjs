@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, access } from 'node:fs/promises';
 import { DEFAULT_ANIMALS, playableAnimals } from '../animal-defaults.js';
-import { PAINT_SURFACES, BUCKET_SURFACES, FLOWERS, DEFAULT_PALETTE, PALETTE_LIMIT, PAINT_RESET, PAINT_NEXT, paintSlots, cleanPaint, canPaintSurface, createPaintPreview } from '../painting.js';
+import { PAINT_SURFACES, BUCKET_SURFACES, FLOWERS, DEFAULT_PALETTE, PALETTE_LIMIT, PAINT_RESET, PAINT_NEXT, paintSlots, bucketColors, paletteColors, WORLD_COLOR_IDS, paintColor, cleanPaint, canPaintSurface, createPaintPreview } from '../painting.js';
 import { worldMarkup } from '../art.js';
 import { roomMarkup } from '../room-art.js';
 import { ANIMALS, PALETTE, applyContent, text } from '../content.js';
@@ -74,7 +74,7 @@ test('legacy content gains editable characters and palette while custom names su
   valid.info.palette[DEFAULT_PALETTE.length].id = valid.info.palette[0].id; assert.throws(() => validateContent(valid), /doppelt/);
   valid.info.palette = Array.from({ length: PALETTE_LIMIT + 1 }, (_, i) => ({ id: 'paint-' + i, name: 'Farbe', color: '#abcdef' }));
   assert.throws(() => validateContent(valid), /Farben/);
-  valid.info.palette = [{ id: 'bad', name: 'Bad', color: 'url(javascript:bad)' }]; assert.throws(() => validateContent(valid), /Kanisterfarbe/);
+  valid.info.palette = [{ id: 'bad', name: 'Bad', color: 'url(javascript:bad)' }]; assert.throws(() => validateContent(valid), /Farbwert/);
 });
 
 test('custom character images and names reach every avatar and staged previews', () => {
@@ -85,9 +85,9 @@ test('custom character images and names reach every avatar and staged previews',
   assert(fileReferences(custom).has('uploads/cat.png'));
   try {
     applyContent(staged); refreshBandWayfinding();
-    const world = worldMarkup(), room = roomMarkup('wardrobe', 0, undefined, 'dog', { page: 1 });
+    const world = worldMarkup(), room = roomMarkup('wardrobe', 0, undefined, 'dog', { page: 0 });
     assert(world.includes('href="blob:local-cat" width="100" height="120" preserveAspectRatio="xMidYMax meet"'));
-    assert(room.includes('Unsere Katze')); assert(room.includes('Orange')); assert.equal(PALETTE.length, DEFAULT_PALETTE.length + 1); assert.equal(ANIMALS[0].name, 'Unsere Katze');
+    assert(room.includes('Unsere Katze')); assert(!room.includes('Orange')); assert.equal(PALETTE.length, DEFAULT_PALETTE.length + 1); assert.equal(ANIMALS[0].name, 'Unsere Katze');
     assert.equal(text('sign_radio'), 'Musikhaus'); assert.equal(text('sign_social'), 'Kontakt');
   } finally { applyContent(document); refreshBandWayfinding(); }
 });
@@ -95,6 +95,42 @@ test('custom character images and names reach every avatar and staged previews',
 test('saved drawings accept only known surfaces and hexadecimal colors', () => {
   assert.deepEqual(cleanPaint({ path: '#ff9900', sun: '#abcdef', 'unknown-world': '#123456', grass: 'url(javascript:bad)' }), { path: '#ff9900', sun: '#abcdef' });
   assert.deepEqual(cleanPaint(null), {}); assert.deepEqual(cleanPaint([]), {});
+});
+
+test('the picture has eighteen shades, buckets have five base colors, and original world colors belong to the same pool', () => {
+  assert.equal(DEFAULT_PALETTE.length, 18); assert.equal(new Set(DEFAULT_PALETTE.map(color => color.color)).size, 18);
+  assert.deepEqual(bucketColors().map(color => color.id), ['yellow', 'red', 'green', 'blue', 'pink']);
+  assert.equal(paintSlots(DEFAULT_PALETTE).length, 5);
+  const originals = { sky: 'blue-light', water: 'blue-dark', grass: 'green', path: 'yellow-light', sun: 'yellow' };
+  for (const [surface, color] of Object.entries(originals)) assert.equal(WORLD_COLOR_IDS[surface], color);
+  for (const [surface, color] of Object.entries(WORLD_COLOR_IDS)) {
+    const hex = DEFAULT_PALETTE.find(item => item.id === color).color;
+    assert.equal(paintColor(surface), hex);
+    for (const node of worldMarkup().matchAll(new RegExp(`data-paint-target="${surface}"[^>]*`, 'g'))) assert(node[0].includes(hex), surface);
+  }
+  const roofs = Object.entries(WORLD_COLOR_IDS).filter(([id]) => id.endsWith('-roof')).map(([, color]) => color);
+  assert(roofs.every(color => color.startsWith('red'))); assert(new Set(roofs).size > 1);
+  for (const surface of BUCKET_SURFACES) {
+    const node = worldMarkup().match(new RegExp(`data-paint-target="${surface.id}"[^>]*`))[0];
+    assert(bucketColors().some(color => node.includes(color.color)), surface.id);
+  }
+});
+
+test('legacy palettes retain edits, gain missing shades and keep extra colors exclusive to the picture', () => {
+  const colors = paletteColors([{ id: 'yellow', name: 'Unser Gelb', color: '#f0dc00' }, { id: 'orange', name: 'Orange', color: '#ff9900' }]);
+  assert.equal(colors.length, 19); assert.equal(colors.find(color => color.id === 'yellow').name, 'Unser Gelb');
+  assert.equal(bucketColors(colors)[0].color, '#f0dc00');
+  assert(!paintSlots(colors).some(color => color.id === 'orange'));
+  assert.equal(paintColor('sun', '#fff20b', {}, colors), '#f0dc00');
+  assert.equal(paintColor('flower-0', '#fff20b', {}, colors), '#f0dc00');
+});
+
+test('old nonbucket plant colors are discarded while permitted plants and saved picture colors survive', () => {
+  const saved = { path: '#abcdef', 'tree-0': '#ffffff', 'tree-1': '#000000', 'tree-2': '#969ba5', 'tree-3': '#bde7ff', 'tree-4': '#ff3935', 'flower-0': '#ff87ce' };
+  assert.deepEqual(cleanPaint(saved), { 'tree-4': '#ff3935', 'flower-0': '#ff87ce', path: '#abcdef' });
+  assert.equal(paintColor('tree-0', '#ff87ce', saved), '#ff87ce');
+  const custom = paletteColors([{ id: 'blue', name: 'Unser Blau', color: '#2149aa' }]);
+  assert.deepEqual(cleanPaint({ 'tree-0': '#2149aa', 'flower-0': '#1d55ff' }, custom), { 'tree-0': '#2149aa' });
 });
 
 test('temporary previews restore each original fill, tree color and readable label without changing outlines', () => {
@@ -111,7 +147,7 @@ test('temporary previews restore each original fill, tree color and readable lab
   assert.equal(wall.getAttribute('stroke'), '#101014');
   restore(); restore();
   assert.equal(frame.getAttribute('fill'), '#fff20b'); assert.equal(wall.getAttribute('fill'), '#1d55ff'); assert.equal(label.getAttribute('fill'), '#ffffff');
-  const restoreTree = createPaintPreview(root, 'tree-0', '#ffffff'); assert.equal(tree.style.color, '#ffffff');
+  const restoreTree = createPaintPreview(root, 'tree-0', '#fff20b'); assert.equal(tree.style.color, '#fff20b');
   restoreTree(); assert.equal(tree.style.color, '#ff87ce'); assert.equal(tree.getAttribute('stroke'), '#101014');
 });
 

@@ -321,6 +321,7 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
     assert.equal(h.state.tapes.carrying, carried, 'changing characters preserves the carried cassette');
     assert(!h.game.innerHTML.includes(`id="home-animal-${spot.id}"`), 'the controlled animal has no duplicate NPC');
     assert.equal((h.game.innerHTML.match(/id="home-animal-/g) || []).length, 3);
+    assert.equal((h.game.innerHTML.match(/data-home-slot=/g) || []).length, 4, 'all four labels stay visible when a figure is selected');
     assert.equal(h.get('#player-use').attrs.get('href'), `#animal-${spot.id}`);
     const returning = h.state.homeReturns.find(animal => animal.id === previousAnimal);
     assert(returning); assert.deepEqual({ ...returning.position }, previousPosition, 'the old animal starts its walk where the player left it');
@@ -404,12 +405,20 @@ try {
   const h = await harness(); h.state.started = true; h.closePanel(); h.enterRoom('wardrobe');
   h.state.position = { ...painting.PAINT_NEXT }; h.game.focus();
   h.press(h.windowHandlers, h.event(' ', 'Space', h.game));
-  assert.equal(h.state.paintPage, 1); assert(h.game.innerHTML.includes('Orange'));
-  h.state.position = { ...painting.paintSlots(content.PALETTE, 1)[0] }; h.game.focus();
+  assert.equal(h.state.paintPage, 0); assert(!h.game.innerHTML.includes('Orange'));
+  assert.equal(painting.paintSlots(content.PALETTE).length, 5);
+  assert(!h.game.innerHTML.includes('data-room-target="paint-next"'));
+  h.state.position = { ...rooms.PICTURE_SPOT }; h.frame(16);
+  assert.equal(h.state.scene, 'painting');
+  h.state.position = { ...studio.STUDIO_CONTROLS.next }; h.game.focus();
   h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game));
-  assert.equal(h.state.paintCan, 'orange', 'a newly added color is usable on the next page');
+  assert.equal(h.state.studio.page, 1); assert(h.game.innerHTML.includes('Orange'));
+  h.state.position = { ...studio.studioColors(content.PALETTE, 1)[0] }; h.game.focus();
+  h.press(h.windowHandlers, h.event(' ', 'Space', h.game));
+  assert.equal(h.state.studio.color, 'orange', 'new CMS colors are available in the picture only');
+  assert.equal(h.state.paintCan, null);
 } finally { content.PALETTE.splice(0, content.PALETTE.length, ...basePalette); }
-console.log('PASS: taking, carrying and returning paint cans, all trees and flowers, rejecting every large picture surface, local save/reload, Escape, removed house reset and newly added palette colors through the real keyboard handlers.');
+console.log('PASS: taking, carrying and returning paint cans, all trees and flowers, rejecting every large picture surface, local save/reload, Escape, removed house reset and extra picture colors kept out of buckets through the real keyboard handlers.');
 
 for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space']]) {
   const h = await harness(false, 'cat', { path: '#ff3935', 'flower-0': '#ff3935' });
@@ -422,7 +431,7 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space']]) {
   assert.equal(h.state.paint[flower.id], '#ff3935');
   h.state.position = { x: 1000, y: 600 }; h.frame(32);
   assert.equal(node(flower.id).style.color, '#ff3935', 'walking away restores the confirmed color');
-  assert.equal(node('grass').getAttribute('fill'), '#40cea1'); assert.equal(h.currentInteraction(), null);
+  assert.equal(node('grass').getAttribute('fill'), '#4acb59'); assert.equal(h.currentInteraction(), null);
   h.state.position = { ...flower.walk }; h.frame(48); h.showPanel('help');
   assert.equal(node(flower.id).style.color, '#ff3935', 'opening a panel clears the preview');
   h.closePanel(); h.frame(64); assert.equal(node(flower.id).style.color, '#fff20b');
@@ -502,7 +511,7 @@ console.log('PASS: holding a paint bucket makes mouse clicks steer to the actual
 
 for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'NumpadEnter']]) {
   const h = await harness(false, 'monkey', { path: '#ff3935' });
-  h.enterRoom('wardrobe'); h.state.position = { ...painting.paintSlots(content.PALETTE).find(color => color.id === 'white') }; h.game.focus();
+  h.enterRoom('wardrobe'); h.state.position = { ...painting.paintSlots(content.PALETTE).find(color => color.id === 'yellow') }; h.game.focus();
   h.press(h.windowHandlers, h.event(key, code, h.game)); h.leaveRoom();
   h.state.position = { ...sky.GROUND_ROCKET }; h.game.focus(); h.press(h.windowHandlers, h.event(key, code, h.game));
   h.state.keys.add('ArrowUp'); let clock = 0, firstSpace = null;
@@ -518,8 +527,8 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
   assert(firstSpace >= 6000 && firstSpace <= 7000, String(firstSpace));
   assert.equal(h.state.adventure.phase, 'ready'); assert.equal(h.state.modal, 'space-launch');
   assert(h.modalContent.innerHTML.includes('Weltraumabenteuer starten')); assert(h.modalContent.innerHTML.includes('Landen'));
-  assert.equal(h.state.adventure.width, 1200); assert.equal(h.state.paintCan, 'white'); assert.equal(h.state.animal, 'monkey');
-  assert(h.get('#adventure-course').attrs.has('hidden')); assert(h.get('#rocket-paint').innerHTML.includes('#ffffff'));
+  assert.equal(h.state.adventure.width, 1200); assert.equal(h.state.paintCan, 'yellow'); assert.equal(h.state.animal, 'monkey');
+  assert(h.get('#adventure-course').attrs.has('hidden')); assert(h.get('#rocket-paint').innerHTML.includes('#fff20b'));
   assert.equal(h.state.adventure.angle, 90, 'the rocket has turned before the launch choice');
   const start = new h.Element('start adventure', 'button', { action: 'space-start' }); h.press(h.documentHandlers, h.event(key, code, start));
   assert.equal(h.state.adventure.phase, 'playing'); assert.equal(h.modal.open, false);
@@ -563,7 +572,7 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
   h.frame(++clock * 16); assert.notEqual(h.get('#rocket-vibration').getAttribute('transform'), firstShake, 'the shared rocket and pilot group vibrates during the crash');
   const scenes = new Set(); while (h.state.landing && clock < 2200) { h.frame(++clock * 16); scenes.add(h.state.scene); }
   assert(scenes.has('space') && scenes.has('sky') && scenes.has('world'));
-  assert(!h.state.rocket.riding && !h.state.rocket.airborne); assert.equal(h.state.paintCan, 'white'); assert.equal(h.state.paint.path, '#ff3935');
+  assert(!h.state.rocket.riding && !h.state.rocket.airborne); assert.equal(h.state.paintCan, 'yellow'); assert.equal(h.state.paint.path, '#ff3935');
   assert(h.state.rocket.broken && h.state.rocket.impact === 0);
   assert(h.game.innerHTML.includes('id="rocket-wreckage"'));
   assert(!h.game.innerHTML.includes('id="rocket-hull"'));
@@ -658,7 +667,7 @@ try {
 console.log('PASS: the native song-ended event removes the disco and sends all guests out; returning cannot restart a finished song party.');
 
 for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'NumpadEnter']]) {
-  const h = await harness(false, 'monkey', { 'tree-0': '#123456', 'flower-0': '#abcdef' }); h.enterRoom('wardrobe');
+  const h = await harness(false, 'monkey', { 'tree-0': '#ff3935', 'flower-0': '#fff20b' }); h.enterRoom('wardrobe');
   h.state.position = { ...rooms.PICTURE_SPOT }; h.frame(16);
   assert.equal(h.state.scene, 'painting', 'walking to the picture opens the brush view');
   assert(h.game.innerHTML.includes('class="studio-brush"')); assert.equal(h.state.animal, 'monkey');
@@ -675,7 +684,7 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
     h.press(h.windowHandlers, h.event(key, code, h.game, true)); assert.equal(h.state.paint[surface.id], before, 'holding a confirmation key does not paint repeatedly');
     h.press(h.windowHandlers, h.event(key, code, h.game)); assert.equal(h.state.paint[surface.id], blue.color);
   }
-  assert.equal(h.state.paint['tree-0'], '#123456'); assert.equal(h.state.paint['flower-0'], '#abcdef');
+  assert.equal(h.state.paint['tree-0'], '#ff3935'); assert.equal(h.state.paint['flower-0'], '#fff20b');
   h.press(h.windowHandlers, h.event('Escape', 'Escape', h.game));
   assert.equal(h.state.scene, 'wardrobe'); assert.equal(h.state.position.x, rooms.PICTURE_SPOT.x);
   for (let i = 0; i < 10; i++) h.frame(64 + i * 16);
@@ -689,6 +698,23 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
   h.press(h.game.handlers, h.event(key, code, close)); assert.equal(h.state.scene, 'wardrobe');
 }
 console.log('PASS: the picture opens on approach, all three action keys take palette colors and paint every large object, arrows move the brush, Enter on the visible exit or Escape returns safely, and confirmed world colors persist without changing trees or flowers.');
+
+for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space']]) {
+  const h = await harness(false, 'cat'); h.enterRoom('wardrobe'); h.state.position = { ...rooms.PICTURE_SPOT }; h.frame(16);
+  assert.equal(h.state.scene, 'painting');
+  for (const color of studio.studioColors(content.PALETTE)) {
+    h.state.position = { ...color }; h.game.focus(); h.press(h.windowHandlers, h.event(key, code, h.game));
+    assert.equal(h.state.studio.color, color.id);
+    h.state.position = { x: studio.CANVAS.x + 1000 * studio.CANVAS.scale, y: studio.CANVAS.y + 1080 * studio.CANVAS.scale };
+    h.press(h.windowHandlers, h.event(key, code, h.game));
+    assert.equal(h.state.paint.grass, color.color, color.name + ' paints through the actual keyboard handler');
+  }
+  h.press(h.windowHandlers, h.event('Escape', 'Escape', h.game));
+  assert.equal((h.game.innerHTML.match(/data-room-target="paint:/g) || []).length, 5);
+  const white = new h.Element('not a bucket', 'g', { roomTarget: 'paint:white' });
+  h.press(h.game.handlers, h.event(key, code, white)); assert.equal(h.state.paintCan, null);
+}
+console.log('PASS: all eighteen picture colors can be taken and confirmed with Enter and Space; only five base buckets appear in the house.');
 
 const originalMelodies = content.BAND.map(member => member.audio);
 const originalCassetteAudio = content.TRACKS[0].src;

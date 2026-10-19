@@ -1,10 +1,12 @@
 import { landscapeMarkup } from './art.js';
-import { PAINT_SURFACES, onPath, paintPages, PAINT_PAGE_SIZE } from './painting.js';
+import { PAINT_SURFACES, onPath } from './painting.js';
 import { text } from './content.js';
 import { escapeXML as esc } from './utils.js';
 
 export const CANVAS = { x: 75, y: 115, scale: .64, w: 1024, h: 947.2 };
-export const studioColors = (palette, page = 0) => palette.slice(page * PAINT_PAGE_SIZE, (page + 1) * PAINT_PAGE_SIZE).map((color, i) => ({ ...color, x: 1260, y: 245 + i * 85 }));
+export const STUDIO_PAGE_SIZE = 18;
+export const studioPages = palette => Math.max(1, Math.ceil(palette.length / STUDIO_PAGE_SIZE));
+export const studioColors = (palette, page = 0) => palette.slice(page * STUDIO_PAGE_SIZE, (page + 1) * STUDIO_PAGE_SIZE).map((color, i) => ({ ...color, x: 1240 + i % 3 * 115, y: 275 + Math.floor(i / 3) * 90 }));
 export const STUDIO_CONTROLS = { next: { x: 1355, y: 815 }, reset: { x: 1355, y: 895 }, close: { x: 1355, y: 990 } };
 export const largeSurfaces = PAINT_SURFACES.filter(surface => !/^(tree|flower)-/.test(surface.id));
 export function canvasPoint(position) { return { x: (position.x - CANVAS.x) / CANVAS.scale, y: (position.y - CANVAS.y) / CANVAS.scale - 380 }; }
@@ -17,7 +19,7 @@ export function studioSurfaceAt(position) {
 export function studioInteraction(position, palette, page = 0) {
   const color = studioColors(palette, page).find(c => Math.hypot(c.x - position.x, c.y - position.y) < 40);
   if (color) return { ...color, kind: 'studio-color', label: text('studio_take_color', { farbe: color.name }) };
-  for (const [id, point] of Object.entries(STUDIO_CONTROLS)) if ((id !== 'next' || paintPages(palette) > 1) && Math.abs(point.x - position.x) < 140 && Math.abs(point.y - position.y) < 30) return { id, kind: 'studio-control', label: text(id === 'close' ? 'studio_close' : id === 'reset' ? 'paint_reset' : 'paint_next') };
+  for (const [id, point] of Object.entries(STUDIO_CONTROLS)) if ((id !== 'next' || studioPages(palette) > 1) && Math.abs(point.x - position.x) < 140 && Math.abs(point.y - position.y) < 30) return { id, kind: 'studio-control', label: text(id === 'close' ? 'studio_close' : id === 'reset' ? 'paint_reset' : 'paint_next') };
   const surface = studioSurfaceAt(position);
   return surface ? { ...surface, kind: 'studio-paint', label: text(surface.key) } : null;
 }
@@ -31,9 +33,10 @@ export function studioMarkup(paint, palette, studio) {
     <rect x="1170" y="100" width="380" height="977" rx="32" fill="#fffcee" stroke="#101014" stroke-width="5"/>
     ${label(1210, 151, text('studio_palette'), 24)}
     <circle cx="1235" cy="188" r="12" fill="${selected?.color || '#fffcee'}" stroke="#101014" stroke-width="2"/>
-    ${label(1260, 194, selected?.name || text('studio_choose'), 16)}
-    ${colors.map(color => `<g data-studio-color="${color.id}" tabindex="0" role="button" aria-pressed="${selected?.id === color.id}" aria-label="${esc(text('studio_take_color', { farbe: color.name }))}"><circle cx="${color.x}" cy="${color.y}" r="31" fill="${color.color}" stroke="#101014" stroke-width="${selected?.id === color.id ? 6 : 3}"/>${label(1310, color.y + 6, color.name, 20)}</g>`).join('')}
-    ${Object.entries(STUDIO_CONTROLS).filter(([id]) => id !== 'next' || paintPages(palette) > 1).map(([id,p]) => `<g data-studio-control="${id}" tabindex="0" role="button" aria-label="${esc(text(id === 'close' ? 'studio_close' : id === 'reset' ? 'paint_reset' : 'paint_next'))}"><rect x="${p.x - 150}" y="${p.y - 30}" width="300" height="60" rx="13" fill="${id === 'close' ? '#fff20b' : '#e8e0f6'}" stroke="#101014" stroke-width="3"/>${label(p.x, p.y + 7, text(id === 'close' ? 'studio_close' : id === 'reset' ? 'paint_reset' : 'paint_next'), 18, 'text-anchor="middle"')}</g>`).join('')}
+    ${label(1260, 194, selected?.name || text('studio_choose'), Math.min(16, 260 / ((selected?.name || text('studio_choose')).length * .6 || 1)))}
+    ${studio.page === 0 ? ['studio_dark', 'studio_normal', 'studio_light'].map((key, i) => label(1240 + i * 115, 226, text(key), 15, 'text-anchor="middle"')).join('') : ''}
+    ${colors.map(color => `<g data-studio-color="${color.id}" tabindex="0" role="button" aria-pressed="${selected?.id === color.id}" aria-label="${esc(text('studio_take_color', { farbe: color.name }))}"><circle cx="${color.x}" cy="${color.y}" r="29" fill="${color.color}" stroke="#101014" stroke-width="${selected?.id === color.id ? 6 : 3}"/>${label(color.x, color.y + 48, color.name, Math.min(14, 106 / (color.name.length * .6 || 1)), 'text-anchor="middle"')}</g>`).join('')}
+    ${Object.entries(STUDIO_CONTROLS).filter(([id]) => id !== 'next' || studioPages(palette) > 1).map(([id,p]) => `<g data-studio-control="${id}" tabindex="0" role="button" aria-label="${esc(text(id === 'close' ? 'studio_close' : id === 'reset' ? 'paint_reset' : 'paint_next'))}"><rect x="${p.x - 150}" y="${p.y - 30}" width="300" height="60" rx="13" fill="${id === 'close' ? '#fff20b' : '#e8e0f6'}" stroke="#101014" stroke-width="3"/>${label(p.x, p.y + 7, text(id === 'close' ? 'studio_close' : id === 'reset' ? 'paint_reset' : 'paint_next'), 18, 'text-anchor="middle"')}</g>`).join('')}
     ${label(75, 84, text('studio_keys'), 16)}
     <g id="destination-marker" hidden=""></g><g id="player" class="studio-brush" pointer-events="none"><use id="player-use" hidden=""/>
       <circle r="16" fill="none" stroke="#ffffff" stroke-width="6"/><circle r="16" fill="none" stroke="#101014" stroke-width="2"/>

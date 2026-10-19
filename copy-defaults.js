@@ -1864,6 +1864,9 @@ export const COPY_GROUPS = [
         "value": "Nimm zuerst eine Farbe auf.",
         "max": 180
       },
+      { "key": "studio_dark", "label": "Farbspalte Dunkel", "value": "Dunkel", "max": 40 },
+      { "key": "studio_normal", "label": "Farbspalte Normal", "value": "Normal", "max": 40 },
+      { "key": "studio_light", "label": "Farbspalte Hell", "value": "Hell", "max": 40 },
       {
         "key": "studio_take_color",
         "label": "Aktion an der Palette",

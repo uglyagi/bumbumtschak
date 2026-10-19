@@ -71,7 +71,7 @@ export function validateContent(input) {
   if (input.info.palette !== undefined && (!Array.isArray(input.info.palette) || input.info.palette.length > PALETTE_LIMIT)) throw new CMSIssue(`Höchstens ${PALETTE_LIMIT} Farben sind möglich.`);
   used.clear();
   const palette = (input.info.palette ?? paletteColors()).map(color => {
-    if (!/^#[a-f0-9]{6}$/i.test(color.color)) throw new CMSIssue('Bitte eine gültige Kanisterfarbe auswählen.');
+    if (!/^#[a-f0-9]{6}$/i.test(color.color)) throw new CMSIssue('Bitte einen gültigen Farbwert auswählen.');
     return { id: unique(color.id), name: str(color.name, 40, 'Farbname', true), color: color.color };
   });
   return { schemaVersion: 1, tracks, concerts, info: {
@@ -79,7 +79,7 @@ export function validateContent(input) {
     animals: playableAnimals(input.info.animals, texts).map((animal, index) => ({ id: animal.id, article: DEFAULT_ANIMALS[index].article,
       name: str(animal.name, 40, 'Name der Spielfigur', true), trait: str(animal.trait, 180, 'Beschreibung der Spielfigur'),
       image: url(animal.image || DEFAULT_ANIMALS[index].image, true), color: /^#[a-f0-9]{6}$/i.test(animal.color) ? animal.color : DEFAULT_ANIMALS[index].color })),
-    palette,
+    palette: paletteColors(palette),
     members: bandMembers(input.info.members).map((member, index) => ({
       id: member.id,
       name: str(member.name, 60, 'Name des Bandmitglieds', true),

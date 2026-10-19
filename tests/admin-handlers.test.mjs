@@ -6,7 +6,7 @@ import { GitHubStore } from '../verwaltung/github-store.js';
 import { COPY_GROUPS, normalizeTexts } from '../copy-defaults.js';
 import { DEFAULT_BAND, bandMembers } from '../band-defaults.js';
 import { DEFAULT_ANIMALS, playableAnimals } from '../animal-defaults.js';
-import { paletteColors, PALETTE_LIMIT, DEFAULT_PALETTE } from '../painting.js';
+import { paletteColors, PALETTE_LIMIT, DEFAULT_PALETTE, BUCKET_COLOR_IDS } from '../painting.js';
 import { fileReferences } from '../verwaltung/drafts.js';
 import { validateContent, validateUpload, checkMagic } from '../verwaltung/schema.js';
 import { RepositoryFixture, TEST_TOKEN } from './github-fixture.mjs';
@@ -35,7 +35,7 @@ async function harness(saved = null) {
   for (const id of ['concerts', 'music', 'info']) get('#tab-' + id).dataset.tab = id;
   get('#editor').hidden = true;
   const context = vm.createContext({
-    COPY_GROUPS, normalizeTexts, DEFAULT_BAND, bandMembers, DEFAULT_ANIMALS, playableAnimals, paletteColors, PALETTE_LIMIT, DEFAULT_PALETTE, fileReferences, validateContent, validateUpload, checkMagic,
+    COPY_GROUPS, normalizeTexts, DEFAULT_BAND, bandMembers, DEFAULT_ANIMALS, playableAnimals, paletteColors, PALETTE_LIMIT, DEFAULT_PALETTE, BUCKET_COLOR_IDS, fileReferences, validateContent, validateUpload, checkMagic,
     REPOSITORY: 'uglyagi/bumbumtschak', GitHubStore: class extends GitHubStore { constructor(token) { super(token, repo.fetch); } },
     readDraft: async () => structuredClone(draft),
     writeDraft: async ({ document, contentSha, files }) => { draft = structuredClone({ document, contentSha, files, savedAt: '2026-10-18T09:00:00Z' }); },
@@ -149,6 +149,10 @@ test('playable character graphics and extra paint colors publish with their edit
   assert.equal(h.state.document.info.animals[3].image, DEFAULT_ANIMALS[3].image);
   await h.click(new h.Element('remove orange', { removeColor: String(DEFAULT_PALETTE.length) }));
   assert.equal(h.state.document.info.palette.length, DEFAULT_PALETTE.length);
+  await h.click(new h.Element('keep basic color', { removeColor: '0' }));
+  assert.equal(h.state.document.info.palette.length, 18, 'the required picture colors cannot be removed accidentally');
+  assert(h.get('#panel').innerHTML.includes('Bild + Farbkübel'));
+  assert(h.get('#panel').innerHTML.includes('Nur im Bild'));
 });
 
 test('each band member can upload, preview, publish and remove an independent melody without replacing its artwork', async () => {

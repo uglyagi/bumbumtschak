@@ -8,3 +8,5 @@
 .gate{max-width:760px}.gate>p{text-align:left}#login{display:grid;gap:16px;text-align:left;margin-top:28px}#login .button{justify-self:start}#gate-message{min-height:1.5em;margin:0;color:#9f2525}#token{font-family:ui-monospace,monospace}.setup{text-align:left;margin-top:28px;border-top:2px solid #101014;padding-top:20px}.setup summary{font-weight:800;cursor:pointer}.setup ol{padding-left:24px}.setup li{margin:14px 0;line-height:1.6}.setup a{color:#1d55ff;text-decoration:underline}.message p:first-child{margin-top:0}.gate [hidden],[hidden]{display:none!important}
 
 .animal-frame{aspect-ratio:5/6}.palette-rows{display:grid;gap:18px;margin-top:24px}.palette-row{display:grid;grid-template-columns:minmax(0,1fr) 110px auto;gap:15px;align-items:end}.palette-row .button{margin-bottom:2px}.palette-row input[type=color]{width:100%;min-height:43px}@media(max-width:560px){.palette-row{grid-template-columns:minmax(0,1fr) 80px;gap:12px}.palette-row>.button{grid-column:1/-1;justify-self:start}}
+
+.palette-use{font-size:12px;font-weight:700;color:#5b526b;align-self:center;max-width:110px}@media(max-width:560px){.palette-use{grid-column:1/-1;max-width:none}}

@@ -380,19 +380,24 @@
     ],
     "palette": [
       {
+        "id": "yellow-dark",
+        "name": "Dunkelgelb",
+        "color": "#d5a600"
+      },
+      {
         "id": "yellow",
         "name": "Gelb",
         "color": "#fff20b"
       },
       {
-        "id": "blue",
-        "name": "Blau",
-        "color": "#1d55ff"
+        "id": "yellow-light",
+        "name": "Hellgelb",
+        "color": "#fff6a3"
       },
       {
-        "id": "green",
-        "name": "Grün",
-        "color": "#40cea1"
+        "id": "red-dark",
+        "name": "Dunkelrot",
+        "color": "#b82332"
       },
       {
         "id": "red",
@@ -400,9 +405,64 @@
         "color": "#ff3935"
       },
       {
+        "id": "red-light",
+        "name": "Hellrot",
+        "color": "#ffaaa0"
+      },
+      {
+        "id": "green-dark",
+        "name": "Dunkelgrün",
+        "color": "#178346"
+      },
+      {
+        "id": "green",
+        "name": "Grün",
+        "color": "#4acb59"
+      },
+      {
+        "id": "green-light",
+        "name": "Hellgrün",
+        "color": "#b5ed9b"
+      },
+      {
+        "id": "blue-dark",
+        "name": "Dunkelblau",
+        "color": "#1238a8"
+      },
+      {
+        "id": "blue",
+        "name": "Blau",
+        "color": "#1d55ff"
+      },
+      {
+        "id": "blue-light",
+        "name": "Hellblau",
+        "color": "#bde7ff"
+      },
+      {
+        "id": "pink-dark",
+        "name": "Dunkelrosa",
+        "color": "#ce3890"
+      },
+      {
         "id": "pink",
         "name": "Rosa",
         "color": "#ff87ce"
+      },
+      {
+        "id": "pink-light",
+        "name": "Hellrosa",
+        "color": "#ffd0e8"
+      },
+      {
+        "id": "black",
+        "name": "Schwarz",
+        "color": "#000000"
+      },
+      {
+        "id": "gray",
+        "name": "Grau",
+        "color": "#969ba5"
       },
       {
         "id": "white",

@@ -1,6 +1,6 @@
 import { WORLD, WORLD_SPAWN, STATIONS, clamp, move, planPath, isActionKey, HOUSE_DOORS, worldTouch, canLandRocket, rocketExitPosition, touchingHomePicture } from './game-core.js';
 import { ANIMALS, BAND, TRACKS, CONCERTS, CONTACT, INFO, PALETTE, loadContent, text } from './content.js';
-import { PAINT_SURFACES, BUCKET_SURFACES, PAINT_NEXT, paintSlots, paintPages, nearbyPaintSurface, canPaintSurface, cleanPaint, paintCanMarkup, createPaintPreview } from './painting.js';
+import { PAINT_SURFACES, BUCKET_SURFACES, PAINT_NEXT, paintSlots, paintPages, bucketColors, nearbyPaintSurface, canPaintSurface, cleanPaint, paintCanMarkup, createPaintPreview } from './painting.js';
 import { icon, avatar, memberArt, worldMarkup } from './art.js';
 import { cassetteMarkup, cassetteSVG, roomMarkup, slotContents, slotDescription } from './room-art.js';
 import { ROOMS, ROOM_SPAWN, EXIT, RADIO, TAPE_SLOTS, SHELF_SWITCH, ROOM_PROPS, ANIMAL_SPOTS, PICTURE_SPOT, TOOLBOX_SPOT, slotsOnPage, tapePages, findTapeSlot, refreshBandWayfinding, roomFor, createCassetteState, tapeLocation, cassetteAction, nearbyInteraction, throughExit, nextMenuIndex } from './rooms.js';
@@ -8,7 +8,7 @@ import { brandIcon, socialPads, contactLinks } from './social.js';
 import { adminURL } from './connection.js';
 import { SPACE, ROCKET_SPEED, GROUND_ROCKET, moveRocket, outsideScene, flightScene } from './sky-world.js';
 import { createParty, syncParty, tickParty, guestPose, guestExitPose, dancePartyMarkup } from './dance-party.js';
-import { studioMarkup, studioInteraction, studioColors, STUDIO_CONTROLS, largeSurfaces } from './painting-studio.js';
+import { studioMarkup, studioInteraction, studioColors, studioPages, STUDIO_CONTROLS, largeSurfaces } from './painting-studio.js';
 import { createAdventure, startAdventure, resizeAdventure, tickAdventure, FINISH_DISTANCE, landingPose, crashVibration } from './rocket-adventure.js';
 import { adventureMarkup, adventureShipPose, meteorMarkup } from './adventure-art.js';
 import { toolboxMarkup } from './toolbox.js';
@@ -32,7 +32,7 @@ const paintStorageKey = previewMode ? 'paint-preview' : 'paint-world';
 const rocketStorageKey = previewMode ? 'rocket-preview-damaged' : 'rocket-damaged';
 const savedRocketDamage = storage.get(rocketStorageKey, '0') === '1';
 let savedPaint = {};
-try { savedPaint = cleanPaint(JSON.parse(storage.get(paintStorageKey, '{}'))); } catch { /* A damaged local drawing starts with the original colors. */ }
+try { savedPaint = cleanPaint(JSON.parse(storage.get(paintStorageKey, '{}')), PALETTE); } catch { /* A damaged local drawing starts with the original colors. */ }
 const state = {
   animal: ANIMALS.some(a => a.id === savedAnimal) ? savedAnimal : 'cat',
   scene: 'world', returnPosition: null, tapes: createCassetteState(), shelfPage: 0,
@@ -191,7 +191,7 @@ function updateDanceGuests() {
   });
 }
 function refreshPaint() {
-  const color = PALETTE.find(color => color.id === state.paintCan), carried = $('#carried-paint');
+  const color = bucketColors(PALETTE).find(color => color.id === state.paintCan), carried = $('#carried-paint');
   if (carried) { carried.toggleAttribute('hidden', !color); carried.innerHTML = color ? paintCanMarkup(color.color) : ''; }
   const rocketPaint = $('#rocket-paint');
   if (rocketPaint) { rocketPaint.toggleAttribute('hidden', !color || !state.rocket.riding); rocketPaint.innerHTML = color ? paintCanMarkup(color.color) : ''; }
@@ -327,7 +327,7 @@ function currentInteraction() {
   if (state.rocket.riding && state.scene !== 'sky') return null;
   const interaction = nearbyInteraction(state.scene, state.position, state.tapes, state.shelfPage, { can: state.paintCan, page: state.paintPage, toolbox: state.toolbox, animal: state.animal, returns: state.homeReturns }, state.rocket.position);
   if (interaction?.kind === 'rocket-board') return state.rocket.damaged ? { ...interaction, kind: state.toolbox ? 'rocket-repair' : 'rocket-damaged', label: text(state.toolbox ? 'rocket_repair' : 'rocket_needs_tools') } : interaction;
-  const color = PALETTE.find(color => color.id === state.paintCan);
+  const color = bucketColors(PALETTE).find(color => color.id === state.paintCan);
   if (outsideScene(state.scene) && color) {
     const selected = BUCKET_SURFACES.find(surface => surface.id === state.paintTarget);
     const surface = canPaintSurface(state.position, selected) ? selected : nearbyPaintSurface(state.position);
@@ -428,13 +428,13 @@ function putPaintDown() { state.paintCan = null; state.paintTarget = null; stopW
 function clearPaintPreview() { paintPreview?.restore(); paintPreview = null; }
 function refreshPaintPreview(near) {
   const colorId = state.scene === 'painting' ? state.studio?.color : state.paintCan;
-  const color = state.started && !modal.open && (outsideScene(state.scene) && near?.kind === 'paint' || state.scene === 'painting' && near?.kind === 'studio-paint') ? PALETTE.find(color => color.id === colorId) : null;
+  const color = state.started && !modal.open && (outsideScene(state.scene) && near?.kind === 'paint' || state.scene === 'painting' && near?.kind === 'studio-paint') ? (state.scene === 'painting' ? PALETTE : bucketColors(PALETTE)).find(color => color.id === colorId) : null;
   if (color && paintPreview?.id === near.id && paintPreview.color === color.color) return;
   clearPaintPreview();
-  if (color) paintPreview = { id: near.id, color: color.color, restore: createPaintPreview(game, near.id, color.color) };
+  if (color) paintPreview = { id: near.id, color: color.color, restore: createPaintPreview(game, near.id, color.color, PALETTE) };
 }
 function paintSurface(id) {
-  const surface = BUCKET_SURFACES.find(surface => surface.id === id), color = PALETTE.find(color => color.id === state.paintCan);
+  const surface = BUCKET_SURFACES.find(surface => surface.id === id), color = bucketColors(PALETTE).find(color => color.id === state.paintCan);
   if (!color || !outsideScene(state.scene) || state.rocket.riding && state.scene !== 'sky' || !canPaintSurface(state.position, surface)) return;
   stopWalking(); state.paint[id] = color.color; state.paintTarget = id;
   storage.set(paintStorageKey, JSON.stringify(state.paint)); renderScene(); game.focus({ preventScroll: true });
@@ -468,7 +468,7 @@ function studioAction(near) {
   if (near?.kind === 'studio-color') state.studio.color = near.id;
   else if (near?.kind === 'studio-control') {
     if (near.id === 'close') { closePainting(); return; }
-    if (near.id === 'next') state.studio.page = (state.studio.page + 1) % paintPages(PALETTE);
+    if (near.id === 'next') state.studio.page = (state.studio.page + 1) % studioPages(PALETTE);
     if (near.id === 'reset') { state.paint = {}; storage.set(paintStorageKey, '{}'); }
   } else if (near?.kind === 'studio-paint') {
     const color = PALETTE.find(c => c.id === state.studio.color);

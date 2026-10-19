@@ -1,4 +1,4 @@
-import { text } from './content.js';
+import { PALETTE, text } from './content.js';
 import { escapeXML } from './utils.js';
 import { SPACE, SKY } from './sky-world.js';
 import { PLANETS } from './solar-system.js';
@@ -34,7 +34,7 @@ export function planetMarkup(planet) {
     </g><text y="${r + 35}" text-anchor="middle" font-size="23" font-weight="900" fill="#fffcee" stroke="#10152d" stroke-width="5" paint-order="stroke" stroke-linejoin="round">${name}</text></g>`;
 }
 export function spaceMarkup(paint = {}, showPlanets = true) {
-  return `<g id="space-world"><defs><linearGradient id="space-atmosphere" x1="0" y1="0" x2="0" y2="1"><stop stop-color="${SPACE.color}"/><stop offset="1" ${paintAttributes('sky', SKY.color, paint, false, 'stop-color')}/></linearGradient></defs>
+  return `<g id="space-world"><defs><linearGradient id="space-atmosphere" x1="0" y1="0" x2="0" y2="1"><stop stop-color="${SPACE.color}"/><stop offset="1" ${paintAttributes('sky', SKY.color, paint, false, 'stop-color', '', PALETTE)}/></linearGradient></defs>
     <rect x="0" y="${SPACE.top}" width="1600" height="${SKY.top - SPACE.top}" fill="${SPACE.color}"/>
     <ellipse cx="870" cy="${SPACE.bottom - 2800}" rx="420" ry="2200" fill="#a47bf4" opacity=".08" transform="rotate(8 870 ${SPACE.bottom - 2800})"/>
     <g aria-hidden="true">${starField}</g>
