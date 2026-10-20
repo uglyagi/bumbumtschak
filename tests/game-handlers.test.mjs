@@ -523,18 +523,19 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
   assert.equal(h.state.adventure.phase, 'intro'); assert(!h.modal.open); assert(h.game.innerHTML.includes('id="adventure-course" hidden=""'));
   const startingPose = adventureArt.adventureShipPose(h.state.adventure); assert.deepEqual({ ...startingPose }, { ...h.state.adventure.entry });
   h.showPanel('space-launch'); assert(!h.modal.open, 'the choice cannot open before the transition finishes');
-  new h.Element('early start', 'button', { action: 'space-start' }).click(); assert.equal(h.state.adventure.phase, 'intro');
-  for (let i = 0; i < 100; i++) h.frame(++clock * 16);
-  assert.equal(h.state.adventure.phase, 'intro'); assert(!h.modal.open); assert(adventureArt.adventureShipPose(h.state.adventure).scale > 30);
+  new h.Element('early difficulty', 'button', { difficulty: 'profi' }).click(); assert.equal(h.state.adventure.phase, 'intro');
+  for (let i = 0; i < 35; i++) h.frame(++clock * 16);
+  const departingPose = adventureArt.adventureShipPose(h.state.adventure);
+  assert.equal(h.state.adventure.phase, 'intro'); assert(!h.modal.open); assert.equal(departingPose.scale, startingPose.scale); assert.equal(departingPose.x, startingPose.x); assert(departingPose.y < startingPose.y);
   assert(h.get('#adventure-course').attrs.has('hidden')); assert.equal(h.state.adventure.meteors.length, 0);
   while (h.state.adventure.phase === 'intro' && clock < 800) h.frame(++clock * 16);
   assert(firstSpace >= 6000 && firstSpace <= 7000, String(firstSpace));
   assert.equal(h.state.adventure.phase, 'ready'); assert.equal(h.state.modal, 'space-launch');
-  assert(h.modalContent.innerHTML.includes('Weltraumabenteuer starten')); assert(h.modalContent.innerHTML.includes('Landen'));
+  assert(h.modalContent.innerHTML.includes('Zurück zur Wiese')); assert.equal((h.modalContent.innerHTML.match(/<button\b/g) || []).length, 4); assert(!h.modalContent.innerHTML.includes('data-action="space-start"'));
   assert.equal(h.state.adventure.width, 1200); assert.equal(h.state.paintCan, 'yellow'); assert.equal(h.state.animal, 'monkey');
   assert(h.get('#adventure-course').attrs.has('hidden')); assert(h.get('#rocket-paint').innerHTML.includes('#fff20b'));
-  assert.equal(h.state.adventure.angle, 90, 'the rocket has turned before the launch choice');
-  const start = new h.Element('start adventure', 'button', { action: 'space-start' }); h.press(h.documentHandlers, h.event(key, code, start));
+  assert.equal(h.state.adventure.angle, 0, 'the rocket stays upright during departure and is offscreen at the choice');
+  const start = new h.Element('choose easy and start', 'button', { difficulty: 'leicht' }); h.press(h.documentHandlers, h.event(key, code, start));
   assert.equal(h.state.adventure.phase, 'playing'); assert.equal(h.modal.open, false);
   const initialShip = { ...h.state.adventure.ship }; h.state.keys.add('ArrowRight'); h.state.keys.add('ArrowUp');
   for (let i = 0; i < 55; i++) h.frame(++clock * 16);
@@ -548,7 +549,7 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
   h.frame(++clock * 16); assert.equal(h.state.adventure.phase, 'sun-finale'); assert(!h.modal.open, 'arrival does not show congratulations immediately');
   assert(h.game.innerHTML.includes('id="sun-holiday"')); assert.equal(h.state.adventure.meteors.length, 0);
   h.showPanel('space-win'); assert(!h.modal.open, 'the finale cannot open an early congratulations window');
-  new h.Element('premature replay', 'button', { action: 'space-replay' }).click(); assert.equal(h.state.adventure.phase, 'sun-finale');
+  new h.Element('premature replay', 'button', { difficulty: 'profi' }).click(); assert.equal(h.state.adventure.phase, 'sun-finale');
   const flightProgress = h.state.adventure.progress;
   assert(h.game.innerHTML.includes('id="sun-flight-background" opacity="1"'));
   while (h.state.adventure.sunTime < adventure.SUN_EXIT_DURATION) h.frame(++clock * 16);
@@ -570,7 +571,7 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
   while (h.state.adventure.phase === 'sun-finale') h.frame(++clock * 16);
   assert.equal(h.state.modal, 'space-win'); assert(h.modalContent.innerHTML.includes('Herzlichen Glückwunsch'));
 
-  h.press(h.documentHandlers, h.event(key, code, new h.Element('replay', 'button', { action: 'space-replay' })));
+  h.press(h.documentHandlers, h.event(key, code, new h.Element('replay at medium', 'button', { difficulty: 'mittel' })));
   assert.equal(h.state.adventure.phase, 'playing'); assert.equal(h.state.adventure.progress, 0); assert(!h.modal.open);
   const ship = h.state.adventure.ship; h.state.adventure.meteors = [{ id: 1, x: ship.x + 1, y: ship.y, radius: 18, vx: -250, vy: 0, angle: 0, spin: 0 }];
   h.frame(++clock * 16); assert.equal(h.state.adventure, null); assert(h.state.rocket.damaged && h.state.landing);
@@ -617,7 +618,7 @@ assert.equal(choosingLand.state.modal, 'space-launch'); choosingLand.closePanel(
 assert(choosingLand.state.landing && !choosingLand.state.rocket.damaged, 'Escape at the launch choice lands safely');
 for (let time = 4500; time < 10000; time += 16) choosingLand.frame(time);
 assert.equal(choosingLand.state.scene, 'world'); assert(!choosingLand.state.rocket.riding && !choosingLand.state.rocket.damaged);
-console.log('PASS: space entry at 6–7 seconds, original-size entry, full cockpit zoom, hidden planets, shrinking and turning before launch/land choices, four-direction flight, upright pilot, pause, Sun landing, carried/unfolded lounger, sunglasses, sunbathing before congratulations, replay, vibrating nose-down crash, scattering wreckage, persistent damage, consuming and replacing the toolbox, repair and restart work with Enter, Space and NumpadEnter.');
+console.log('PASS: space entry at 6–7 seconds, original-size straight upward departure, hidden planets, only three difficulties and return to meadow, immediate start on difficulty choice, four-direction flight, upright pilot, pause, Sun landing, carried/unfolded lounger, sunglasses, sunbathing before congratulations, replay, vibrating nose-down crash, scattering wreckage, persistent damage, consuming and replacing the toolbox, repair and restart work with Enter, Space and NumpadEnter.');
 
 const dancingTrack = content.TRACKS.find(track => track.id === 'tanzen'), originalDanceAudio = dancingTrack.src;
 try {
@@ -850,7 +851,7 @@ try {
     h.state.keys.add('ArrowUp'); while(!h.state.adventure && clock < 1800)h.frame(++clock*16);
     assert(h.state.adventure); assert(h.game.innerHTML.includes('id="rocket-pilot" href="#dressed-dog"'));
     while(h.state.adventure.phase === 'intro' && clock < 2200)h.frame(++clock*16);
-    new h.Element('start','button',{action:'space-start'}).click();
+    new h.Element('start easy','button',{difficulty:'leicht'}).click();
     h.state.adventure.progress=adventure.FINISH_DISTANCE;h.state.adventure.meteors=[];h.state.adventure.nextMeteor=Infinity;
     h.frame(++clock*16);assert.equal(h.state.adventure.phase,'sun-finale');
     h.state.adventure.sunTime=adventure.SUN_TRANSITION_DURATION+8-adventure.SUN_STORY_START;h.frame(++clock*16);
@@ -933,11 +934,10 @@ for(const level of ['leicht','mittel','profi']) {
  h.state.adventure=adventure.createAdventure(1200,700);h.state.adventure.phase='ready';h.state.adventure.nextDifficulty=h.state.difficulty;h.showPanel('space-launch');
  assert(h.modalContent.innerHTML.includes('Raumfahrprofi'));assert(h.modalContent.innerHTML.includes('data-difficulty="leicht"'));
  const choice=new h.Element('difficulty','button',{difficulty:level});h.press(h.documentHandlers,h.event('Enter','Enter',choice));assert.equal(h.state.adventure.nextDifficulty,level);assert.equal(h.stored.get('bbt-adventure-difficulty'),level);
- new h.Element('start','button',{action:'space-start'}).click();assert.equal(h.state.adventure.difficulty,level);
+ assert.equal(h.state.adventure.phase,'playing','a difficulty choice starts immediately');assert.equal(h.state.adventure.difficulty,level);assert(!h.modal.open);
  new h.Element('cannot change during flight','button',{difficulty:'profi'}).click();assert.equal(h.state.adventure.difficulty,level);
  let clock=1;h.frame(clock*16);h.state.adventure.progress=adventure.FINISH_DISTANCE;h.state.adventure.meteors=[];h.state.adventure.nextMeteor=Infinity;h.frame(++clock*16);
  h.state.adventure.sunTime=adventure.sunHolidayDuration(h.state.adventure)-.01;h.frame(++clock*16);assert.equal(h.state.adventure.phase,'won');assert.equal(h.state.adventure.completedDifficulty,level);
- new h.Element('next level','button',{difficulty:level==='profi'?'leicht':'profi'}).click();
  new h.Element('land','button',{action:'space-land'}).click();assert.equal(h.state.landing.success,level==='profi');
  while(h.state.landing&&clock<500)h.frame(++clock*16);
  assert(!h.state.landing);assert.equal(h.state.scene,'world');

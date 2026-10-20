@@ -1,6 +1,6 @@
 import { defs, rocketMarkup, landscapeMarkup } from './art.js';
 import { planetMarkup } from './space-art.js';
-import { COURSE, FINISH_DISTANCE, SUN_DIAMETER, INTRO_ZOOM_IN, INTRO_HOLD_END, INTRO_ZOOM_OUT_END } from './rocket-adventure.js';
+import { COURSE, FINISH_DISTANCE, SUN_DIAMETER, INTRO_DURATION } from './rocket-adventure.js';
 import { text } from './content.js';
 import { sunHolidayMarkup } from './sun-holiday.js';
 import { escapeXML as esc } from './utils.js';
@@ -10,21 +10,11 @@ export function meteorMarkup(meteor) {
   return `<g transform="translate(${meteor.x.toFixed(1)} ${meteor.y.toFixed(1)})"><g transform="rotate(${meteor.angle.toFixed(1)}) scale(${meteor.radius})" fill="#a68d83" stroke="#101014" stroke-width=".1" stroke-linejoin="round"><path d="M-.95-.2-.65-.82.05-1 .65-.7 1-.12.75.6.12 1-.6.74-1 .2Z"/><ellipse cx="-.3" cy="-.25" rx=".27" ry=".2" fill="#7b6869" stroke-width=".05"/><circle cx=".35" cy=".3" r=".18" fill="#c4afa0" stroke-width=".05"/></g></g>`;
 }
 export function adventureShipPose(game) {
-  const flight = { ...game.ship, scale: .72 };
-  if (game.phase !== 'intro' || game.reduced) return flight;
-  const smooth = value => { const t = Math.max(0, Math.min(1, value)); return t * t * (3 - 2 * t); };
-  const blend = (from, to, amount) => from + (to - from) * amount;
-  const zoom = (from, to, amount) => Math.exp(blend(Math.log(from), Math.log(to), amount));
-  // At the close-up, the cockpit window fills the whole viewport.
-  const close = { x: game.width / 2, y: game.height / 2, scale: Math.hypot(game.width, game.height) / 30 * 1.1 };
-  const t = game.introTime;
-  if (t <= INTRO_ZOOM_IN) {
-    const amount = smooth(t / INTRO_ZOOM_IN);
-    return { x: blend(game.entry.x, close.x, amount), y: blend(game.entry.y, close.y, amount), scale: zoom(game.entry.scale, close.scale, amount) };
-  }
-  if (t <= INTRO_HOLD_END) return close;
-  const amount = smooth((t - INTRO_HOLD_END) / (INTRO_ZOOM_OUT_END - INTRO_HOLD_END));
-  return { x: blend(close.x, flight.x, amount), y: blend(close.y, flight.y, amount), scale: zoom(close.scale, flight.scale, amount) };
+  if (!['intro', 'ready'].includes(game.phase)) return { ...game.ship, scale: .72 };
+  const progress = game.phase === 'ready' ? 1 : Math.max(0, Math.min(1, game.introTime / INTRO_DURATION));
+  const amount = progress * progress * (3 - 2 * progress), endY = -140 * game.entry.scale;
+  // Retain the actual rocket size and horizontal position until it has left the screen.
+  return { x: game.entry.x, y: game.entry.y + (endY - game.entry.y) * amount, scale: game.entry.scale };
 }
 function adventureBackdropMarkup(game, paint = {}) {
   const w = game.width, h = game.height;
@@ -49,7 +39,7 @@ export function adventureMarkup(game, animal, paint = {}, hat = false) {
   const w = game.width, h = game.height, pose = adventureShipPose(game);
   return `<svg id="world-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" font-family="Trebuchet MS,Arial,sans-serif" aria-label="${esc(text('adventure_title'))}">
     ${defs()}${backdrop}
-    <g id="adventure-ship" transform="translate(${pose.x} ${pose.y}) scale(${pose.scale})">${rocketMarkup({ position: { x: 0, y: 86 }, riding: true, airborne: game.phase === 'playing', angle: game.angle, hat }, animal)}</g>
+    <g id="adventure-ship" transform="translate(${pose.x} ${pose.y}) scale(${pose.scale})">${rocketMarkup({ position: { x: 0, y: 86 }, riding: true, airborne: ['intro', 'playing'].includes(game.phase), angle: game.angle, hat }, animal)}</g>
     <g id="player" hidden=""><use id="player-use"/></g><g id="destination-marker" hidden=""></g>
   </svg>`;
 }

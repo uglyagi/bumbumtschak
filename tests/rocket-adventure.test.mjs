@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { COURSE, ADVENTURE_PLANETS, SUN_DIAMETER, FINISH_DISTANCE, createAdventure, startAdventure, resizeAdventure, tickAdventure, meteorHits, landingPose, SUN_HOLIDAY_DURATION, INTRO_DURATION, INTRO_ZOOM_IN, INTRO_HOLD_END, INTRO_ZOOM_OUT_END } from '../rocket-adventure.js';
+import { COURSE, ADVENTURE_PLANETS, SUN_DIAMETER, FINISH_DISTANCE, createAdventure, startAdventure, resizeAdventure, tickAdventure, meteorHits, landingPose, SUN_HOLIDAY_DURATION, INTRO_DURATION } from '../rocket-adventure.js';
 import { CSS_PIXELS_PER_CM } from '../solar-system.js';
 import { GROUND_ROCKET } from '../sky-world.js';
 import { adventureMarkup, adventureShipPose, meteorMarkup } from '../adventure-art.js';
@@ -13,12 +13,12 @@ test('the journey visits every planet from Neptune to Mercury at an Earth 1 cm b
   assert(SUN_DIAMETER / earth.diameter > 109 && SUN_DIAMETER / earth.diameter < 110);
 });
 
-test('the intro zoom waits for a choice; playing scrolls automatically and arrows move at a normalized speed', () => {
+test('the vertical departure waits for a difficulty; playing scrolls automatically and arrows move at a normalized speed', () => {
   const game = createAdventure(1200, 700, 13);
   for (let i = 0; i < 20; i++) tickAdventure(game, .05, 1, 1);
   assert.equal(game.phase, 'intro'); assert.equal(game.progress, 0); assert.equal(game.angle, 0);
   while (game.introTime < INTRO_DURATION) tickAdventure(game, .05);
-  assert.equal(game.phase, 'ready'); assert.equal(game.angle, 90);
+  assert.equal(game.phase, 'ready'); assert.equal(game.angle, 0);
   tickAdventure(game, .05); assert.equal(game.progress, 0);
   startAdventure(game); const ship = { ...game.ship };
   tickAdventure(game, .05); assert(game.progress > 0); assert.deepEqual(game.ship, ship);
@@ -121,30 +121,32 @@ test('collisions work from every direction and departed meteors are removed beyo
 });
 
 
-test('arrival keeps planets hidden, zooms from the original size into the pilot, shrinks and turns before the choice', () => {
-  const entry = { x: 480, y: 580, scale: .806 }, game = createAdventure(1200, 700, 1, entry);
-  const start = adventureShipPose(game);
-  assert.deepEqual(start, entry, 'the first frame retains the actual on-screen rocket size and position');
-  const markup = adventureMarkup(game, 'monkey');
-  assert(markup.includes('id="adventure-course" hidden=""'), 'the course is prepared but not visible during arrival');
-  assert(markup.includes('id="adventure-hud" class="adventure-hud" hidden=""'));
-  game.introTime = INTRO_ZOOM_IN;
-  const close = adventureShipPose(game); assert.equal(close.x, 600); assert.equal(close.y, 350);
-  assert(close.scale * 34 > Math.hypot(game.width, game.height), 'the cockpit fills the viewport, hiding the hull');
-  game.introTime = INTRO_HOLD_END; const held = adventureShipPose(game); assert.equal(held.x, close.x); assert.equal(held.y, close.y); assert(Math.abs(held.scale - close.scale) < 1e-10);
-  game.introTime = INTRO_ZOOM_OUT_END; const small = adventureShipPose(game);
-  assert(Math.abs(small.scale - .72) < 1e-10); assert.equal(small.x, game.ship.x); assert.equal(small.y, game.ship.y);
-  assert.equal(game.angle, 0); tickAdventure(game, .05); assert(game.angle > 0 && game.angle < 90); assert.equal(game.phase, 'intro');
-  while (game.phase === 'intro') tickAdventure(game, .05);
-  assert.equal(game.phase, 'ready'); assert.equal(game.angle, 90); assert.equal(game.meteors.length, 0); assert.equal(game.progress, 0);
-  assert(adventureMarkup(game, 'monkey').includes('id="adventure-course" hidden=""'), 'the choice still shows only stars and the sideways rocket');
-  startAdventure(game);
-  assert(!adventureMarkup(game, 'monkey').includes('id="adventure-course" hidden=""')); assert.equal(game.angle, 90);
+test('arrival flies straight upwards at its original size until fully offscreen, without zooming or turning before the choice', () => {
+  for (const [width, height, scale] of [[1200, 700, .806], [390, 580, .65], [800, 450, 1.2]]) {
+    const entry = { x: width * .4, y: height * .8, scale }, game = createAdventure(width, height, 1, entry);
+    assert.deepEqual(adventureShipPose(game), entry, 'the first frame retains the real rocket position and scale');
+    let previousY = entry.y;
+    for (let i = 0; i <= 20; i++) {
+      game.introTime = INTRO_DURATION * i / 20;
+      const pose = adventureShipPose(game);
+      assert.equal(pose.x, entry.x); assert.equal(pose.scale, entry.scale); assert(pose.y <= previousY);
+      assert.equal(game.angle, 0); previousY = pose.y;
+    }
+    assert(previousY + 100 * scale < 0, 'the complete rocket and flame have left through the top edge');
+    const svg = adventureMarkup(game, 'monkey');
+    assert(svg.includes('id="adventure-course" hidden=""')); assert(svg.includes('id="adventure-hud" class="adventure-hud" hidden=""'));
+    assert.equal(tickAdventure(game, .01), 'ready'); assert.equal(game.angle, 0);
+    const ready = adventureShipPose(game); assert(ready.y < 0); assert.equal(ready.x, entry.x); assert.equal(ready.scale, entry.scale);
+    for (let i = 0; i < 100; i++) tickAdventure(game, .05);
+    assert.equal(game.progress, 0); assert.equal(game.meteors.length, 0); assert.equal(game.phase, 'ready');
+    startAdventure(game); assert.equal(game.angle, 90);
+    assert.equal(adventureShipPose(game).scale, .72); assert(!adventureMarkup(game, 'monkey').includes('id="adventure-course" hidden=""'));
+  }
 });
 
 
-test('reduced motion skips the full-screen zoom and opens the ready choice safely', () => {
+test('reduced motion skips the departure flight and safely opens the same difficulty choice without a zoom', () => {
   const game = createAdventure(390, 580); game.reduced = true;
-  assert.equal(tickAdventure(game, .016), 'ready'); assert.equal(game.angle, 90);
-  assert.equal(adventureShipPose(game).scale, .72); assert.equal(game.meteors.length, 0);
+  assert.equal(tickAdventure(game, .016), 'ready'); assert.equal(game.angle, 0);
+  const pose = adventureShipPose(game); assert.equal(pose.scale, game.entry.scale); assert(pose.y < 0); assert.equal(game.meteors.length, 0);
 });

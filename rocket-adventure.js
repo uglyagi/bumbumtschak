@@ -13,10 +13,7 @@ export const COURSE = ADVENTURE_PLANETS.map((planet, i) => {
 });
 export const SUN_DIAMETER = CSS_PIXELS_PER_CM * SUN_RADIUS_KM / EARTH_RADIUS_KM;
 export const FINISH_DISTANCE = edge + 180;
-export const INTRO_ZOOM_IN = 1.5;
-export const INTRO_HOLD_END = 1.85;
-export const INTRO_ZOOM_OUT_END = 3.55;
-export const INTRO_DURATION = 4.2;
+export const INTRO_DURATION = 1.4;
 export const SUN_EXIT_DURATION = 2.1;
 export const SUN_SCENE_CHANGE_START = 2.25;
 export const SUN_TRANSITION_DURATION = 2.75;
@@ -70,8 +67,8 @@ export function tickAdventure(game, seconds, dx = 0, dy = 0) {
   const dt = clamp(seconds, 0, .05);
   if (game.phase === 'intro') {
     game.introTime = game.reduced ? INTRO_DURATION : game.introTime + dt;
-    game.angle = 90 * clamp((game.introTime - INTRO_ZOOM_OUT_END) / (INTRO_DURATION - INTRO_ZOOM_OUT_END), 0, 1);
-    if (game.introTime >= INTRO_DURATION) { game.phase = 'ready'; game.angle = 90; return 'ready'; }
+    game.angle = 0;
+    if (game.introTime >= INTRO_DURATION) { game.phase = 'ready'; return 'ready'; }
     return null;
   }
   if (game.phase === 'sun-finale') {

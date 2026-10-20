@@ -154,9 +154,8 @@ function renderPanel(id) {
 }
 function adventurePanel(id) {
   const win = id === 'space-win', pause = id === 'space-pause';
-  const primary = pause ? 'space-continue' : win ? 'space-replay' : 'space-start';
-  const difficulty = pause ? '' : `<div class="difficulty-picker"><p>${T('adventure_difficulty')}</p><div class="difficulty-options" role="group" aria-label="${T('adventure_difficulty')}">${Object.keys(DIFFICULTIES).map(level => `<button data-difficulty="${level}" aria-pressed="${state.adventure?.nextDifficulty === level}"><strong>${T('difficulty_' + level)}</strong><small>${T('difficulty_' + level + '_hint')}</small></button>`).join('')}</div></div>`;
-  return `<div class="modal-wrap adventure-dialog"><div class="modal-kicker">✦ ${T('adventure_title')}</div><h2 id="modal-title">${T(win ? 'adventure_win' : pause ? 'adventure_pause' : 'adventure_ready')}</h2><p class="modal-intro editable-prose">${T(win ? 'adventure_win_body' : 'adventure_keys')}</p>${difficulty}<div class="modal-actions"><button class="primary-button" data-action="${primary}">${T(pause ? 'adventure_continue' : win ? 'adventure_replay' : 'adventure_start')} ${icon('arrow')}</button><button class="secondary-button" data-action="space-land">${T(win ? 'adventure_back' : 'adventure_land')}</button></div></div>`;
+  const difficulty = pause ? '' : `<div class="difficulty-picker"><p>${T('adventure_difficulty')}</p><div class="difficulty-options" role="group" aria-label="${T('adventure_difficulty')}">${Object.keys(DIFFICULTIES).map(level => `<button data-difficulty="${level}"><strong>${T('difficulty_' + level)}</strong><small>${T('difficulty_' + level + '_hint')}</small></button>`).join('')}</div></div>`;
+  return `<div class="modal-wrap adventure-dialog"><div class="modal-kicker">✦ ${T('adventure_title')}</div><h2 id="modal-title">${T(win ? 'adventure_win' : pause ? 'adventure_pause' : 'adventure_ready')}</h2><p class="modal-intro editable-prose">${T(win ? 'adventure_win_body' : pause ? 'adventure_keys' : 'adventure_choice_hint')}</p>${difficulty}<div class="modal-actions">${pause ? `<button class="primary-button" data-action="space-continue">${T('adventure_continue')} ${icon('arrow')}</button>` : ''}<button class="secondary-button" data-action="space-land">${T(win ? 'adventure_back' : 'adventure_land')}</button></div></div>`;
 }
 function pausePanel() {
   const options = [['map', 'map_open'], ['characters', 'pause_character'], ['radio', 'pause_radio'], ['concerts', 'pause_concerts'], ['panda', 'pause_band'], ['social', 'pause_social'], ['grownups', 'nav_grownups'], ['help', 'help_open']];
@@ -682,9 +681,8 @@ document.addEventListener('click', e => {
   if (state.landing) return;
   if (btn.dataset.difficulty && state.adventure && ['ready', 'won'].includes(state.adventure.phase) && Object.hasOwn(DIFFICULTIES, btn.dataset.difficulty)) {
     state.difficulty = btn.dataset.difficulty; state.adventure.nextDifficulty = state.difficulty; storage.set('adventure-difficulty', state.difficulty);
-    modalContent.innerHTML = renderPanel(state.modal); modalContent.querySelector(`[data-difficulty="${state.difficulty}"]`)?.focus(); return;
+    playAdventure(); return;
   }
-  if (action === 'space-start' || action === 'space-replay') { playAdventure(); return; }
   if (action === 'space-continue') { closePanel(); return; }
   if (action === 'space-land') { landFromAdventure(); return; }
   if (btn.dataset.open) { visit(btn.dataset.open); return; }

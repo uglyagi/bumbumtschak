@@ -1769,7 +1769,8 @@ export const COPY_GROUPS = [
       {
         "key": "space_entered",
         "label": "Beim Erreichen des Weltraums",
-        "value": "Willkommen im Weltraum! Entdecke die acht Planeten und die Sterne. Mit den Richtungstasten fliegst du weiter. Nach unten geht es zurück zur Wiese.",
+        "value": "Die Rakete fliegt nach oben hinaus. Wähle danach leicht, mittel oder Raumfahrprofi, um sofort loszufliegen. Oder kehre zur Wiese zurück.",
+        "previousValues": ["Willkommen im Weltraum! Entdecke die acht Planeten und die Sterne. Mit den Richtungstasten fliegst du weiter. Nach unten geht es zurück zur Wiese."],
         "max": 500
       },
       {
@@ -1926,7 +1927,8 @@ export const COPY_GROUPS = [
       {
         "key": "adventure_land",
         "label": "Landeknopf",
-        "value": "Landen",
+        "value": "Zurück zur Wiese",
+        "previousValues": ["Landen"],
         "max": 180
       },
       {
@@ -2087,6 +2089,7 @@ export const COPY_GROUPS = [
 ];
 COPY_GROUPS.push({ id: 'difficulty', label: 'Schwierigkeitsstufen & Raumfahrerfeier', fields: [
   { key: 'adventure_difficulty', label: 'Auswahl der Schwierigkeit', value: 'Wie möchtest du fliegen?', max: 180 },
+  { key: 'adventure_choice_hint', label: 'Hinweis beim Abenteuerstart', value: 'Wähle eine Schwierigkeitsstufe und los geht’s!', max: 300 },
   { key: 'difficulty_leicht', label: 'Leichte Stufe', value: 'leicht', max: 40 },
   { key: 'difficulty_leicht_hint', label: 'Beschreibung leicht', value: 'Wenige, kleine und langsame Meteoriten', max: 180 },
   { key: 'difficulty_mittel', label: 'Mittlere Stufe', value: 'mittel', max: 40 },
