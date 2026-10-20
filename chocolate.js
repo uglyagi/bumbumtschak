@@ -1,4 +1,5 @@
-export const CHOCOLATE_SPEED_SECONDS = 20;
+export const CHOCOLATE_SPEED_SECONDS = 19;
+export const CHOCOLATE_FADE_SECONDS = 4;
 export const CHOCOLATE_DOOR = { x: 679, y: 494 };
 export const CHOCOLATE_RETURN = { x: 679, y: 550 };
 export const CHOCOLATE_DRAWER = { id: 'chocolate-drawer', x: 815, y: 320 };
@@ -78,8 +79,8 @@ export const isChocolateTrack = track => !!track && (['schokolade', 'song-66d899
 export const touchingChocolateDoor = position => Math.abs(position.x - CHOCOLATE_DOOR.x) <= 29 && position.y >= 482 && position.y <= 510;
 export function createChocolate(saved) { return { unlocked: saved?.unlocked === true, carrying: false, boost: 0, active: false, session: false, collected: [], run: null }; }
 export const savedChocolate = chocolate => ({ unlocked: chocolate.unlocked });
-export const chocolateSpeed = chocolate => 1 + Math.min(1, Math.max(0, chocolate.boost) / 5);
-export const chocolateMusicGain = chocolate => Math.min(1, Math.max(0, chocolate.boost) / 5);
+export const chocolateSpeed = chocolate => 1 + Math.min(1, Math.max(0, chocolate.boost) / CHOCOLATE_FADE_SECONDS);
+export const chocolateMusicGain = chocolate => Math.min(1, Math.max(0, chocolate.boost) / CHOCOLATE_FADE_SECONDS);
 export function tickChocolate(chocolate, elapsed) { chocolate.boost = Math.max(0, chocolate.boost - Math.max(0, elapsed)); }
 export function takeChocolate(chocolate) { if (!chocolate.unlocked || chocolate.carrying) return false; chocolate.carrying = true; return true; }
 export function eatChocolate(chocolate) { if (!chocolate.carrying) return false; chocolate.carrying = false; chocolate.boost = CHOCOLATE_SPEED_SECONDS; return true; }

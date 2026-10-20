@@ -1009,14 +1009,14 @@ try {
   h.state.position = { ...chocolate.CHOCOLATE_DRAWER }; h.game.focus();
   h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game, true)); assert(!h.state.chocolate.carrying);
   h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game)); assert(h.state.chocolate.carrying); assert.equal(h.state.chocolate.boost, 0);
-  h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game)); assert(!h.state.chocolate.carrying); assert.equal(h.state.chocolate.boost, 20);
+  h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game)); assert(!h.state.chocolate.carrying); assert.equal(h.state.chocolate.boost, 19);
   h.leaveRoom(); h.state.position = { x: 650, y: 650 }; h.game.focus(); h.state.keys.add('ArrowRight');
   const before = { ...h.state.position }; h.frame(++clock * 16);
   assert(Math.abs(h.state.position.x - before.x - core.WORLD.speed * .016 * 2) < 1e-8);
-  h.state.keys.clear(); h.frame(clock * 16 + 20001); assert.equal(h.state.chocolate.boost, 0); assert.equal(chocolate.chocolateSpeed(h.state.chocolate), 1);
+  h.state.keys.clear(); h.frame(clock * 16 + 19001); assert.equal(h.state.chocolate.boost, 0); assert.equal(chocolate.chocolateSpeed(h.state.chocolate), 1);
   const reload = await harness(false, 'cat', null, false, null, JSON.parse(h.stored.get('bbt-chocolate-world'))); reload.enterRoom('wardrobe');
   assert(reload.game.innerHTML.includes('data-room-target="chocolate-drawer"')); assert(!reload.state.chocolate.carrying); assert.equal(reload.state.chocolate.boost, 0);
-  console.log('PASS: Schokolade changes only the left speaker into a door, walking enters without confirmation, five reachable bars collect by touch, confetti plays, the figure walks itself out, the drawer persists, separate presses take/eat and movement doubles for exactly twenty seconds.');
+  console.log('PASS: Schokolade changes only the left speaker into a door, walking enters without confirmation, five reachable bars collect by touch, confetti plays, the figure walks itself out, the drawer persists, separate presses take/eat and the nineteen-second boost gradually returns to normal speed.');
 
   for (const reason of ['ended', 'changed', 'escape']) {
     const h = await harness(false, 'dog'); h.enterRoom('radio'); h.state.tapes.loaded = chocolateTrack.id; h.loadRecording();
@@ -1036,7 +1036,7 @@ try {
     const h = await harness(true, 'horse', null, false, null, { unlocked: true }); h.enterRoom('wardrobe'); h.state.position = { ...chocolate.CHOCOLATE_DRAWER }; h.game.focus();
     h.press(h.windowHandlers, h.event(key, code, h.game)); assert(h.state.chocolate.carrying); assert.equal(h.state.chocolate.boost, 0);
     h.press(h.windowHandlers, h.event(key, code, h.game, true)); assert(h.state.chocolate.carrying);
-    h.press(h.windowHandlers, h.event(key, code, h.game)); assert(!h.state.chocolate.carrying); assert.equal(h.state.chocolate.boost, 20);
+    h.press(h.windowHandlers, h.event(key, code, h.game)); assert(!h.state.chocolate.carrying); assert.equal(h.state.chocolate.boost, 19);
     assert(h.stored.has('bbt-chocolate-preview')); assert(!h.stored.has('bbt-chocolate-world'));
   }
   console.log('PASS: Space and Numpad Enter take and eat a single bar in two distinct presses; held keys do not eat it and preview rewards are separate.');
@@ -1111,11 +1111,11 @@ try {
       }
       const before = JSON.stringify(h.state.tapes); h.enterRoom('wardrobe'); h.state.position = { ...chocolate.CHOCOLATE_DRAWER }; h.game.focus();
       h.press(h.windowHandlers, h.event(key, code, h.game)); h.press(h.windowHandlers, h.event(key, code, h.game));
-      assert.equal(h.state.chocolate.boost, 20); assert.equal(h.get('#audio').src, boostTrack.src); assert(h.state.playing);
+      assert.equal(h.state.chocolate.boost, 19); assert.equal(h.get('#audio').src, boostTrack.src); assert(h.state.playing);
       assert.equal(h.state.boostMusic.id, boostTrack.id); assert.equal(JSON.stringify(h.state.tapes), before, 'bonus music does not relocate any cassette');
       assert(!h.state.party.active); assert(!h.state.hatActive); assert(h.state.chocolate.active);
-      h.frame(16); h.frame(19016); assert(h.state.boostMusic); assert.equal(h.state.chocolate.boost, 1);
-      h.frame(20017); assert.equal(h.state.boostMusic, null); assert.equal(h.state.chocolate.boost, 0); assert.equal(h.get('#audio').loop, false);
+      h.frame(16); h.frame(18016); assert(h.state.boostMusic); assert.equal(h.state.chocolate.boost, 1);
+      h.frame(19017); assert.equal(h.state.boostMusic, null); assert.equal(h.state.chocolate.boost, 0); assert.equal(h.get('#audio').loop, false);
       if (previousMode === 'empty') assert(h.get('#audio').paused);
       else {
         assert.equal(h.get('#audio').src, 'uploads/tanzen.mp3'); assert.equal(h.get('#audio').currentTime, 37.5);
@@ -1128,12 +1128,12 @@ try {
   for (let press = 0; press < 2; press++) renewed.press(renewed.windowHandlers, renewed.event('Enter', 'Enter', renewed.game));
   renewed.frame(16); renewed.frame(5016);
   for (let press = 0; press < 2; press++) renewed.press(renewed.windowHandlers, renewed.event('Enter', 'Enter', renewed.game));
-  assert.equal(renewed.state.chocolate.boost, 20); assert.equal(renewed.state.boostMusic.previous.time, 18); assert.equal(renewed.get('#audio').currentTime, 0);
-  renewed.frame(25017); assert.equal(renewed.state.boostMusic, null); assert.equal(renewed.get('#audio').src, 'uploads/tanzen.mp3'); assert.equal(renewed.get('#audio').currentTime, 18);
+  assert.equal(renewed.state.chocolate.boost, 19); assert.equal(renewed.state.boostMusic.previous.time, 18); assert.equal(renewed.get('#audio').currentTime, 0);
+  renewed.frame(24017); assert.equal(renewed.state.boostMusic, null); assert.equal(renewed.get('#audio').src, 'uploads/tanzen.mp3'); assert.equal(renewed.get('#audio').currentTime, 18);
   renewed.state.position = { ...chocolate.CHOCOLATE_DRAWER };
   for (let press = 0; press < 2; press++) renewed.press(renewed.windowHandlers, renewed.event('Enter', 'Enter', renewed.game));
   renewed.state.tapes.loaded = 'freundschaft'; const chosen = content.TRACKS.find(track => track.id === 'freundschaft'), oldSrc = chosen.src; chosen.src = 'uploads/freunde.mp3'; renewed.loadRecording();
-  assert.equal(renewed.state.boostMusic, null); renewed.frame(45018); assert.equal(renewed.get('#audio').src, chosen.src, 'choosing another cassette cancels automatic music return');
+  assert.equal(renewed.state.boostMusic, null); renewed.frame(43018); assert.equal(renewed.get('#audio').src, chosen.src, 'choosing another cassette cancels automatic music return');
   chosen.src = oldSrc;
 
   const alreadyPlaying = await harness(false, 'dog', null, false, null, { unlocked: true }); alreadyPlaying.state.tapes.loaded = boostTrack.id; alreadyPlaying.loadRecording(); alreadyPlaying.get('#audio').currentTime = 43;
@@ -1141,7 +1141,7 @@ try {
   alreadyPlaying.press(alreadyPlaying.windowHandlers, alreadyPlaying.event('Enter', 'Enter', alreadyPlaying.game)); alreadyPlaying.press(alreadyPlaying.windowHandlers, alreadyPlaying.event('Enter', 'Enter', alreadyPlaying.game));
   assert.equal(alreadyPlaying.state.boostMusic.continuing, true); assert.equal(alreadyPlaying.get('#audio').currentTime, 43, 'Schokolade already playing continues smoothly until it fades out');
 } finally { content.TRACKS.splice(content.TRACKS.indexOf(boostTrack), 1); content.TRACKS[1].src = originalBoostCassette; }
-console.log('PASS: eating with Enter, Space or Numpad Enter plays Schokolade for the twenty-second boost, restores an empty, paused or playing radio at its saved position, leaves cassettes in place, supports repeated treats and respects a newly selected cassette.');
+console.log('PASS: eating with Enter, Space or Numpad Enter plays Schokolade for the nineteen-second boost, restores an empty, paused or playing radio at its saved position, leaves cassettes in place, supports repeated treats and respects a newly selected cassette.');
 
 const returnTrack = { id: 'schokolade', title: 'Schokolade', src: 'uploads/schokolade.mp3', color: '#ff87ce', image: 'assets/hut.png' };
 content.TRACKS.push(returnTrack);
@@ -1242,17 +1242,17 @@ try {
     h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game)); h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game));
     h.leaveRoom(); h.state.position = { x: 650, y: 650 }; h.frame(16);
     assert.equal(h.get('#audio').volume, .6); assert.equal(chocolate.chocolateSpeed(h.state.chocolate), 2);
-    h.frame(15016); assert.equal(h.state.chocolate.boost, 5); assert.equal(h.get('#audio').volume, .6);
-    h.frame(17516); assert.equal(h.state.chocolate.boost, 2.5); assert.equal(h.get('#audio').volume, .3); assert.equal(chocolate.chocolateSpeed(h.state.chocolate), 1.5);
+    h.frame(15016); assert.equal(h.state.chocolate.boost, 4); assert.equal(h.get('#audio').volume, .6);
+    h.frame(17016); assert.equal(h.state.chocolate.boost, 2); assert.equal(h.get('#audio').volume, .3); assert.equal(chocolate.chocolateSpeed(h.state.chocolate), 1.5);
     const volume = new h.Element('volume', 'input'); volume.id = 'volume'; volume.value = '.8';
     for (const cb of h.documentHandlers.get('input') || []) cb({ target: volume });
     assert.equal(h.get('#audio').volume, .4, 'the fade follows the selected master volume');
     h.showPanel('panda'); assert.equal(h.get('#audio').volume, .4, 'closing or opening a biography does not reset the fade'); h.closePanel(); h.game.focus();
-    h.state.keys.add('ArrowRight'); const x = h.state.position.x; h.frame(17532); h.state.keys.clear();
+    h.state.keys.add('ArrowRight'); const x = h.state.position.x; h.frame(17032); h.state.keys.clear();
     const travelled = h.state.position.x - x; assert(travelled > core.WORLD.speed * .016 && travelled < core.WORLD.speed * .016 * 2);
-    h.frame(20017); assert.equal(h.state.chocolate.boost, 0); assert.equal(chocolate.chocolateSpeed(h.state.chocolate), 1);
+    h.frame(19017); assert.equal(h.state.chocolate.boost, 0); assert.equal(chocolate.chocolateSpeed(h.state.chocolate), 1);
     if (mode === 'other') { assert.equal(h.get('#audio').src, 'uploads/tanzen.mp3'); assert(!h.get('#audio').paused); assert.equal(h.get('#audio').volume, .8); }
     else assert(h.get('#audio').paused, 'Schokolade ends quietly after the boost, including when its cassette was already playing');
   }
 } finally { content.TRACKS.splice(content.TRACKS.indexOf(fadingTrack), 1); content.TRACKS[1].src = preFadeTanzen; }
-console.log('PASS: the boost keeps full speed and volume for fifteen seconds, fades volume and walking smoothly for the final five seconds, follows volume controls, ends at normal speed and silence, and restores a different previously playing cassette.');
+console.log('PASS: the boost keeps full speed and volume for fifteen seconds, fades volume and walking smoothly for the final four seconds, follows volume controls, ends at normal speed and silence, and restores a different previously playing cassette.');
