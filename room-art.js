@@ -32,6 +32,7 @@ export const playerMarkup = `<g id="player" transform="translate(800 870)"><elli
 const target = (id, name, markup, attributes = '') => `<g class="world-station" data-room-target="${id}" tabindex="0" role="button" aria-label="${escape(name)}" ${attributes}>${markup}</g>`;
 
 const fitted = (x, y, value, width, size = 17, color = '#101014') => `<text x="${x}" y="${y}" text-anchor="middle" stroke="none" fill="${color}" font-size="${size}" font-weight="900" ${value.length * size * .6 > width ? `textLength="${width}" lengthAdjust="spacingAndGlyphs"` : ''}>${escape(value)}</text>`;
+const hintText = markup => markup.replace('<text ', '<text data-game-hint="" ');
 export function slotDescription(tapes, index) {
   const track = TRACKS.find(t => t.id === tapes.slots[index]);
   return track ? text('walk_tape', { lied: track.title }) : text('radio_empty_slot');
@@ -55,19 +56,19 @@ function radioArt(shelfPage, tapes, chocolate = {}) {
     <rect x="205" y="550" width="420" height="325" rx="20" fill="#fff20b" stroke="#101014" stroke-width="4"/>
     ${slotsOnPage(shelfPage).map(slot => `<g transform="translate(${slot.x} ${slot.y})" data-room-target="slot:${slot.slot}" id="tape-slot-${slot.slot}" data-tape-slot="${slot.slot}" class="world-station" tabindex="0" role="button" aria-label="${escape(slotDescription(tapes, slot.slot))}">${slotContents(tapes, slot.slot)}</g>`).join('')}
     <g transform="translate(215 300) rotate(-2)"><rect width="355" height="195" rx="14" fill="#fffcee" stroke="#101014" stroke-width="4"/>
-      ${fitted(177, 53, text('radio_sign_1'), 323, 17)}${fitted(177, 104, text('radio_sign_2'), 323, 17)}${fitted(177, 155, text('radio_sign_3'), 323, 16)}
+      ${hintText(fitted(177, 53, text('radio_sign_1'), 323, 17))}${hintText(fitted(177, 104, text('radio_sign_2'), 323, 17))}${hintText(fitted(177, 155, text('radio_sign_3'), 323, 16))}
     </g>
     ${tapePages(tapes) > 1 ? target('shelf', text('action_shelf'), `<g transform="translate(800 740)"><rect x="-135" y="-37" width="270" height="74" rx="14" fill="#40cea1" stroke="#101014" stroke-width="4"/>${fitted(0, -7, text('radio_shelf_page', { seite: shelfPage + 1, anzahl: tapePages(tapes) }), 240, 17)}${fitted(0, 18, text('radio_next_shelf'), 240, 14)}</g>`) : ''}`;
 }
 function infoArt(scene) {
   const prefix = 'concert';
-  return target(scene, ROOM_PROPS[scene][0].label, `<g stroke="#101014" stroke-width="5" stroke-linejoin="round"><path d="M530 463v38m540-38v38" stroke-width="12"/><rect x="500" y="280" width="600" height="200" rx="16" fill="${ROOMS[scene].color}"/><rect x="514" y="294" width="572" height="172" rx="7" fill="#1d55ff"/></g>${fitted(800, 355, text(prefix + '_board'), 535, 38, 'white')}${fitted(800, 405, text(prefix + '_board_sub'), 535, 23, '#fff20b')}${mapLabel(800, 530, text('read_hint'), 420)}`);
+  return target(scene, ROOM_PROPS[scene][0].label, `<g stroke="#101014" stroke-width="5" stroke-linejoin="round"><path d="M530 463v38m540-38v38" stroke-width="12"/><rect x="500" y="280" width="600" height="200" rx="16" fill="${ROOMS[scene].color}"/><rect x="514" y="294" width="572" height="172" rx="7" fill="#1d55ff"/></g>${fitted(800, 355, text(prefix + '_board'), 535, 38, 'white')}${fitted(800, 405, text(prefix + '_board_sub'), 535, 23, '#fff20b')}<g data-game-hint="">${mapLabel(800, 530, text('read_hint'), 420)}</g>`);
 }
 
 function wardrobeArt(selectedAnimal, paint) {
   const hat = paint.hat, unlocked = hat?.phase === 'unlocked', available = unlocked && !hat.returning;
   const hatAction = hat?.wearing ? 'hat_return' : bucketColors(PALETTE).some(color => color.id === paint.can) ? 'hat_paint' : 'hat_wear';
-  return `${fitted(390, 295, text('wardrobe_board'), 420, 26)}${fitted(390, 327, text('wardrobe_hint'), 440, 14)}
+  return `${hintText(fitted(390, 295, text('wardrobe_board'), 420, 26))}${hintText(fitted(390, 327, text('wardrobe_hint'), 440, 14))}
     ${unlocked || hat?.discovered ? `<g id="home-hat-stand" ${available ? `data-hat-target="hat-stand" role="button" tabindex="0" aria-label="${escape(text(hatAction))}"` : ''} transform="translate(${HAT_STAND.x} ${HAT_STAND.y})"><g stroke="#101014" stroke-width="4" stroke-linecap="round"><path d="M0-35V20m-20 0h40" fill="none"/><ellipse cy="-35" rx="23" ry="7" fill="#d69c5b"/></g>${!available || hat.wearing ? '' : `<g transform="translate(0 -43) scale(.8)">${hatMarkup(hat.color)}</g>`}${fitted(0, 55, text('hat_stand'), 190, 17)}${fitted(0, 79, text(!unlocked ? 'hat_missing' : hat.returning ? 'hat_returning' : hatAction), 210, 13)}</g>` : ''}
     ${paint.chocolate?.unlocked ? target('chocolate-drawer', text('choco_take'), '<g transform="translate(' + CHOCOLATE_DRAWER.x + ' ' + CHOCOLATE_DRAWER.y + ') scale(.68)" stroke="#101014" stroke-width="4" stroke-linejoin="round"><path d="M-79-8v25m158-25v25" stroke-width="8"/><rect x="-94" y="-100" width="188" height="100" rx="9" fill="#fff20b"/><path d="M-94-82h188" stroke="#784128" stroke-width="5"/><rect x="-83" y="-70" width="166" height="56" rx="5" fill="#ff87ce"/><circle cy="-26" r="5" fill="#784128"/><text y="-44" text-anchor="middle" fill="#101014" stroke="none" font-size="21" font-weight="900">' + escape(text('choco_drawer')) + '</text></g>') : ''}
     ${ANIMAL_SPOTS.map(spot => {

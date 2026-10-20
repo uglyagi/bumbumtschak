@@ -120,6 +120,7 @@ export function worldMarkup(paint = {}, painting = false, scene = 'world', rocke
     <g id="friends-world"></g>
     <g id="destination-marker" hidden=""><ellipse rx="17" ry="8" fill="none" stroke="#101014" stroke-width="3" stroke-dasharray="4 4"/></g>
     <g id="player" transform="translate(${WORLD_SPAWN.x} ${WORLD_SPAWN.y})"><ellipse cx="0" cy="0" rx="25" ry="9" fill="#101014" opacity=".18"/><g id="player-body"><use id="player-use" href="#animal-cat" x="-34" y="-77" width="68" height="82"/><g id="carried-tape" transform="translate(-29 -39) scale(.44)" hidden=""></g><g id="carried-toolbox" transform="translate(-43 -63) scale(.4)" hidden=""></g><g id="carried-paint" transform="translate(12 -44) scale(.38)" hidden=""></g></g><path d="m-5-91 5 6 5-6" fill="none" stroke="#101014" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>`}
+    ${snapshot ? '' : '<g id="friends-fire"></g>'}
   </svg>`;
 }
 

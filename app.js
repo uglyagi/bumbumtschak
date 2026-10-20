@@ -18,8 +18,8 @@ import { createHatQuest, savedHatQuest, startHatQuest, tickHatQuest, hatInteract
 import { createReception, landReception, stopReceptionFireworks, tickReception, receptionMarkup, receptionAway, swapReceptionPilot } from './reception.js';
 import { createChocolate, savedChocolate, chocolateSpeed, chocolateMusicGain, tickChocolate, takeChocolate, eatChocolate, newChocolateRun, collectChocolate, beginChocolateExit, advanceChocolateExit, isChocolateTrack, touchingChocolateDoor, CHOCOLATE_DOOR, CHOCOLATE_RETURN, CHOCOLATE_DRAWER, MAZE_SPAWN, MAZE_EXIT, MAZE_CHOCOLATES, chocolateBarMarkup, chocolateConfetti } from './chocolate.js';
 import { chocolateMazeMarkup } from './chocolate-art.js';
-import { createFriends, savedFriends, isFriendsTrack, startFriends, releaseFriends, swapFriendsPlayer, friendsAway, friendsTentNear, gatherFriends, tickFriends, FRIEND_CAMP_PLAYER, FRIEND_TENT } from './friends-game.js';
-import { friendsHiddenMarkup, friendsWorldMarkup, friendsConfettiMarkup } from './friends-art.js';
+import { createFriends, savedFriends, isFriendsTrack, startFriends, releaseFriends, swapFriendsPlayer, friendsAway, friendsTentNear, gatherFriends, tickFriends, friendsCameraView, FRIEND_CAMP_FADE_SECONDS, FRIEND_CAMP_PLAYER, FRIEND_TENT } from './friends-game.js';
+import { friendsHiddenMarkup, friendsWorldMarkup, friendsCampfireMarkup, friendsConfettiMarkup } from './friends-art.js';
 
 const previewMode = new URLSearchParams(location.search).get('preview') === '1';
 const contentStatus = await loadContent(previewMode);
@@ -63,13 +63,13 @@ const state = {
   rocket: { position: { ...GROUND_ROCKET }, riding: false, airborne: false, damaged: savedRocketDamage, broken: savedRocketDamage, impact: null },
   adventure: null, landing: null, toolbox: false, homeReturns: [],
   party: createParty(), chocolate: createChocolate(savedChocolates),
-  friends: createFriends(savedFriendCamp), friendsRestartPending: false, friendsExit: null,
+  friends: createFriends(savedFriendCamp), friendsRestartPending: false, friendsExit: null, campMusic: null,
   hat: createHatQuest(savedHat), hatActive: false, hatRestartPending: false,
   difficulty: Object.hasOwn(DIFFICULTIES, savedDifficulty) ? savedDifficulty : 'leicht', reception: null,
   volume: clamp(Number(storage.get('volume', '.6')) || 0, 0, 1),
   reduced: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
 };
-const game = $('#game'), modal = $('#modal'), modalContent = $('#modal-content'), audio = $('#audio'), memberAudio = $('#member-audio');
+const game = $('#game'), modal = $('#modal'), modalContent = $('#modal-content'), audio = $('#audio'), memberAudio = $('#member-audio'), campAudio = $('#camp-audio');
 game.innerHTML = worldMarkup();
 let world = $('#world-svg'), player = $('#player'), playerUse = $('#player-use'), marker = $('#destination-marker');
 $('#radio-shortcut').innerHTML = icon('music');
@@ -98,7 +98,7 @@ function updateAnimal() {
 function characterPanel() {
   return `<div class="modal-wrap welcome">${state.started ? closeButton() : ''}
     <div class="modal-kicker"><span class="welcome-sticker">${T('welcome_kicker')}</span></div><h2 id="modal-title">${T('welcome_title')}</h2>
-    <p class="modal-intro editable-prose">${T('welcome_intro')}</p><div class="character-grid" role="group" aria-label="${T('animal_group')}">${ANIMALS.map(a => `<button class="character-option" data-character="${a.id}" style="--animal-color:${a.color}" aria-pressed="${state.animal === a.id}"><span class="character-check">${icon('check')}</span>${avatar(a.id)}<strong>${escape(a.name)}</strong><small>${escape(a.trait)}</small></button>`).join('')}</div>
+    <p class="modal-intro editable-prose" data-game-hint>${T('welcome_intro')}</p><div class="character-grid" role="group" aria-label="${T('animal_group')}">${ANIMALS.map(a => `<button class="character-option" data-character="${a.id}" style="--animal-color:${a.color}" aria-pressed="${state.animal === a.id}"><span class="character-check">${icon('check')}</span>${avatar(a.id)}<strong>${escape(a.name)}</strong><small>${escape(a.trait)}</small></button>`).join('')}</div>
     <div class="modal-actions"><button class="primary-button" data-action="start">${T(state.started ? 'welcome_resume' : 'welcome_start')} ${icon('arrow')}</button><button class="text-button" data-action="start-radio">${T('welcome_radio')}</button></div>
     ${state.started ? exitWay() : ''}<div class="welcome-foot"><span>${T('welcome_keys')}</span><span>${icon('music')} ${T('welcome_music')}</span></div></div>`;
 }
@@ -113,7 +113,7 @@ function wrap(kicker, title, contents, className = '') {
 }
 function radioPanel() {
   const track = playbackTrack();
-  return wrap(`${icon('cassette')} ${T('radio_kicker')}`, text('radio_title'), `<p class="modal-intro editable-prose">${T('radio_intro')}</p>
+  return wrap(`${icon('cassette')} ${T('radio_kicker')}`, text('radio_title'), `<p class="modal-intro editable-prose" data-game-hint>${T('radio_intro')}</p>
     <div class="radio-layout"><div><div class="boombox ${state.playing ? 'is-playing' : ''}"><div class="radio-handle"></div><div class="radio-topline"><span>${T('radio_name')}</span><span class="radio-lights" aria-hidden="true"><i></i><i></i><i></i></span></div>
     <div class="radio-speakers" aria-hidden="true"><div class="speaker"></div><div class="tape-window"><strong>${track ? escape(track.title) : T('radio_empty')}</strong><div class="reels"><span class="reel"></span><span class="reel"></span></div></div><div class="speaker"></div></div>
     <div class="radio-controls"><button class="play-button" data-action="play" ${!track?.src ? 'disabled' : ''} aria-label="${T(state.playing ? 'pause_label' : track?.src ? 'play_label' : 'missing_audio_label')}">${icon(state.playing ? 'pause' : 'play')}</button><label class="volume-label">${T('radio_volume')} <input id="volume" type="range" min="0" max="1" step=".05" value="${state.volume}" aria-label="${T('radio_volume')}"></label></div></div>
@@ -166,7 +166,7 @@ function renderPanel(id) {
 function adventurePanel(id) {
   const win = id === 'space-win', pause = id === 'space-pause';
   const difficulty = pause ? '' : `<div class="difficulty-picker"><p>${T('adventure_difficulty')}</p><div class="difficulty-options" role="group" aria-label="${T('adventure_difficulty')}">${Object.keys(DIFFICULTIES).map(level => `<button data-difficulty="${level}"><strong>${T('difficulty_' + level)}</strong><small>${T('difficulty_' + level + '_hint')}</small></button>`).join('')}</div></div>`;
-  return `<div class="modal-wrap adventure-dialog"><div class="modal-kicker">✦ ${T('adventure_title')}</div><h2 id="modal-title">${T(win ? 'adventure_win' : pause ? 'adventure_pause' : 'adventure_ready')}</h2><p class="modal-intro editable-prose">${T(win ? 'adventure_win_body' : pause ? 'adventure_keys' : 'adventure_choice_hint')}</p>${difficulty}<div class="modal-actions">${pause ? `<button class="primary-button" data-action="space-continue">${T('adventure_continue')} ${icon('arrow')}</button>` : ''}<button class="secondary-button" data-action="space-land">${T(win ? 'adventure_back' : 'adventure_land')}</button></div></div>`;
+  return `<div class="modal-wrap adventure-dialog"><div class="modal-kicker">✦ ${T('adventure_title')}</div><h2 id="modal-title">${T(win ? 'adventure_win' : pause ? 'adventure_pause' : 'adventure_ready')}</h2><p class="modal-intro editable-prose" ${win ? '' : 'data-game-hint'}>${T(win ? 'adventure_win_body' : pause ? 'adventure_keys' : 'adventure_choice_hint')}</p>${difficulty}<div class="modal-actions">${pause ? `<button class="primary-button" data-action="space-continue">${T('adventure_continue')} ${icon('arrow')}</button>` : ''}<button class="secondary-button" data-action="space-land">${T(win ? 'adventure_back' : 'adventure_land')}</button></div></div>`;
 }
 function pausePanel() {
   const options = [['map', 'map_open'], ['characters', 'pause_character'], ['radio', 'pause_radio'], ['concerts', 'pause_concerts'], ['panda', 'pause_band'], ['social', 'pause_social'], ['grownups', 'nav_grownups'], ['help', 'help_open']];
@@ -319,6 +319,7 @@ function refreshFriendsWorld(force = false) {
   if (force || key !== friendsRenderKey) {
     $('#friends-hidden').innerHTML = friendsHiddenMarkup(friends);
     $('#friends-world').innerHTML = friendsWorldMarkup(friends);
+    $('#friends-fire').innerHTML = friendsCampfireMarkup(friends);
     friendsRenderKey = key; friendsEffectFrame = -1;
   }
   for (const actor of friends.actors) {
@@ -341,6 +342,7 @@ function updateFriends(dt) {
   const previousAway = awayAnimals().join(',');
   const events = tickFriends(state.friends, dt, state.scene, state.position, state.rocket.riding, state.rocket.position, state.reduced);
   for (const event of events) {
+    if (event.type === 'leaving') fadeCampMusic();
     if (event.type === 'caught') {
       const name = ANIMALS.find(animal => animal.id === event.id)?.name || '';
       toast(text('friends_caught', { name })); announce(text('friends_caught', { name }));
@@ -360,6 +362,7 @@ function inviteFriends() {
   if (state.scene !== 'world' || state.rocket.riding) return;
   if (gatherFriends(state.friends, ANIMALS, state.animal, state.position, state.rocket.position)) {
     state.reception = null; state.homeReturns = [];
+    startCampMusic();
     renderScene(); announce(text('friends_invited')); toast(text('friends_invited'));
   }
 }
@@ -536,9 +539,11 @@ function checkWorldTouch() {
   if (touch) enterRoom(touch.id);
 }
 function refreshAudioVolume() {
+  const campGain = state.campMusic?.fadeRemaining == null ? 1 : state.campMusic.fadeRemaining / FRIEND_CAMP_FADE_SECONDS;
   const fading = state.chocolate.boost > 0 && isChocolateTrack(playbackTrack());
-  const volume = state.volume * (state.memberMelody ? .2 : 1) * (fading ? chocolateMusicGain(state.chocolate) : 1);
+  const volume = state.volume * (state.memberMelody ? .2 : 1) * (fading ? chocolateMusicGain(state.chocolate) : 1) * (state.campMusic?.radio ? campGain : 1);
   if (audio.volume !== volume) audio.volume = volume;
+  campAudio.volume = state.volume * (state.memberMelody ? .2 : 1) * campGain;
 }
 function refreshPlayback() {
   refreshAudioVolume();
@@ -575,6 +580,7 @@ function playRecording(track, time = 0, playing = true) {
   refreshPlayback();
 }
 function loadRecording() {
+  stopCampMusic();
   // Only inserting or ejecting a cassette replenishes the maze, never a room visit.
   state.chocolate.collected = []; state.chocolate.session = false;
   state.boostMusic = null;
@@ -586,6 +592,7 @@ function loadRecording() {
 function startChocolateMusic() {
   const track = TRACKS.find(track => isChocolateTrack(track) && validRecording(track));
   if (!track) return;
+  stopCampMusic();
   const previous = state.boostMusic?.previous || { id: state.tapes.loaded, time: audio.currentTime || 0, playing: state.playing };
   const continuing = !state.boostMusic && isChocolateTrack(playbackTrack()) && state.playing;
   state.boostMusic = { id: track.id, previous, continuing };
@@ -603,6 +610,32 @@ for (const event of ['play', 'pause', 'ended']) audio.addEventListener(event, ()
   refreshPlayback();
 });
 audio.addEventListener('error', () => { refreshPlayback(); toast(text('audio_error')); });
+function stopCampMusic() {
+  const radio = state.campMusic?.radio;
+  state.campMusic = null; campAudio.pause(); campAudio.loop = false; campAudio.removeAttribute('src'); campAudio.load();
+  if (radio) { audio.pause(); audio.loop = false; refreshPlayback(); }
+}
+function startCampMusic() {
+  const track = TRACKS.find(track => isFriendsTrack(track) && validRecording(track));
+  if (!track) return;
+  stopCampMusic(); state.boostMusic = null; audio.pause(); audio.loop = false; state.playing = false;
+  state.friendsRestartPending = false;
+  state.campMusic = { track: track.id, fadeRemaining: null };
+  const session = state.campMusic;
+  campAudio.src = track.src; campAudio.currentTime = 0; campAudio.loop = true;
+  refreshPlayback(); refreshAudioVolume();
+  campAudio.play().catch(() => { if (state.campMusic === session) { stopCampMusic(); announce(text('audio_error')); } });
+}
+function fadeCampMusic() {
+  if (!state.campMusic && state.playing && isFriendsTrack(playbackTrack())) state.campMusic = { track: playbackTrack().id, radio: true, fadeRemaining: null };
+  if (state.campMusic && state.campMusic.fadeRemaining === null) state.campMusic.fadeRemaining = FRIEND_CAMP_FADE_SECONDS;
+}
+function tickCampMusic(elapsed) {
+  if (!state.campMusic || state.campMusic.fadeRemaining === null) return;
+  state.campMusic.fadeRemaining = Math.max(0, state.campMusic.fadeRemaining - Math.max(0, elapsed));
+  if (!state.campMusic.fadeRemaining) stopCampMusic();
+}
+campAudio.addEventListener('error', () => { if (state.campMusic && !state.campMusic.radio) stopCampMusic(); });
 function stopMemberMelody() {
   memberRequest++; state.memberMelody = null; memberAudio.pause(); memberAudio.removeAttribute('src'); memberAudio.load(); refreshAudioVolume();
 }
@@ -1159,6 +1192,13 @@ function resize() {
 }
 function updateCamera(dt, snap = false) {
   if (state.scene === 'painting' || state.adventure) return;
+  const group = state.scene === 'world' && !state.rocket.riding ? friendsCameraView(state.friends, state.position, state.viewport) : null;
+  if (group) {
+    state.camera.x = group.x + group.w / 2; state.camera.y = group.y + group.h / 2;
+    const viewBox = [group.x, group.y, group.w, group.h].map(value => value.toFixed(2)).join(' ');
+    if (world.getAttribute('viewBox') !== viewBox) world.setAttribute('viewBox', viewBox);
+    return;
+  }
   const { w, h } = state.viewport;
   const top = outsideScene(state.scene) ? WORLD.top : 0;
   const tx = clamp(state.position.x, w / 2, WORLD.width - w / 2), ty = clamp(state.position.y - (outsideScene(state.scene) ? 240 : 130), top + h / 2, WORLD.height - h / 2);
@@ -1169,7 +1209,7 @@ function updateCamera(dt, snap = false) {
 }
 function frame(time) {
   const elapsed = Math.max(0, (time - (lastTime || time)) / 1000), dt = Math.min(.05, elapsed); lastTime = time;
-  tickChocolate(state.chocolate, elapsed);
+  tickChocolate(state.chocolate, elapsed); tickCampMusic(elapsed);
   if (!state.chocolate.boost && state.boostMusic) finishChocolateMusic();
   refreshAudioVolume(); refreshChocolateItems();
   if (state.started && !document.hidden) {

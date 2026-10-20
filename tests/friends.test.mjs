@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ANIMALS, text } from '../content.js';
 import { WORLD, WORLD_SPAWN, HOUSE_DOORS, canStand, planPath, move, worldTouch } from '../game-core.js';
-import { createFriends, savedFriends, isFriendsTrack, startFriends, releaseFriends, friendsAway, friendsTentNear, gatherFriends, swapFriendsPlayer, tickFriends, FRIEND_HIDEOUTS, FRIEND_CAMP, FRIEND_TENT, FRIEND_CAMP_PLAYER, FRIEND_CAMP_SPOTS } from '../friends-game.js';
-import { friendsHiddenMarkup, friendsWorldMarkup, friendsConfettiMarkup } from '../friends-art.js';
+import { createFriends, savedFriends, isFriendsTrack, startFriends, releaseFriends, friendsAway, friendsTentNear, gatherFriends, swapFriendsPlayer, tickFriends, friendsCameraView, FRIEND_HIDEOUTS, FRIEND_CAMP, FRIEND_TENT, FRIEND_CAMP_PLAYER, FRIEND_CAMP_SPOTS } from '../friends-game.js';
+import { friendsHiddenMarkup, friendsWorldMarkup, friendsCampfireMarkup, friendsConfettiMarkup } from '../friends-art.js';
 import { worldMarkup } from '../art.js';
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -75,7 +75,7 @@ test('after confetti, every friend walks to the water and builds a persistent te
   for (const [i, actor] of friends.actors.entries()) assert(dist(actor.position, FRIEND_CAMP_SPOTS[i]) < 5);
   assert.deepEqual(savedFriends(friends), { tent: true });
   assert(friendsWorldMarkup(friends).includes('data-friends-tent'));
-  assert(friendsWorldMarkup(friends).includes('friend-fire-flame'));
+  assert(friendsCampfireMarkup(friends).includes('friend-fire-flame'));
   const reloaded = createFriends(savedFriends(friends));
   assert(reloaded.unlocked); assert.equal(reloaded.phase, 'idle'); assert.equal(reloaded.actors.length, 0);
   assert(friendsWorldMarkup(reloaded).includes('friend-tent')); assert(!friendsTentNear(reloaded, WORLD_SPAWN));
@@ -101,4 +101,37 @@ test('changing the player never duplicates an animal and leaving another adventu
   assert(!friends.actors.some(actor => actor.id === first)); assert(friends.actors.some(actor => actor.id === 'cat'));
   releaseFriends(friends); assert.equal(friends.phase, 'idle'); assert.equal(friendsAway(friends).length, 0); assert(friends.unlocked);
   assert.equal(createFriends({ tent: 'true' }).unlocked, false); assert.equal(createFriends(null).unlocked, false);
+});
+
+test('the campsite keeps the tent clear of the water and the flame clear of every seated character', () => {
+  assert(FRIEND_TENT.x < 900 && FRIEND_TENT.y < 1025, 'the tent moves left and upward');
+  assert(FRIEND_TENT.y + 14 < 1025, 'even the pegs stay above the water');
+  const flame = { left: FRIEND_CAMP.x - 24, right: FRIEND_CAMP.x + 24, top: FRIEND_CAMP.y - 50, bottom: FRIEND_CAMP.y + 20 };
+  for (const spot of [FRIEND_CAMP_PLAYER, ...FRIEND_CAMP_SPOTS]) {
+    assert(canStand(spot.x, spot.y));
+    assert(spot.x + 34 < flame.left || spot.x - 34 > flame.right || spot.y + 12 < flame.top || spot.y - 77 > flame.bottom, 'no seated figure covers the flame');
+  }
+  const world = worldMarkup();
+  assert(world.indexOf('id="friends-fire"') > world.indexOf('id="player"'), 'the fire remains visible in the foreground');
+});
+
+test('the camping camera immediately fits the complete group on wide and narrow screens', () => {
+  const friends = createFriends({ tent: true });
+  gatherFriends(friends, ANIMALS, 'cat', { x: FRIEND_TENT.x, y: FRIEND_TENT.y - 75 });
+  const player = { x: 120, y: 1010 };
+  friends.actors.forEach((actor, i) => { actor.position = [{ x: 1480, y: 280 }, { x: 400, y: 480 }, { x: 960, y: 1020 }][i]; });
+  for (const phase of ['celebrate', 'to-camp', 'gathering', 'building', 'camping']) {
+    friends.phase = phase;
+    for (const [w, h] of [[1480, 850], [390, 700], [1400, 360]]) {
+      const view = friendsCameraView(friends, player, { w, h });
+      assert(Math.abs(view.w / view.h - w / h) < 1e-9);
+      for (const point of [player, ...friends.actors.map(actor => actor.position)]) {
+        assert(point.x - 34 >= view.x && point.x + 34 <= view.x + view.w);
+        assert(point.y - 77 >= view.y && point.y + 12 <= view.y + view.h);
+      }
+      assert(FRIEND_TENT.x - 89 >= view.x && FRIEND_TENT.x + 119 <= view.x + view.w);
+      assert(FRIEND_TENT.y - 94 >= view.y && FRIEND_TENT.y + 14 <= view.y + view.h);
+    }
+  }
+  friends.phase = 'chasing'; assert.equal(friendsCameraView(friends, player, { w: 600, h: 700 }), null);
 });

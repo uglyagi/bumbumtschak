@@ -2,10 +2,11 @@ import { WORLD, HOUSE_DOORS, canStand, move, planPath } from './game-core.js';
 import { GROUND_ROCKET } from './sky-world.js';
 
 export const FRIEND_HIDEOUTS = [{ x: 105, y: 280 }, { x: 1475, y: 270 }, { x: 550, y: 960 }];
-export const FRIEND_CAMP = { x: 780, y: 983 };
-export const FRIEND_TENT = { x: 900, y: 1025 };
-export const FRIEND_CAMP_PLAYER = { x: 780, y: 930 };
-export const FRIEND_CAMP_SPOTS = [{ x: 710, y: 985 }, { x: 770, y: 1030 }, { x: 825, y: 1005 }];
+export const FRIEND_CAMP = { x: 875, y: 940 };
+export const FRIEND_TENT = { x: 700, y: 965 };
+export const FRIEND_CAMP_PLAYER = { x: 960, y: 1020 };
+export const FRIEND_CAMP_SPOTS = [{ x: 800, y: 980 }, { x: 870, y: 860 }, { x: 965, y: 920 }];
+export const FRIEND_CAMP_FADE_SECONDS = 5;
 export const FRIEND_CATCH_RADIUS = 34;
 export const FRIEND_NOTICE_RADIUS = 125;
 const home = HOUSE_DOORS.find(door => door.id === 'wardrobe');
@@ -184,4 +185,22 @@ export function tickFriends(friends, seconds, scene, player, riding = false, roc
     if (friends.campBuild === 1) { friends.phase = 'camping'; friends.elapsed = 0; events.push({ type: 'camp-ready' }); }
   }
   return events;
+}
+
+export function friendsCameraView(friends, player, viewport) {
+  if (!['celebrate', 'to-camp', 'gathering', 'building', 'camping'].includes(friends.phase)) return null;
+  const actors = friends.actors.filter(actor => actor.status !== 'home');
+  if (!actors.length) return null;
+  const points = [player, ...actors.map(actor => actor.position)];
+  let left = Math.min(...points.map(point => point.x - 54)), right = Math.max(...points.map(point => point.x + 54));
+  let top = Math.min(...points.map(point => point.y - 104)), bottom = Math.max(...points.map(point => point.y + 28));
+  if (friends.unlocked) {
+    left = Math.min(left, FRIEND_TENT.x - 108); right = Math.max(right, FRIEND_TENT.x + 132);
+    top = Math.min(top, FRIEND_TENT.y - 124, FRIEND_CAMP.y - 72); bottom = Math.max(bottom, FRIEND_TENT.y + 28);
+  }
+  const aspect = viewport.w / viewport.h, w = Math.max(viewport.w, right - left, (bottom - top) * aspect), h = w / aspect;
+  // Fit the full bodies immediately; easing must never leave a walker outside the view.
+  const x = Math.max(Math.min(0, WORLD.width - w), Math.min(Math.max(0, WORLD.width - w), (left + right - w) / 2));
+  const y = Math.max(Math.min(WORLD.top, WORLD.height - h), Math.min(WORLD.height - h, (top + bottom - h) / 2));
+  return { x, y, w, h };
 }
