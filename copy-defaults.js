@@ -2113,6 +2113,105 @@ COPY_GROUPS.push({ id: 'hat', label: 'Hut-Suche & Kleidung', fields: [
   { key: 'hat_paint', label: 'Hut auf der Ablage färben', value: 'Hut färben', max: 120 },
   { key: 'hat_painted', label: 'Hut gefärbt', value: 'Dein Hut ist jetzt {farbe}.', max: 300 },
 ] });
+
+COPY_GROUPS.push({ id: 'chocolate', label: 'Schokolabyrinth & Schokoladenlade', fields: [
+  {
+    "key": "choco_title",
+    "label": "Labyrinth-Überschrift",
+    "value": "Schokolabyrinth",
+    "max": 400
+  },
+  {
+    "key": "choco_door",
+    "label": "Schild am Radio-Eingang",
+    "value": "Schoko!",
+    "max": 400
+  },
+  {
+    "key": "choco_enter",
+    "label": "Eingang ins Schokolabyrinth",
+    "value": "Ins Schokolabyrinth gehen",
+    "max": 400
+  },
+  {
+    "key": "choco_collect_hint",
+    "label": "Anleitung im Labyrinth",
+    "value": "Finde alle fünf Schokoladentafeln! Du sammelst sie beim Berühren ein.",
+    "max": 400
+  },
+  {
+    "key": "choco_count",
+    "label": "Gefundene Tafeln",
+    "value": "Schokolade: {anzahl} / 5",
+    "max": 400
+  },
+  {
+    "key": "choco_back",
+    "label": "Ausgang zum Musikhaus",
+    "value": "Zum Musikhaus ↓",
+    "max": 400
+  },
+  {
+    "key": "choco_leaving",
+    "label": "Automatischer Rückweg",
+    "value": "Zurück zum Musikhaus …",
+    "max": 400
+  },
+  {
+    "key": "choco_complete",
+    "label": "Alle Tafeln gefunden",
+    "value": "Alle fünf gefunden! Deine Schokoladenlade ist frei!",
+    "max": 400
+  },
+  {
+    "key": "choco_returned",
+    "label": "Zurück im Musikhaus",
+    "value": "Wieder im Musikhaus!",
+    "max": 400
+  },
+  {
+    "key": "choco_paused",
+    "label": "Musik pausiert",
+    "value": "Musik pausiert",
+    "max": 400
+  },
+  {
+    "key": "choco_drawer",
+    "label": "Beschriftung der Schokoladenlade",
+    "value": "Schokolade",
+    "max": 400
+  },
+  {
+    "key": "choco_take",
+    "label": "Tafel aus der Lade nehmen",
+    "value": "Schokolade nehmen",
+    "max": 400
+  },
+  {
+    "key": "choco_taken",
+    "label": "Tafel in der Hand",
+    "value": "Schokolade in der Hand! Enter oder Leertaste: essen.",
+    "max": 400
+  },
+  {
+    "key": "choco_eat",
+    "label": "Schokolade essen",
+    "value": "Schokolade essen",
+    "max": 400
+  },
+  {
+    "key": "choco_eaten",
+    "label": "Temposchub aktiviert",
+    "value": "Mmmh! Du läufst jetzt 20 Sekunden doppelt so schnell!",
+    "max": 400
+  },
+  {
+    "key": "choco_boost",
+    "label": "Temposchub-Anzeige",
+    "value": "Doppeltes Tempo · {sekunden} s",
+    "max": 400
+  }
+] });
 export const COPY_FIELDS = COPY_GROUPS.flatMap(group => group.fields);
 export const DEFAULT_TEXTS = Object.fromEntries(COPY_FIELDS.map(field => [field.key, field.value]));
 export function normalizeTexts(saved) {

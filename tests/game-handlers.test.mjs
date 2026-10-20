@@ -16,16 +16,19 @@ const wreckage = await import(new URL(`rocket-wreckage.${extension}`, root));
 const holiday = await import(new URL(`sun-holiday.${extension}`, root));
 const hats = await import(new URL(`hat-quest.${extension}`, root));
 const reception = await import(new URL(`reception.${extension}`, root));
+const chocolate = await import(new URL(`chocolate.${extension}`, root));
+const chocolateArt = await import(new URL(`chocolate-art.${extension}`, root));
 
 // Exercise the application's real registered handlers with DOM test doubles.
 // This checks app behavior, not browser rendering or native default actions.
 const source = await fs.readFile(new URL(`app.${extension}`, root), 'utf8');
-async function harness(preview = false, savedAnimal = '', savedDrawing = null, damaged = false, savedHat = null) {
+async function harness(preview = false, savedAnimal = '', savedDrawing = null, damaged = false, savedHat = null, savedChocolates = null) {
   const opened = [];
   const stored = new Map(savedAnimal ? [['bbt-animal', savedAnimal]] : []);
   if (savedDrawing) stored.set(preview ? 'bbt-paint-preview' : 'bbt-paint-world', JSON.stringify(savedDrawing));
   if (savedHat) stored.set(preview ? 'bbt-hat-preview' : 'bbt-hat-world', JSON.stringify(savedHat));
   if (damaged) stored.set(preview ? 'bbt-rocket-preview-damaged' : 'bbt-rocket-damaged', '1');
+  if (savedChocolates) stored.set(preview ? 'bbt-chocolate-preview' : 'bbt-chocolate-world', JSON.stringify(savedChocolates));
   const nodes = new Map(), windowHandlers = new Map(), documentHandlers = new Map();
   const add = (map, name, callback) => map.set(name, [...(map.get(name) || []), callback]);
   const doc = { activeElement: null, hidden: false, baseURI: 'https://uglyagi.github.io/bumbumtschak/' };
@@ -97,7 +100,7 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null, d
   const game = get('#game'), modal = get('#modal'), modalContent = get('#modal-content'), audio = get('#audio');
   for (const node of [audio, get('#member-audio')]) Object.assign(node, { paused: true, ended: false, currentTime: 0, pause() { this.paused = true; }, play() { this.paused = false; this.ended = false; return Promise.resolve(); }, load() {} });
   const context = vm.createContext({
-    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky, ...dance, ...studio, ...adventure, ...adventureArt, ...toolbox, ...wreckage, ...holiday, ...hats, ...reception,
+    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky, ...dance, ...studio, ...adventure, ...adventureArt, ...toolbox, ...wreckage, ...holiday, ...hats, ...reception, ...chocolate, ...chocolateArt,
     loadContent: async () => ({ ok: true }), document: doc,
     window: { innerWidth: 1200, matchMedia: () => ({ matches: false }), addEventListener: (n, cb) => add(windowHandlers, n, cb), open(...args) { opened.push(args); } },
     location: { search: preview ? '?preview=1' : '' }, localStorage: { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value) },
@@ -970,3 +973,75 @@ try {
  const x=h.state.position.x;h.state.keys.add('ArrowRight');for(let i=101;i<=111;i++)h.frame(i*16);h.state.keys.clear();assert(h.state.position.x>x+25,'player movement remains independent of the slower light updates');
 }finally{dancingTrack.src=originalDanceAudio;}
 console.log('PASS: disco spotlights use about twenty updates per second while player movement retains its normal frame rate.');
+
+
+const chocolateTrack = { id: 'schokolade', title: 'Schokolade', src: 'uploads/schokolade.mp3', color: '#ff87ce', image: 'assets/hut.png' };
+content.TRACKS.push(chocolateTrack);
+try {
+  const h = await harness(false, 'monkey'); h.enterRoom('radio'); h.state.tapes.loaded = chocolateTrack.id; h.loadRecording();
+  assert(h.state.chocolate.active); assert(h.game.innerHTML.includes('data-room-target="choco-door"'));
+  h.state.position = { x: chocolate.CHOCOLATE_DOOR.x, y: 550 }; h.game.focus(); h.state.keys.add('ArrowUp');
+  let clock = 0;
+  while (h.state.scene === 'radio' && clock < 100) h.frame(++clock * 16);
+  assert.equal(h.state.scene, 'chocolate'); assert.equal(h.state.chocolate.run.collected.length, 0); assert.equal(h.state.keys.size, 0);
+  assert.equal((h.game.innerHTML.match(/id="maze-chocolate-[1-5]"/g) || []).length, 5);
+  const locked = await harness(false, 'cat'); locked.enterRoom('wardrobe'); assert(!locked.game.innerHTML.includes('data-room-target="chocolate-drawer"'));
+  for (const bar of chocolate.MAZE_CHOCOLATES) {
+    h.state.path = core.planPath(h.state.position, bar, 'chocolate'); assert(h.state.path.length);
+    const deadline = clock + 4000;
+    while (!h.state.chocolate.run.collected.includes(bar.id) && clock < deadline) { h.frame(++clock * 16); assert(chocolate.canStandChocolate(h.state.position.x, h.state.position.y)); }
+    assert(h.state.chocolate.run.collected.includes(bar.id)); assert(h.get('#maze-' + bar.id).attrs.has('hidden'));
+  }
+  assert.equal(h.state.chocolate.run.phase, 'celebrate'); assert(h.state.chocolate.unlocked); assert(JSON.parse(h.stored.get('bbt-chocolate-world')).unlocked);
+  h.frame(++clock * 16); assert(h.get('#chocolate-celebration').innerHTML.includes('chocolate-confetti'));
+  while (h.state.chocolate.run.phase === 'celebrate') h.frame(++clock * 16);
+  assert.equal(h.state.chocolate.run.phase, 'leaving'); h.state.keys.add('ArrowRight');
+  const deadline = clock + 3000; while (h.state.scene === 'chocolate' && clock < deadline) h.frame(++clock * 16);
+  assert.equal(h.state.scene, 'radio'); assert.deepEqual({ ...h.state.position }, { ...chocolate.CHOCOLATE_RETURN }); assert.equal(h.state.chocolate.run, null); assert(h.state.chocolate.active);
+  for (let i = 0; i < 10; i++) h.frame(++clock * 16); assert.equal(h.state.scene, 'radio', 'return point does not immediately enter the door again');
+  h.enterRoom('wardrobe'); assert(h.game.innerHTML.includes('data-room-target="chocolate-drawer"'));
+  h.state.position = { ...chocolate.CHOCOLATE_DRAWER }; h.game.focus();
+  h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game, true)); assert(!h.state.chocolate.carrying);
+  h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game)); assert(h.state.chocolate.carrying); assert.equal(h.state.chocolate.boost, 0);
+  h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game)); assert(!h.state.chocolate.carrying); assert.equal(h.state.chocolate.boost, 20);
+  h.leaveRoom(); h.state.position = { x: 650, y: 650 }; h.game.focus(); h.state.keys.add('ArrowRight');
+  const before = { ...h.state.position }; h.frame(++clock * 16);
+  assert(Math.abs(h.state.position.x - before.x - core.WORLD.speed * .016 * 2) < 1e-8);
+  h.state.keys.clear(); h.frame(clock * 16 + 20001); assert.equal(h.state.chocolate.boost, 0); assert.equal(chocolate.chocolateSpeed(h.state.chocolate), 1);
+  const reload = await harness(false, 'cat', null, false, null, JSON.parse(h.stored.get('bbt-chocolate-world'))); reload.enterRoom('wardrobe');
+  assert(reload.game.innerHTML.includes('data-room-target="chocolate-drawer"')); assert(!reload.state.chocolate.carrying); assert.equal(reload.state.chocolate.boost, 0);
+  console.log('PASS: Schokolade changes only the left speaker into a door, walking enters without confirmation, five reachable bars collect by touch, confetti plays, the figure walks itself out, the drawer persists, separate presses take/eat and movement doubles for exactly twenty seconds.');
+
+  for (const reason of ['ended', 'changed', 'escape']) {
+    const h = await harness(false, 'dog'); h.enterRoom('radio'); h.state.tapes.loaded = chocolateTrack.id; h.loadRecording();
+    h.state.position = { ...chocolate.CHOCOLATE_DOOR }; h.game.focus(); let clock = 0; h.frame(++clock * 16);
+    assert.equal(h.state.scene, 'chocolate'); h.state.path = core.planPath(h.state.position, chocolate.MAZE_CHOCOLATES[0], 'chocolate');
+    for (let i = 0; i < 200; i++) h.frame(++clock * 16);
+    if (reason === 'ended') { h.get('#audio').ended = true; h.get('#audio').paused = true; for (const cb of h.get('#audio').handlers.get('ended')) cb({}); }
+    if (reason === 'changed') { h.state.tapes.loaded = 'tanzen'; h.loadRecording(); }
+    if (reason === 'escape') h.press(h.windowHandlers, h.event('Escape', 'Escape', h.game));
+    assert.equal(h.state.chocolate.run.phase, 'leaving');
+    const deadline = clock + 2000; while (h.state.scene === 'chocolate' && clock < deadline) h.frame(++clock * 16);
+    assert.equal(h.state.scene, 'radio'); assert(!h.state.chocolate.unlocked); assert.equal(h.state.chocolate.run, null);
+  }
+  console.log('PASS: song ending, changing songs and Escape each trigger an automatic collision-free walk to the maze exit, without unlocking an unfinished reward.');
+
+  for (const [key, code] of [[' ', 'Space'], ['Enter', 'NumpadEnter']]) {
+    const h = await harness(true, 'horse', null, false, null, { unlocked: true }); h.enterRoom('wardrobe'); h.state.position = { ...chocolate.CHOCOLATE_DRAWER }; h.game.focus();
+    h.press(h.windowHandlers, h.event(key, code, h.game)); assert(h.state.chocolate.carrying); assert.equal(h.state.chocolate.boost, 0);
+    h.press(h.windowHandlers, h.event(key, code, h.game, true)); assert(h.state.chocolate.carrying);
+    h.press(h.windowHandlers, h.event(key, code, h.game)); assert(!h.state.chocolate.carrying); assert.equal(h.state.chocolate.boost, 20);
+    assert(h.stored.has('bbt-chocolate-preview')); assert(!h.stored.has('bbt-chocolate-world'));
+  }
+  console.log('PASS: Space and Numpad Enter take and eat a single bar in two distinct presses; held keys do not eat it and preview rewards are separate.');
+
+  const paused = await harness(false, 'cat'); paused.enterRoom('radio'); paused.state.tapes.loaded = chocolateTrack.id; paused.loadRecording(); paused.state.position = { ...chocolate.CHOCOLATE_DOOR }; paused.game.focus(); paused.frame(16);
+  assert.equal(paused.state.scene, 'chocolate'); paused.get('#audio').pause(); for (const cb of paused.get('#audio').handlers.get('pause')) cb({});
+  const waiting = { ...paused.state.position }; paused.state.keys.add('ArrowRight');
+  for (let frame = 2; frame < 20; frame++) paused.frame(frame * 16);
+  assert.deepEqual({ ...paused.state.position }, waiting); assert.equal(paused.state.chocolate.run.phase, 'search');
+  await paused.get('#audio').play(); for (const cb of paused.get('#audio').handlers.get('play')) cb({});
+  paused.frame(20 * 16); assert(paused.state.position.x > waiting.x);
+  paused.press(paused.windowHandlers, paused.event('Escape', 'Escape', paused.game)); assert.equal(paused.state.chocolate.run.phase, 'leaving');
+  console.log('PASS: pausing Schokolade freezes exploration without losing the run, resuming restores walking, and Escape still starts a safe automatic return.');
+} finally { content.TRACKS.splice(content.TRACKS.indexOf(chocolateTrack), 1); }

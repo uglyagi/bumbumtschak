@@ -16,6 +16,8 @@ import { wreckageTransforms } from './rocket-wreckage.js';
 import { sunHolidayPose, holidayTransform } from './sun-holiday.js';
 import { createHatQuest, savedHatQuest, startHatQuest, tickHatQuest, hatInteraction, findHat, toggleHat, paintHat, returnHat, wearsHat, animalHref, colorHatMarkup, hatEffectsMarkup, isHatTrack, hatSpot, HAT_STAND, HAT_HEADS } from './hat-quest.js';
 import { createReception, landReception, stopReceptionFireworks, tickReception, receptionMarkup, receptionAway, swapReceptionPilot } from './reception.js';
+import { createChocolate, savedChocolate, chocolateSpeed, tickChocolate, takeChocolate, eatChocolate, newChocolateRun, collectChocolate, beginChocolateExit, advanceChocolateExit, isChocolateTrack, touchingChocolateDoor, CHOCOLATE_DOOR, CHOCOLATE_RETURN, CHOCOLATE_DRAWER, MAZE_SPAWN, MAZE_EXIT, MAZE_CHOCOLATES, chocolateBarMarkup, chocolateConfetti } from './chocolate.js';
+import { chocolateMazeMarkup } from './chocolate-art.js';
 
 const previewMode = new URLSearchParams(location.search).get('preview') === '1';
 const contentStatus = await loadContent(previewMode);
@@ -35,6 +37,9 @@ const rocketStorageKey = previewMode ? 'rocket-preview-damaged' : 'rocket-damage
 const savedRocketDamage = storage.get(rocketStorageKey, '0') === '1';
 const savedDifficulty = storage.get('adventure-difficulty', 'leicht');
 const hatStorageKey = previewMode ? 'hat-preview' : 'hat-world';
+const chocolateStorageKey = previewMode ? 'chocolate-preview' : 'chocolate-world';
+let savedChocolates = null;
+try { savedChocolates = JSON.parse(storage.get(chocolateStorageKey, 'null')); } catch { /* A damaged local reward starts locked. */ }
 let savedHat = null;
 try { savedHat = JSON.parse(storage.get(hatStorageKey, 'null')); } catch { /* An invalid local quest starts afresh. */ }
 let savedPaint = {};
@@ -52,7 +57,7 @@ const state = {
   studio: null, pictureTouch: false,
   rocket: { position: { ...GROUND_ROCKET }, riding: false, airborne: false, damaged: savedRocketDamage, broken: savedRocketDamage, impact: null },
   adventure: null, landing: null, toolbox: false, homeReturns: [],
-  party: createParty(),
+  party: createParty(), chocolate: createChocolate(savedChocolates),
   hat: createHatQuest(savedHat), hatActive: false, hatRestartPending: false,
   difficulty: Object.hasOwn(DIFFICULTIES, savedDifficulty) ? savedDifficulty : 'leicht', reception: null,
   volume: clamp(Number(storage.get('volume', '.6')) || 0, 0, 1),
@@ -263,24 +268,111 @@ function updateReception(dt) {
   if (state.scene === 'wardrobe' && away !== receptionAway(state.reception).join(',')) renderScene();
   else refreshReceptionEffects();
 }
+function refreshChocolateItems() {
+  const chocolate = state.chocolate, carry = $('#chocolate-carry');
+  if (carry) {
+    carry.toggleAttribute('hidden', !chocolate.carrying || state.rocket.riding || !!state.adventure || state.scene === 'painting');
+    carry.setAttribute('transform', 'translate(' + (state.position.x + 17).toFixed(2) + ' ' + (state.position.y - 30).toFixed(2) + ') scale(' + (state.scene === 'chocolate' ? '.3' : '.42') + ')');
+  }
+  const badge = $('#chocolate-boost'), seconds = Math.ceil(chocolate.boost);
+  badge.hidden = !seconds || state.rocket.riding || !!state.adventure || state.scene === 'painting';
+  const boostLabel = text('choco_boost', { sekunden: seconds });
+  if (badge.textContent !== boostLabel) badge.textContent = boostLabel;
+  const progress = $('#chocolate-progress'); progress.hidden = state.scene !== 'chocolate';
+  if (!progress.hidden && chocolate.run) {
+    const run = chocolate.run, label = text(run.phase === 'leaving' ? 'choco_leaving' : run.phase === 'celebrate' ? 'choco_count' : !chocolate.active ? 'choco_paused' : 'choco_count', { anzahl: run.collected.length });
+    if (progress.textContent !== label) progress.textContent = label;
+  }
+}
+function refreshChocolatePlayback() {
+  const chocolate = state.chocolate, track = TRACKS.find(track => track.id === state.tapes.loaded), previous = chocolate.active;
+  chocolate.active = state.playing && !audio.ended && !audio.error && isChocolateTrack(track);
+  if (chocolate.active) chocolate.session = true;
+  if (!isChocolateTrack(track) || audio.ended || audio.error) {
+    chocolate.session = false;
+    if (state.scene === 'chocolate') requestChocolateExit('song');
+  }
+  if (previous !== chocolate.active && state.scene === 'radio') renderScene();
+  refreshChocolateItems();
+}
+function enterChocolateMaze() {
+  if (state.scene !== 'radio' || !state.chocolate.active) return false;
+  stopWalking(); closePanel(); state.chocolate.run = newChocolateRun();
+  state.scene = 'chocolate'; state.position = { ...MAZE_SPAWN };
+  renderScene(); game.focus({ preventScroll: true }); announce(text('choco_collect_hint')); return true;
+}
+function requestChocolateExit(reason = 'manual') {
+  if (state.scene !== 'chocolate' || !state.chocolate.run) return;
+  closePanel(); stopWalking();
+  beginChocolateExit(state.chocolate.run, state.position, reason);
+  $('#chocolate-celebration').innerHTML = '';
+  refreshChocolateItems(); announce(text('choco_leaving'));
+}
+function finishChocolateExit() {
+  stopWalking(); state.chocolate.run = null; state.scene = 'radio'; state.position = { ...CHOCOLATE_RETURN };
+  renderScene(); game.focus({ preventScroll: true }); announce(text('choco_returned'));
+}
+function frameChocolate(dt) {
+  const run = state.chocolate.run;
+  if (!run || !state.started || modal.open || document.hidden) return;
+  let walking = false;
+  if (run.phase === 'celebrate') {
+    run.celebration += dt;
+    $('#chocolate-celebration').innerHTML = chocolateConfetti(run.celebration, state.position.x, state.position.y, state.reduced);
+    if (run.celebration >= 2.4) requestChocolateExit('complete');
+  } else if (run.phase === 'leaving') {
+    const old = state.position, next = advanceChocolateExit(run, old, dt);
+    state.position = next.position; walking = Math.hypot(old.x - next.position.x, old.y - next.position.y) > .05;
+    if (next.done) { finishChocolateExit(); return; }
+  } else if (state.chocolate.active) {
+    let dx = 0, dy = 0;
+    for (const code of state.keys) { const direction = directions.get(code); if (direction) { dx += direction[0]; dy += direction[1]; } }
+    for (const direction of state.pad.values()) { const vector = padVectors[direction]; dx += vector[0]; dy += vector[1]; }
+    if (!dx && !dy && state.path.length) {
+      while (state.path.length && Math.hypot(state.path[0].x - state.position.x, state.path[0].y - state.position.y) < 2) state.path.shift();
+      if (state.path.length) { dx = state.path[0].x - state.position.x; dy = state.path[0].y - state.position.y; }
+    }
+    if (dx || dy) {
+      const old = state.position, speed = chocolateSpeed(state.chocolate);
+      const step = state.path.length ? Math.min(dt, Math.hypot(dx, dy) / (WORLD.speed * speed)) : dt;
+      state.position = move(old, dx, dy, step, 'chocolate', null, speed); walking = Math.hypot(old.x - state.position.x, old.y - state.position.y) > .05;
+    }
+    const collected = collectChocolate(run, state.position);
+    if (collected) {
+      for (const treat of MAZE_CHOCOLATES) if (run.collected.includes(treat.id)) $('#maze-' + treat.id)?.setAttribute('hidden', '');
+      announce(text('choco_count', { anzahl: run.collected.length }));
+      if (collected === 'complete') {
+        state.chocolate.unlocked = true; storage.set(chocolateStorageKey, JSON.stringify(savedChocolate(state.chocolate)));
+        stopWalking(); toast(text('choco_complete')); announce(text('choco_complete'));
+      }
+    }
+    if (run.phase === 'search' && Math.hypot(state.position.x - MAZE_EXIT.x, state.position.y - MAZE_EXIT.y) < 20) { finishChocolateExit(); return; }
+  }
+  player.classList.toggle('is-moving', walking);
+  player.setAttribute('transform', 'translate(' + state.position.x.toFixed(2) + ' ' + state.position.y.toFixed(2) + ')');
+  updateNear(); updateCamera(dt); refreshChocolateItems();
+}
+
 function renderScene() {
   clearPaintPreview();
   const hat = wearsHat(state.hat, state.hatActive);
-  const artwork = state.adventure ? adventureMarkup(state.adventure, state.animal, state.paint, hat) : state.scene === 'painting' ? studioMarkup(state.paint, PALETTE, state.studio) : outsideScene(state.scene) ? worldMarkup(state.paint, !!state.paintCan, state.scene, { ...state.rocket, hat }, state.animal) : roomMarkup(state.scene, state.shelfPage, state.tapes, state.animal, { can: state.paintCan, page: state.paintPage, world: state.paint, toolbox: state.toolbox, returns: state.homeReturns, hat: state.hat, away: receptionAway(state.reception) });
+  const artwork = state.adventure ? adventureMarkup(state.adventure, state.animal, state.paint, hat) : state.scene === 'chocolate' ? chocolateMazeMarkup(state.chocolate.run) : state.scene === 'painting' ? studioMarkup(state.paint, PALETTE, state.studio) : outsideScene(state.scene) ? worldMarkup(state.paint, !!state.paintCan, state.scene, { ...state.rocket, hat }, state.animal) : roomMarkup(state.scene, state.shelfPage, state.tapes, state.animal, { can: state.paintCan, page: state.paintPage, world: state.paint, toolbox: state.toolbox, returns: state.homeReturns, hat: state.hat, away: receptionAway(state.reception), chocolate: state.chocolate });
   const markup = colorHatMarkup(artwork, state.hat.color);
   const end = markup.lastIndexOf('</svg>');
-  game.innerHTML = markup.slice(0, end) + '<g id="hat-effects"></g><g id="reception-effects"></g>' + markup.slice(end);
+  game.innerHTML = markup.slice(0, end) + '<g id="hat-effects"></g><g id="reception-effects"></g><g id="chocolate-carry" pointer-events="none" hidden="">' + chocolateBarMarkup() + '</g>' + markup.slice(end);
   world = $('#world-svg'); player = $('#player'); playerUse = $('#player-use'); marker = $('#destination-marker');
-  game.setAttribute('aria-label', state.adventure?.sunTime != null ? text('sun_holiday_title') : state.scene === 'painting' ? text('studio_title') : state.scene === 'space' ? text('space_title') : state.scene === 'sky' ? text('sky_title') : state.scene === 'world' ? text('world_title') : ROOMS[state.scene].title);
+  game.setAttribute('aria-label', state.adventure?.sunTime != null ? text('sun_holiday_title') : state.scene === 'chocolate' ? text('choco_title') : state.scene === 'painting' ? text('studio_title') : state.scene === 'space' ? text('space_title') : state.scene === 'sky' ? text('sky_title') : state.scene === 'world' ? text('world_title') : ROOMS[state.scene].title);
   $('.wayfinder').hidden = state.scene !== 'world' || state.rocket.riding;
   $('.exit-room').hidden = !!state.landing || state.adventure?.phase === 'intro' || state.scene === 'world' && !state.rocket.riding;
-  $('.exit-room').textContent = text(state.adventure?.sunTime != null ? 'adventure_back' : state.scene === 'painting' ? 'studio_close' : state.rocket.riding ? state.rocket.airborne ? 'rocket_land_button' : 'rocket_exit' : 'exit_button');
+  $('.exit-room').textContent = text(state.adventure?.sunTime != null ? 'adventure_back' : state.scene === 'chocolate' ? 'choco_back' : state.scene === 'painting' ? 'studio_close' : state.rocket.riding ? state.rocket.airborne ? 'rocket_land_button' : 'rocket_exit' : 'exit_button');
   game.classList.toggle('in-room', !outsideScene(state.scene));
   player.toggleAttribute('hidden', state.rocket.riding);
   state.near = null; updateAnimal(); refreshCassettes(); refreshHatEffects(); refreshReceptionEffects(); resize(); updateNear(true);
   player.setAttribute('transform', `translate(${state.position.x} ${state.position.y})`);
+  refreshChocolateItems();
 }
 function showPanel(id, focusSelector = '') {
+  if (state.scene === 'chocolate') { requestChocolateExit(); return; }
   if (state.landing || ['intro', 'sun-finale'].includes(state.adventure?.phase)) return;
   if (state.adventure && !id.startsWith('space-')) id = state.adventure.phase === 'won' ? 'space-win' : state.adventure.phase === 'playing' ? 'space-pause' : 'space-launch';
   stopWalking(); clearPaintPreview(); state.modal = id; game.classList.add('paused');
@@ -315,6 +407,7 @@ function beginWorld(close = true) {
   announce(text('now_animal', { tier: ANIMALS.find(a => a.id === state.animal).name }));
 }
 function enterRoom(id) {
+  if (state.scene === 'chocolate') { requestChocolateExit(); return false; }
   const room = roomFor(id); if (!room) return;
   if (state.scene === 'painting') closePainting();
   if (state.rocket.riding) { closePanel(); toast(text('rocket_land_first')); return false; }
@@ -326,6 +419,7 @@ function enterRoom(id) {
   return true;
 }
 function leaveRoom() {
+  if (state.scene === 'chocolate') { requestChocolateExit(); return; }
   if (state.landing) return;
   if (state.adventure) { landFromAdventure(); return; }
   if (state.scene === 'painting') { closePainting(); return; }
@@ -346,6 +440,7 @@ function refreshPlayback() {
   state.playing = !audio.paused && !audio.ended;
   refreshDanceParty();
   refreshHatQuest();
+  refreshChocolatePlayback();
   $('#radio-shortcut').setAttribute('aria-label', text('room_radio'));
   $('#radio-shortcut').style.background = state.playing ? 'var(--yellow)' : '';
   $('#radio-tape')?.classList.toggle('is-playing', state.playing);
@@ -386,6 +481,9 @@ for (const event of ['ended', 'error']) memberAudio.addEventListener(event, () =
 document.addEventListener('input', e => { if (e.target.id === 'volume') { state.volume = Number(e.target.value); memberAudio.volume = state.volume; audio.volume = state.volume * (state.memberMelody ? .2 : 1); storage.set('volume', state.volume); } });
 function currentInteraction() {
   if (state.adventure || state.landing) return null;
+  if (state.chocolate.carrying && state.scene !== 'painting' && !state.rocket.riding && state.chocolate.run?.phase !== 'leaving') return { id: 'eat-chocolate', kind: 'eat-chocolate', label: text('choco_eat') };
+  if (state.scene === 'chocolate') return null;
+  if (state.scene === 'wardrobe' && state.chocolate.unlocked && Math.hypot(state.position.x - CHOCOLATE_DRAWER.x, state.position.y - CHOCOLATE_DRAWER.y) < 75) return { ...CHOCOLATE_DRAWER, kind: 'take-chocolate', label: text('choco_take') };
   if (state.scene === 'painting') {
     const interaction = studioInteraction(state.position, PALETTE, state.studio.page), matrix = world.getScreenCTM();
     if (interaction?.kind !== 'studio-paint' || !document.elementsFromPoint || !matrix) return interaction;
@@ -572,6 +670,8 @@ function performInteraction() {
   if (!near) return;
   if (state.scene === 'painting') { studioAction(near); return; }
   stopWalking();
+  if (near.kind === 'take-chocolate') { if (takeChocolate(state.chocolate)) { renderScene(); announce(text('choco_taken')); } return; }
+  if (near.kind === 'eat-chocolate') { if (eatChocolate(state.chocolate)) { renderScene(); toast(text('choco_eaten')); announce(text('choco_eaten')); } return; }
   if (near.kind === 'find-hat') {
     if (findHat(state.hat, state.scene, state.position, state.hatActive)) { saveHat(); renderScene(); toast(text('hat_found')); announce(text('hat_found')); }
     return;
@@ -642,6 +742,7 @@ function navigateTo(x, y, destination = null) {
   marker.removeAttribute('hidden'); marker.setAttribute('transform', `translate(${x} ${y})`); game.focus({ preventScroll: true });
 }
 function goToStation(id) {
+  if (state.scene === 'chocolate') { requestChocolateExit(); return; }
   const station = STATIONS.find(s => s.id === id); if (!station) return;
   if (state.rocket.riding) { closePanel(); toast(text('rocket_land_first')); return; }
   const s = id === 'rocket' ? { ...station, ...state.rocket.position } : station;
@@ -694,7 +795,7 @@ document.addEventListener('click', e => {
   if (action === 'put-paint') { putPaintDown(); return; }
   if (action === 'close') closePanel();
   if (action === 'leave') leaveRoom();
-  if (action === 'exit-walk') { if (state.scene === 'painting') closePainting(); else if (state.rocket.riding) returnToGround(); else navigateTo(EXIT.x, 1020, { kind: 'exit' }); }
+  if (action === 'exit-walk') { if (state.scene === 'chocolate') requestChocolateExit(); else if (state.scene === 'painting') closePainting(); else if (state.rocket.riding) returnToGround(); else navigateTo(EXIT.x, 1020, { kind: 'exit' }); }
   if (action === 'start') beginWorld();
   if (action === 'start-radio') { beginWorld(false); enterRoom('radio'); }
   if (action === 'world') { if (state.scene !== 'world') leaveRoom(); else { closePanel(); if (!state.started) showPanel('characters'); else game.focus(); } }
@@ -764,6 +865,9 @@ modalContent.addEventListener('keydown', e => {
   controls[nextMenuIndex(controls.indexOf(document.activeElement), e.key, controls.length)]?.focus();
 });
 function activateRoomTarget(id) {
+  if (id === 'choco-door') { if (state.scene === 'radio' && state.chocolate.active) navigateTo(CHOCOLATE_DOOR.x, CHOCOLATE_DOOR.y); return; }
+  if (id === 'chocolate-exit') { requestChocolateExit(); return; }
+  if (id === 'chocolate-drawer') { if (state.scene !== 'wardrobe' || !state.chocolate.unlocked) return; if (currentInteraction()?.kind === 'take-chocolate') performInteraction(); else navigateTo(CHOCOLATE_DRAWER.x, CHOCOLATE_DRAWER.y); return; }
   if (id === 'toolbox') { if (state.scene !== 'wardrobe') return; if (currentInteraction()?.id === id) performInteraction(); else navigateTo(TOOLBOX_SPOT.x, TOOLBOX_SPOT.y); return; }
   if (id === 'painting') { if (currentInteraction()?.kind === 'painting') openPainting(); else navigateTo(PICTURE_SPOT.x, PICTURE_SPOT.y); return; }
   if (id.startsWith('paint:') || id === 'paint-next') {
@@ -856,7 +960,7 @@ window.addEventListener('keydown', e => {
   if (modal.open || !state.started || state.landing) return;
   if (state.adventure && e.key === 'Escape') { e.preventDefault(); if (!e.repeat) { if (['intro', 'sun-finale'].includes(state.adventure.phase)) landFromAdventure(); else showPanel(state.adventure.phase === 'playing' ? 'space-pause' : state.adventure.phase === 'won' ? 'space-win' : 'space-launch'); } return; }
   if (state.scene === 'painting' && e.key === 'Escape') { e.preventDefault(); if (!e.repeat) closePainting(); return; }
-  if (e.key === 'Escape') { e.preventDefault(); if (!e.repeat) { if (state.paintCan) putPaintDown(); else outsideScene(state.scene) ? showPanel('pause') : leaveRoom(); } return; }
+  if (e.key === 'Escape') { e.preventDefault(); if (!e.repeat) { if (state.scene === 'chocolate') requestChocolateExit(); else if (state.paintCan) putPaintDown(); else outsideScene(state.scene) ? showPanel('pause') : leaveRoom(); } return; }
   if (!(document.activeElement === game || game.contains(document.activeElement))) {
     if (e.key.startsWith('Arrow') && e.target.closest('.header,.footer')) {
       e.preventDefault(); const controls = [...document.querySelectorAll('.header a,.header button,.footer button')];
@@ -918,7 +1022,8 @@ function updateCamera(dt, snap = false) {
   if (world.getAttribute('viewBox') !== viewBox) world.setAttribute('viewBox', viewBox);
 }
 function frame(time) {
-  const dt = Math.min(.05, Math.max(0, (time - (lastTime || time)) / 1000)); lastTime = time;
+  const elapsed = Math.max(0, (time - (lastTime || time)) / 1000), dt = Math.min(.05, elapsed); lastTime = time;
+  tickChocolate(state.chocolate, elapsed); refreshChocolateItems();
   if (state.started && !document.hidden) {
     if (!modal.open && state.homeReturns.length) tickHomeReturns(dt);
     if (!modal.open) { tickHats(dt); updateReception(dt); }
@@ -927,6 +1032,7 @@ function frame(time) {
     updateDanceGuests();
     if (departing && !state.party.departing) refreshDanceParty();
   }
+  if (state.scene === 'chocolate') { frameChocolate(dt); requestAnimationFrame(frame); return; }
   if (state.rocket.broken && state.rocket.impact !== null && state.rocket.impact < .8 && !document.hidden) {
     state.rocket.impact += dt;
     for (const piece of wreckageTransforms(state.rocket.impact)) $(`#rocket-debris-${piece.id}`)?.setAttribute('transform', piece.transform);
@@ -979,7 +1085,7 @@ function frame(time) {
       }
     }
     if (dx || dy) {
-      const old = state.position, stepTime = state.path.length ? Math.min(dt, Math.hypot(dx, dy) / (state.scene === 'painting' ? 400 : state.rocket.riding ? ROCKET_SPEED : WORLD.speed)) : dt;
+      const old = state.position, stepTime = state.path.length ? Math.min(dt, Math.hypot(dx, dy) / (state.scene === 'painting' ? 400 : state.rocket.riding ? ROCKET_SPEED : WORLD.speed * chocolateSpeed(state.chocolate))) : dt;
       if (state.rocket.riding) {
         if (!state.rocket.airborne && dy < 0) { state.rocket.airborne = true; renderScene(); announce(text('rocket_flying')); }
         if (state.rocket.airborne) {
@@ -995,7 +1101,7 @@ function frame(time) {
           }
         }
       } else if (state.scene === 'painting') { const length = Math.hypot(dx, dy); state.position = { x: clamp(old.x + dx / length * 400 * stepTime, 30, 1570), y: clamp(old.y + dy / length * 400 * stepTime, 110, 1055) }; }
-      else state.position = move(old, dx, dy, stepTime, state.scene, state.rocket.position);
+      else state.position = move(old, dx, dy, stepTime, state.scene, state.rocket.position, chocolateSpeed(state.chocolate));
       walking = Math.hypot(state.position.x - old.x, state.position.y - old.y) > .05;
       if (state.path.length) {
         stuckTime = walking ? 0 : stuckTime + dt;
@@ -1005,9 +1111,11 @@ function frame(time) {
     if (throughExit(state.scene, state.position)) leaveRoom();
     checkWorldTouch();
     checkPictureTouch();
+    if (state.scene === 'radio' && state.chocolate.active && touchingChocolateDoor(state.position)) enterChocolateMaze();
     updateNear(); updateCamera(dt);
   }
   player.classList.toggle('is-moving', walking); player.setAttribute('transform', `translate(${state.position.x.toFixed(2)} ${state.position.y.toFixed(2)})`);
+  refreshChocolateItems();
   if (outsideScene(state.scene) && state.rocket.riding) $('#rocket')?.setAttribute('transform', `translate(${state.position.x.toFixed(2)} ${state.position.y.toFixed(2)})`);
   requestAnimationFrame(frame);
 }

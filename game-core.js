@@ -1,4 +1,5 @@
 import { SPACE, SKY, GROUND_ROCKET, rocketBody } from './sky-world.js';
+import { canStandChocolate, chocolatePath } from './chocolate.js';
 
 export const WORLD = { width: 1600, height: 1100, top: SPACE.top, radius: 18, speed: 205 };
 export const WORLD_SPAWN = { x: 650, y: 650 };
@@ -63,6 +64,7 @@ export function sceneObstacles(scene = 'world', parkedRocket = GROUND_ROCKET) {
   return [...WALLS, ...props];
 }
 export function canStand(x, y, radius = WORLD.radius, scene = 'world', parkedRocket = GROUND_ROCKET) {
+  if (scene === 'chocolate') return canStandChocolate(x, y, radius);
   if (scene === 'space') return false;
   if (x < radius + 24 || x > WORLD.width - radius - 24) return false;
   if (scene === 'sky') {
@@ -87,10 +89,10 @@ export function rocketExitPosition(position) {
   return [[-55, 25], [55, 25], [-55, 0], [55, 0], [0, 55], [-65, 55], [65, 55]].map(([dx, dy]) => ({ x: position.x + dx, y: position.y + dy }))
     .find(point => canStand(point.x, point.y, WORLD.radius, 'world', position)) || null;
 }
-export function move(position, dx, dy, dt, scene = 'world', parkedRocket = GROUND_ROCKET) {
+export function move(position, dx, dy, dt, scene = 'world', parkedRocket = GROUND_ROCKET, speedMultiplier = 1) {
   const length = Math.hypot(dx, dy);
   if (!length) return { ...position };
-  const distance = WORLD.speed * Math.min(dt, .05);
+  const distance = WORLD.speed * Math.min(dt, .05) * Math.max(1, Math.min(2, speedMultiplier));
   const next = { ...position };
   const nx = position.x + dx / length * distance;
   if (canStand(nx, next.y, WORLD.radius, scene, parkedRocket)) next.x = nx;
@@ -107,6 +109,7 @@ export function nearestStation(position, range = 110) {
   return nearest;
 }
 export function planPath(start, end, scene = 'world', parkedRocket = GROUND_ROCKET) {
+  if (scene === 'chocolate') return chocolatePath(start, end);
   const inDoor = (point, door, margin = 0) => Math.abs(point.x - door.x) <= door.halfWidth + margin && point.y >= door.top - margin && point.y <= door.bottom + margin;
   // Walking to another destination must not lead through an automatic entrance.
   const avoidedDoors = scene === 'world' ? HOUSE_DOORS.filter(door => !inDoor(start, door, WORLD.radius + 7) && !inDoor(end, door)) : [];
