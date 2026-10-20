@@ -62,7 +62,7 @@ export const FLOWERS = [
   const larger = Math.round(size * 1.25), extra = larger - size;
   return [x - extra / 2, y - extra * 1.2, color, larger];
 });
-export const TREES = [[35, 85, 150, 210, '#ff87ce'], [1390, 50, 170, 225, '#fff20b'], [1440, 500, 130, 210, '#ff87ce'], [30, 850, 145, 210, '#1d55ff'], [500, 805, 110, 155, '#ff87ce']];
+export const TREES = [[35, 85, 150, 210, '#ff87ce'], [1390, 50, 170, 225, '#fff20b'], [1440, 500, 130, 210, '#ff87ce'], [-100, 620, 145, 210, '#1d55ff'], [500, 805, 110, 155, '#ff87ce']];
 export const CLOUDS = [[356, -310, 140, 60], [1155, -285, 145, 60]];
 export const WORLD_PATH = 'M300 1020Q255 900 300 750T315 560Q280 466 440 475L1110 475Q1320 440 1280 610L1265 850Q1150 945 910 810T670 670Q560 610 570 500M815 500V320M800 665Q840 660 895 695';
 const rect = (x, y, w, h) => ({ x, y, w, h });
@@ -91,7 +91,7 @@ export const PAINT_SURFACES = [
   { id: 'mailbox', key: 'paint_mailbox', bounds: rect(1324, 703, 120, 140), walk: { x: 1465, y: 835 } },
   { id: 'sun', key: 'paint_sun', bounds: rect(190, -300, 102, 106), walk: { x: 241, y: -159 }, reach: 55, sky: true },
   ...CLOUDS.map(([x, y, w, h], i) => ({ id: `cloud-${i}`, key: 'paint_cloud', bounds: rect(x, y, w, h), walk: { x: x + w / 2, y: y + h + 38 }, reach: 60, sky: true })),
-  ...TREES.map(([x, y, w, h], i) => ({ id: `tree-${i}`, key: 'paint_tree', bounds: rect(x, y, w, h * .71), walk: [{ x: 215, y: 200 }, { x: 1350, y: 160 }, { x: 1390, y: 610 }, { x: 205, y: 950 }, { x: 470, y: 875 }][i], reach: 65 })),
+  ...TREES.map(([x, y, w, h], i) => ({ id: `tree-${i}`, key: 'paint_tree', bounds: rect(x, y, w, h * .71), walk: [{ x: 215, y: 200 }, { x: 1350, y: 160 }, { x: 1390, y: 610 }, { x: 75, y: 720 }, { x: 470, y: 875 }][i], reach: 65 })),
   ...FLOWERS.map(([x, y, , size], i) => ({ id: `flower-${i}`, key: 'paint_flower', bounds: rect(x, y, size, size * .7), walk: { x: x + size / 2, y: y + size + 20 }, reach: 42 })),
   { id: 'water', key: 'paint_water', bounds: rect(WORLD_BOUNDS.left, 1025, WORLD_BOUNDS.width, 75), walk: { x: 800, y: 1005 }, reach: 55 },
   { id: 'path', key: 'paint_path', walk: { x: 650, y: 650 }, ground: true },
