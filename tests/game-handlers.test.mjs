@@ -20,11 +20,13 @@ const chocolate = await import(new URL(`chocolate.${extension}`, root));
 const chocolateArt = await import(new URL(`chocolate-art.${extension}`, root));
 const friends = await import(new URL(`friends-game.${extension}`, root));
 const friendsArt = await import(new URL(`friends-art.${extension}`, root));
+const bike = await import(new URL(`bike-race.${extension}`, root));
+const bikeArt = await import(new URL(`bike-art.${extension}`, root));
 
 // Exercise the application's real registered handlers with DOM test doubles.
 // This checks app behavior, not browser rendering or native default actions.
 const source = await fs.readFile(new URL(`app.${extension}`, root), 'utf8');
-async function harness(preview = false, savedAnimal = '', savedDrawing = null, damaged = false, savedHat = null, savedChocolates = null, savedFriendCamp = null) {
+async function harness(preview = false, savedAnimal = '', savedDrawing = null, damaged = false, savedHat = null, savedChocolates = null, savedFriendCamp = null, savedBikes = null, savedBikeScores = null) {
   const opened = [];
   const stored = new Map(savedAnimal ? [['bbt-animal', savedAnimal]] : []);
   if (savedDrawing) stored.set(preview ? 'bbt-paint-preview' : 'bbt-paint-world', JSON.stringify(savedDrawing));
@@ -32,6 +34,8 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null, d
   if (damaged) stored.set(preview ? 'bbt-rocket-preview-damaged' : 'bbt-rocket-damaged', '1');
   if (savedChocolates) stored.set(preview ? 'bbt-chocolate-preview' : 'bbt-chocolate-world', JSON.stringify(savedChocolates));
   if (savedFriendCamp) stored.set(preview ? 'bbt-friends-preview' : 'bbt-friends-world', JSON.stringify(savedFriendCamp));
+  if (savedBikes) stored.set(preview ? 'bbt-bikes-preview' : 'bbt-bikes-world', JSON.stringify(savedBikes));
+  if (savedBikeScores) stored.set(preview ? 'bbt-bike-scores-preview' : 'bbt-bike-scores-world', JSON.stringify(savedBikeScores));
   const nodes = new Map(), windowHandlers = new Map(), documentHandlers = new Map();
   const add = (map, name, callback) => map.set(name, [...(map.get(name) || []), callback]);
   const doc = { activeElement: null, hidden: false, baseURI: 'https://uglyagi.github.io/bumbumtschak/' };
@@ -79,6 +83,7 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null, d
     matches(selector) { return selector === 'input[type=range]' && this.tag === 'input'; }
     closest(selector) {
       for (const part of selector.split(',')) {
+        if (part === '[data-bicycle]' && this.dataset.bicycle) return this;
         if (part === '[data-character]' && this.dataset.character) return this;
         if (part === '[data-member]' && this.dataset.member) return this;
         if (part === '[data-signpost]' && this.dataset.signpost) return this;
@@ -102,9 +107,9 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null, d
   doc.createElement = tag => new Element(tag);
   doc.body = { prepend() {}, classList: { add() {} } };
   const game = get('#game'), modal = get('#modal'), modalContent = get('#modal-content'), audio = get('#audio');
-  for (const node of [audio, get('#member-audio'), get('#camp-audio')]) Object.assign(node, { paused: true, ended: false, currentTime: 0, pause() { this.paused = true; }, play() { this.paused = false; this.ended = false; return Promise.resolve(); }, load() {} });
+  for (const node of [audio, get('#member-audio'), get('#camp-audio'), get('#bike-audio')]) Object.assign(node, { paused: true, ended: false, currentTime: 0, pause() { this.paused = true; }, play() { this.paused = false; this.ended = false; return Promise.resolve(); }, load() {} });
   const context = vm.createContext({
-    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky, ...dance, ...studio, ...adventure, ...adventureArt, ...toolbox, ...wreckage, ...holiday, ...hats, ...reception, ...chocolate, ...chocolateArt, ...friends, ...friendsArt,
+    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky, ...dance, ...studio, ...adventure, ...adventureArt, ...toolbox, ...wreckage, ...holiday, ...hats, ...reception, ...chocolate, ...chocolateArt, ...friends, ...friendsArt, ...bike, ...bikeArt,
     loadContent: async () => ({ ok: true }), document: doc,
     window: { innerWidth: 1200, matchMedia: () => ({ matches: false }), addEventListener: (n, cb) => add(windowHandlers, n, cb), open(...args) { opened.push(args); } },
     location: { search: preview ? '?preview=1' : '' }, localStorage: { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value) },
@@ -443,7 +448,7 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space']]) {
   assert.equal(h.state.paint[flower.id], '#ff3935');
   h.state.position = { x: 1000, y: 600 }; h.frame(32);
   assert.equal(node(flower.id).style.color, '#ff3935', 'walking away restores the confirmed color');
-  assert.equal(node('grass').getAttribute('fill'), '#4acb59'); assert.equal(h.currentInteraction(), null);
+  assert.equal(node('grass').getAttribute('fill'), '#b5ed9b'); assert.equal(h.currentInteraction(), null);
   h.state.position = { ...flower.walk }; h.frame(48); h.showPanel('help');
   assert.equal(node(flower.id).style.color, '#ff3935', 'opening a panel clears the preview');
   h.closePanel(); h.frame(64); assert.equal(node(flower.id).style.color, '#fff20b');
@@ -453,7 +458,7 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space']]) {
   h.state.position = { ...painting.BUCKET_SURFACES.find(surface => surface.id === 'tree-0').walk }; h.frame(80);
   assert.equal(node('tree-0').style.color, '#fff20b');
   h.press(h.windowHandlers, h.event('Escape', 'Escape', h.game));
-  assert.equal(node('tree-0').style.color, '#ff87ce'); assert.equal(h.state.paint['tree-0'], undefined);
+  assert.equal(node('tree-0').style.color, '#4acb59'); assert.equal(h.state.paint['tree-0'], undefined);
   assert.equal(h.state.paint.path, '#ff3935', 'bucket previews preserve the saved picture drawing');
 }
 console.log('PASS: bucket previews cover only trees and flowers, restore on movement and panels, commit on Enter/Space, reject repeated keys and clear on Escape.');
@@ -1417,3 +1422,95 @@ console.log('PASS: the flight choices navigate vertically with Up/Down and launc
   h.state.friends.phase = 'camping'; assert(h.enterRoom('social')); assert.equal(h.state.scene, 'social');
 }
 console.log('PASS: every building and the mailbox stay closed throughout tag and the group walk; normal entry returns at the campfire.');
+
+const savedCycleTrack=content.TRACKS.find(track=>track.id==='fahrradfahren').src;
+content.TRACKS.find(track=>track.id==='fahrradfahren').src='uploads/cycling.mp3';
+for(const [key,code] of [['Enter','Enter'],[' ','Space'],['Enter','NumpadEnter']]){
+  const h=await harness(false,'cat');
+  h.enterRoom('radio');h.state.tapes.carrying='fahrradfahren';h.state.position={...rooms.RADIO};h.game.focus();
+  h.press(h.windowHandlers,h.event(key,code,h.game));
+  assert.equal(h.state.tapes.loaded,'fahrradfahren');assert(h.state.bikeDoor);
+  assert(h.game.innerHTML.includes('data-room-target="bike-door"'));assert(h.game.innerHTML.includes('Wettrennen'));
+  assert(!h.game.innerHTML.includes('data-room-target="choco-door"'));
+  h.state.position={...bike.BIKE_DOOR};h.frame(1000);
+  assert.equal(h.state.modal,'bike-launch');assert(h.state.race && h.modal.open);
+  assert(h.modalContent.innerHTML.includes('data-bike-level="leicht"'));assert(h.modalContent.innerHTML.includes('data-bike-level="mittel"'));assert(h.modalContent.innerHTML.includes('data-bike-level="schwer"'));
+  const level=new h.Element('difficulty','button',{bikeLevel:'mittel'});
+  h.press(h.documentHandlers,h.event(key,code,level));
+  assert.equal(h.state.race.phase,'racing');assert.equal(h.state.race.difficulty,'mittel');assert(!h.modal.open);
+  assert.equal(h.get('#audio').volume,0);assert(h.state.bikeMusic);assert.equal(h.get('#bike-audio').src,'uploads/cycling.mp3');
+  h.game.focus();h.press(h.windowHandlers,h.event('ArrowUp','ArrowUp',h.game));h.frame(1017);
+  assert(!h.state.keys.has('ArrowUp'));const x=h.state.race.x;
+  h.press(h.windowHandlers,h.event('ArrowRight','ArrowRight',h.game));h.frame(1034);assert(h.state.race.x>x);
+  h.state.keys.clear();h.press(h.windowHandlers,h.event('Escape','Escape',h.game));
+  assert.equal(h.state.modal,'bike-pause');const clock=h.state.race.elapsed;h.frame(2034);assert.equal(h.state.race.elapsed,clock);
+  new h.Element('continue','button',{action:'bike-continue'}).click();assert(!h.modal.open);
+  new h.Element('exit','button',{action:'bike-exit'}).click();
+  assert.equal(h.state.race,null);assert.equal(h.state.scene,'radio');assert.deepEqual(h.state.position,bike.BIKE_RETURN);
+  assert.equal(h.state.bikeMusic,null);assert.equal(h.get('#audio').volume,h.state.volume);
+  h.state.position={...rooms.RADIO};h.press(h.windowHandlers,h.event(key,code,h.game));
+  assert.equal(h.state.tapes.loaded,null);assert(!h.state.bikeDoor);assert(!h.game.innerHTML.includes('data-room-target="bike-door"'));
+}
+console.log('PASS: actual cassette insertion opens the right cycling door; Enter, Space and Numpad choose difficulty; only left/right steer; Escape pauses; exit and ejection restore the speaker and original music.');
+
+for(const level of Object.keys(bike.BIKE_LEVELS)){
+  const h=await harness(false,'horse');h.enterRoom('radio');h.state.tapes.loaded='fahrradfahren';h.loadRecording();
+  h.state.position={...bike.BIKE_DOOR};h.frame(1000);new h.Element('start','button',{bikeLevel:level}).click();
+  h.state.race.progress=bike.BIKE_FINISH-.5;h.state.race.x=bike.bikeRoadCenter(bike.BIKE_FINISH);h.state.race.elapsed=41.2;h.state.race.rocks=[];
+  h.frame(1020);assert.equal(h.state.modal,'bike-win');assert(h.state.garage.unlocked.includes(level));
+  assert(JSON.parse(h.stored.get('bbt-bikes-world')).unlocked.includes(level));
+  h.get('#bike-racer-name').value='<Rad & Pferd>';
+  new h.Element('save','button',{action:'bike-save'}).click();
+  assert.equal(h.state.bikeScores[level].length,1);assert(h.state.race.saved);
+  assert(h.modalContent.innerHTML.includes('&lt;Rad &amp; Pferd&gt;'));assert(h.modalContent.innerHTML.includes('auf diesem Gerät'));
+  new h.Element('save again','button',{action:'bike-save'}).click();assert.equal(h.state.bikeScores[level].length,1);
+  new h.Element('exit','button',{action:'bike-exit'}).click();h.leaveRoom();
+  assert.equal(h.state.scene,'world');assert(h.game.innerHTML.includes('data-bicycle="'+level+'"'));
+  h.state.position={...h.state.garage.positions[level]};h.game.focus();h.press(h.windowHandlers,h.event(' ','Space',h.game));
+  assert.equal(h.state.garage.riding,level);assert(h.state.bikeMusic);assert.equal(h.get('#player-use').getAttribute('y'),'-98');
+  assert.equal(h.enterRoom('radio'),false);assert.equal(h.state.scene,'world');
+  const start={...h.state.position};h.state.keys.add('ArrowLeft');h.frame(1037);h.state.keys.clear();assert(h.state.position.x<start.x);
+  h.press(h.windowHandlers,h.event('Enter','Enter',h.game));assert.equal(h.state.garage.riding,null);assert.equal(h.state.bikeMusic,null);
+  assert.equal(h.get('#player-use').getAttribute('y'),'-77');
+}
+console.log('PASS: all three finishes persist the matching bicycle; local names are escaped and duplicate saves prevented; earned bikes mount with Space, move outdoors, block buildings and dismount with Enter.');
+
+for(const target of ['wall','crown','entrance']){
+  const h=await harness(false,'dog',null,false,null,null,null,{unlocked:['schwer']});
+  const p=target==='wall'?{x:640,y:400}:target==='crown'?{x:140,y:305}:{x:305,y:580};
+  h.state.garage.positions.schwer={...p};h.state.position={...p};h.game.focus();
+  h.press(h.windowHandlers,h.event('Enter','Enter',h.game));assert.equal(h.state.garage.riding,'schwer');
+  h.state.keys.add('ArrowUp');let time=1000,frames=0;
+  while(h.state.garage.riding && frames++<90){time+=17;h.frame(time);}
+  h.state.keys.clear();assert.equal(h.state.garage.riding,null,target+' knocks the rider off');
+  assert(h.state.garage.fall>0);assert.equal(h.state.scene,'world');
+  const stopped={...h.state.position};h.frame(time+500);assert.deepEqual(h.state.position,stopped);
+  for(let i=0;i<30;i++)h.frame(time+1000+i*50);
+  h.game.focus();h.press(h.windowHandlers,h.event(' ','Space',h.game));assert.equal(h.state.garage.riding,'schwer',target+' allows mounting again');
+}
+console.log('PASS: houses, full tree crowns and door thresholds knock cyclists off; the world stays active, recovery completes, and the rider must mount again.');
+
+const cycleReload=await harness(false,'monkey',null,false,null,null,null,{unlocked:['leicht','schwer']},{leicht:[{name:'Katze',time:591}]});
+assert.deepEqual(cycleReload.state.garage.unlocked,['leicht','schwer']);assert.equal(cycleReload.state.bikeScores.leicht[0].name,'Katze');
+const cyclePreview=await harness(true,'cat',null,false,null,null,null,{unlocked:['mittel']});
+assert(cyclePreview.state.garage.unlocked.includes('mittel'));assert(!cyclePreview.stored.has('bbt-bikes-world'));
+const cycleKeys=await harness(false,'cat');
+cycleKeys.enterRoom('radio');cycleKeys.state.tapes.loaded='fahrradfahren';cycleKeys.loadRecording();
+cycleKeys.state.position={...bike.BIKE_DOOR};cycleKeys.frame(1000);
+const cycleChoices=Object.keys(bike.BIKE_LEVELS).map(level=>new cycleKeys.Element(level,'button',{bikeLevel:level}));
+const cycleExit=new cycleKeys.Element('exit','button',{action:'bike-exit'});
+cycleKeys.modalContent.querySelectorAll=()=>[...cycleChoices,cycleExit];cycleChoices[0].focus();
+cycleKeys.press(cycleKeys.modalContent.handlers,cycleKeys.event('ArrowDown','ArrowDown',cycleChoices[0]));
+assert.equal(cycleKeys.doc.activeElement,cycleChoices[1]);
+cycleKeys.press(cycleKeys.documentHandlers,cycleKeys.event(' ','Space',cycleChoices[1]));
+assert.equal(cycleKeys.state.race.difficulty,'mittel');
+cycleKeys.state.race.progress=bike.BIKE_FINISH-1;cycleKeys.state.race.x=bike.bikeRoadCenter(bike.BIKE_FINISH);cycleKeys.state.race.rocks=[];
+cycleKeys.frame(1020);const nameInput=cycleKeys.get('#bike-racer-name');nameInput.id='bike-racer-name';nameInput.value='Radler Hund';
+const nameSpace=cycleKeys.press(cycleKeys.modalContent.handlers,cycleKeys.event(' ','Space',nameInput));assert(!nameSpace.prevented);
+cycleKeys.press(cycleKeys.modalContent.handlers,cycleKeys.event('Enter','Enter',nameInput));
+assert(cycleKeys.state.race.saved);assert.equal(cycleKeys.state.bikeScores.mittel[0].name,'Radler Hund');
+new cycleKeys.Element('again','button',{action:'bike-again'}).click();assert.equal(cycleKeys.state.race.phase,'ready');assert.equal(cycleKeys.state.modal,'bike-launch');
+cycleKeys.closePanel();assert.equal(cycleKeys.state.race,null);assert.equal(cycleKeys.state.scene,'radio');
+console.log('PASS: vertical difficulty choices respond to arrow keys and Space; a name accepts spaces and Enter saves it; replay resets the race and closing choices returns to the Music House.');
+content.TRACKS.find(track=>track.id==='fahrradfahren').src=savedCycleTrack;
+console.log('PASS: bicycle rewards and separate per-difficulty local leaderboards restore after reload; administration previews use separate reward storage.');

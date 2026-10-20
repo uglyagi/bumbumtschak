@@ -68,3 +68,26 @@ dialog.space-choice{width:min(640px,calc(100% - 28px));margin:auto auto 6vh;max-
 @media(prefers-reduced-motion:reduce){.friend-body,.game.is-camping #player-body{animation:none!important}}
 
 .adventure-dialog .modal-actions{flex-direction:column;align-items:stretch}.adventure-dialog .modal-actions button{width:100%}.difficulty-options button:focus-visible,.adventure-dialog .modal-actions button:focus-visible{background:var(--yellow);outline:3px solid var(--ink);outline-offset:3px}
+
+/* Cycling uses the same bold outlines and front-facing animals as the world. */
+.bike-dialog { max-width: 720px; }
+.bike-dialog .difficulty-options { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.bike-dialog .difficulty-options button { text-align: left; }
+.bike-dialog .difficulty-options strong, .bike-dialog .difficulty-options small { display: block; }
+.bike-dialog .difficulty-options small { margin-top: 4px; }
+.bike-results { margin: 20px 0; padding: 16px 20px; background: #fff6a3; border: 3px solid #101014; border-radius: 16px; }
+.bike-score-entry { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin: 20px 0; }
+.bike-score-entry label { flex: 1 1 200px; font-weight: 800; }
+.bike-score-entry input { display: block; width: 100%; padding: 12px; margin-top: 6px; border: 3px solid #101014; border-radius: 10px; background: white; font: inherit; }
+.bike-board { padding: 0; list-style-position: inside; }
+.bike-board li { padding: 9px 12px; border-bottom: 2px solid #10101422; }
+.bike-board li strong { float: right; font-variant-numeric: tabular-nums; }
+.bike-board-local { font-size: .82rem; opacity: .75; }
+.game.is-cycling #player-body, .game.bike-fallen #player-body { animation: none !important; }
+.game.bike-fallen #player-body { transform: rotate(-58deg); transform-origin: 0 0; }
+.game.is-bike-race ~ .dpad .pad-up, .game.is-bike-race ~ .dpad .pad-down { visibility: hidden; }
+.game.is-bike-race { background: #b5ed9b; }
+.is-pedaling .bike-pedals { animation: cycle-pedals .3s linear infinite alternate; }
+.game.paused .bike-pedals { animation-play-state: paused; }
+@keyframes cycle-pedals { from { transform: translateY(-3px); } to { transform: translateY(3px); } }
+@media (prefers-reduced-motion: reduce) { .is-pedaling .bike-pedals { animation: none; } }

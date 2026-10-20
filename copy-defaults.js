@@ -2340,6 +2340,216 @@ COPY_GROUPS.push({ id: 'friends', label: 'Beste Freunde: Fangenspiel und Lagerfe
     "max": 500
   }
 ] });
+COPY_GROUPS.push({
+  "id": "cycling",
+  "label": "Fahrradfahren: Wettrennen & Fahrräder",
+  "fields": [
+    {
+      "key": "bike_title",
+      "label": "Schild und Spielname",
+      "value": "Wettrennen",
+      "max": 700
+    },
+    {
+      "key": "bike_enter",
+      "label": "Eingang",
+      "value": "Zum Wettrennen gehen",
+      "max": 700
+    },
+    {
+      "key": "bike_ready",
+      "label": "Startüberschrift",
+      "value": "Auf die Räder, fertig, los!",
+      "max": 700
+    },
+    {
+      "key": "bike_keys",
+      "label": "Feste Spielanleitung",
+      "value": "Lenke nur mit ← und →. Die Strecke zieht von unten nach oben vorbei. Weiche Steinen aus und bleib auf dem Weg. Nach einem Sturz brauchst du 3 Sekunden zum Aufsteigen. Escape pausiert.",
+      "max": 700
+    },
+    {
+      "key": "bike_choose",
+      "label": "Schwierigkeitswahl",
+      "value": "Wähle deine Strecke",
+      "max": 700
+    },
+    {
+      "key": "bike_level_leicht",
+      "label": "Stufe leicht",
+      "value": "Leicht",
+      "max": 700
+    },
+    {
+      "key": "bike_level_mittel",
+      "label": "Stufe mittel",
+      "value": "Mittel",
+      "max": 700
+    },
+    {
+      "key": "bike_level_schwer",
+      "label": "Stufe schwer",
+      "value": "Schwer",
+      "max": 700
+    },
+    {
+      "key": "bike_hint_leicht",
+      "label": "Beschreibung leicht",
+      "value": "Gemütliches Tempo, wenige Steine – gewinne ein Dreirad.",
+      "max": 700
+    },
+    {
+      "key": "bike_hint_mittel",
+      "label": "Beschreibung mittel",
+      "value": "Mehr Tempo und Steine – gewinne ein Fahrrad.",
+      "max": 700
+    },
+    {
+      "key": "bike_hint_schwer",
+      "label": "Beschreibung schwer",
+      "value": "Schnelles Rennen, viele Steine – gewinne ein Mountainbike.",
+      "max": 700
+    },
+    {
+      "key": "bike_pause",
+      "label": "Pauseüberschrift",
+      "value": "Verschnaufpause",
+      "max": 700
+    },
+    {
+      "key": "bike_continue",
+      "label": "Rennen fortsetzen",
+      "value": "Weiterfahren",
+      "max": 700
+    },
+    {
+      "key": "bike_back",
+      "label": "Ausgang",
+      "value": "Zurück zum Musikhaus",
+      "max": 700
+    },
+    {
+      "key": "bike_win",
+      "label": "Zielüberschrift",
+      "value": "Geschafft! Du bist im Ziel!",
+      "max": 700
+    },
+    {
+      "key": "bike_result",
+      "label": "Ergebnis",
+      "value": "Deine Zeit: {zeit} · Stürze: {anzahl}",
+      "max": 700
+    },
+    {
+      "key": "bike_unlock",
+      "label": "Gewinn",
+      "value": "Dein {rad} wartet vor Home sweet Home auf dich!",
+      "max": 700
+    },
+    {
+      "key": "bike_reward_leicht",
+      "label": "Name Dreirad",
+      "value": "Dreirad",
+      "max": 700
+    },
+    {
+      "key": "bike_reward_mittel",
+      "label": "Name Fahrrad",
+      "value": "Fahrrad",
+      "max": 700
+    },
+    {
+      "key": "bike_reward_schwer",
+      "label": "Name Mountainbike",
+      "value": "Mountainbike",
+      "max": 700
+    },
+    {
+      "key": "bike_board",
+      "label": "Bestenliste",
+      "value": "Bestenliste · {stufe}",
+      "max": 700
+    },
+    {
+      "key": "bike_board_local",
+      "label": "Speicherhinweis",
+      "value": "Diese Bestenliste wird auf diesem Gerät gespeichert.",
+      "max": 700
+    },
+    {
+      "key": "bike_board_empty",
+      "label": "Leere Bestenliste",
+      "value": "Noch keine Zeit eingetragen. Fahre die erste Bestzeit!",
+      "max": 700
+    },
+    {
+      "key": "bike_name",
+      "label": "Namensfeld",
+      "value": "Dein Name oder Spitzname",
+      "max": 700
+    },
+    {
+      "key": "bike_save",
+      "label": "Zeit eintragen",
+      "value": "In die Bestenliste eintragen",
+      "max": 700
+    },
+    {
+      "key": "bike_saved",
+      "label": "Zeit gespeichert",
+      "value": "Deine Zeit ist eingetragen!",
+      "max": 700
+    },
+    {
+      "key": "bike_again",
+      "label": "Noch einmal",
+      "value": "Noch einmal fahren",
+      "max": 700
+    },
+    {
+      "key": "bike_finish",
+      "label": "Ziellinie",
+      "value": "ZIEL!",
+      "max": 700
+    },
+    {
+      "key": "bike_falls",
+      "label": "Sturzanzahl",
+      "value": "Stürze: {anzahl}",
+      "max": 700
+    },
+    {
+      "key": "bike_recover",
+      "label": "Wieder aufsteigen",
+      "value": "Wieder aufsteigen … {sekunden} s",
+      "max": 700
+    },
+    {
+      "key": "bike_mount",
+      "label": "Aufsteigen",
+      "value": "Auf dein {rad} steigen",
+      "max": 700
+    },
+    {
+      "key": "bike_dismount",
+      "label": "Absteigen",
+      "value": "Vom Fahrrad absteigen",
+      "max": 700
+    },
+    {
+      "key": "bike_mounted",
+      "label": "Aufgestiegen",
+      "value": "Aufgesessen! Pfeiltasten lenken, Enter oder Leertaste steigt ab.",
+      "max": 700
+    },
+    {
+      "key": "bike_crashed",
+      "label": "Sturz in der Welt",
+      "value": "Hoppla! Steig mit Enter oder Leertaste wieder auf.",
+      "max": 700
+    }
+  ]
+});
 export const COPY_FIELDS = COPY_GROUPS.flatMap(group => group.fields);
 export const DEFAULT_TEXTS = Object.fromEntries(COPY_FIELDS.map(field => [field.key, field.value]));
 export function normalizeTexts(saved) {

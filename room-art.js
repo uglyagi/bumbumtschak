@@ -9,6 +9,7 @@ import { HOME_PICTURE } from './game-core.js';
 import { toolboxMarkup } from './toolbox.js';
 import { CHOCOLATE_DRAWER } from './chocolate.js';
 import { socialPadsMarkup } from './social.js';
+import { bikeDoorMarkup } from './bike-art.js';
 
 export function cassetteMarkup(track) {
   return `<g stroke="#101014" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round">
@@ -42,11 +43,11 @@ export function slotContents(tapes, index) {
   const track = TRACKS.find(t => t.id === tapes.slots[index]);
   return `<rect x="-92" y="-59" width="184" height="118" rx="12" fill="#fffcee" fill-opacity=".38" stroke="#101014" stroke-width="2" stroke-dasharray="6 5" opacity=".6"/>${track ? `<g transform="translate(-90 -57) scale(1.36)">${cassetteMarkup(track)}</g>` : ''}`;
 }
-function radioArt(shelfPage, tapes, chocolate = {}) {
+function radioArt(shelfPage, tapes, chocolate = {}, bicycle = false) {
   return `${target('radio', text('radio_walk'), `<g transform="translate(290 -15)" stroke="#101014" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
     <path d="M418 309v-40h180v40" fill="none"/><path d="M642 300 680 275"/><circle cx="681" cy="271" r="7" fill="#fff20b"/>
     <rect x="325" y="300" width="370" height="180" rx="25" fill="#ff87ce"/>
-    ${chocolate.session || chocolate.active ? '<g data-room-target="choco-door" role="button" tabindex="0" aria-label="' + escape(text('choco_enter')) + '"><path d="M350 480V383a39 39 0 0 1 78 0v97Z" fill="#442820"/><path d="M357 480V383a32 32 0 0 1 64 0v97" fill="none" stroke="#fff20b" stroke-width="6"/><path d="M353 480h72v26h-72" fill="#fff6a3" stroke-width="3"/><path d="M389 499v-22m-8 8 8-8 8 8" stroke="#101014" stroke-width="4" fill="none"/><rect x="336" y="309" width="106" height="32" rx="10" fill="#fffcee" stroke-width="3"/><text x="389" y="332" text-anchor="middle" stroke="none" font-size="23" font-weight="900">' + escape(text('choco_door')) + '</text><path d="m370 410 8 6-7 7m28-26 9 8-7 9" fill="none" stroke="#ff87ce" stroke-width="4"/></g>' : '<circle cx="389" cy="394" r="47" fill="url(#speaker)"/>'}<circle cx="634" cy="394" r="47" fill="url(#speaker)"/>
+    ${chocolate.session || chocolate.active ? '<g data-room-target="choco-door" role="button" tabindex="0" aria-label="' + escape(text('choco_enter')) + '"><path d="M350 480V383a39 39 0 0 1 78 0v97Z" fill="#442820"/><path d="M357 480V383a32 32 0 0 1 64 0v97" fill="none" stroke="#fff20b" stroke-width="6"/><path d="M353 480h72v26h-72" fill="#fff6a3" stroke-width="3"/><path d="M389 499v-22m-8 8 8-8 8 8" stroke="#101014" stroke-width="4" fill="none"/><rect x="336" y="309" width="106" height="32" rx="10" fill="#fffcee" stroke-width="3"/><text x="389" y="332" text-anchor="middle" stroke="none" font-size="23" font-weight="900">' + escape(text('choco_door')) + '</text><path d="m370 410 8 6-7 7m28-26 9 8-7 9" fill="none" stroke="#ff87ce" stroke-width="4"/></g>' : '<circle cx="389" cy="394" r="47" fill="url(#speaker)"/>'}${bikeDoorMarkup(bicycle)}
     <rect x="452" y="350" width="118" height="77" rx="8" fill="#fffcee"/>
     ${fitted(510, 389, text('radio_empty_display'), 100, 16)}
     <path d="M463 445h20m13 0h20m13 0h20" stroke-width="11"/><path d="M440 326h139" stroke-width="10"/><path d="M443 326h85" stroke="#1d55ff" stroke-width="4"/>
@@ -122,7 +123,7 @@ export function roomMarkup(scene, shelfPage = 0, tapes = createCassetteState(), 
     <text x="800" y="195" text-anchor="middle" font-size="${Math.min(40, 1100 / (room.title.length * .65 || 1))}" font-weight="900">${escape(room.title.toUpperCase())}</text>
     ${tiles.join('')}
     ${scene === 'wardrobe' ? '' : '<path d="M800 955V830q0-72-62-94" fill="none" stroke="#fff20b" stroke-width="75" stroke-linecap="round"/>'}
-    ${scene === 'radio' ? radioArt(shelfPage, tapes, paint.chocolate) : scene === 'wardrobe' ? wardrobeArt(selectedAnimal, paint) : infoArt(scene)}
+    ${scene === 'radio' ? radioArt(shelfPage, tapes, paint.chocolate, paint.bikeDoor) : scene === 'wardrobe' ? wardrobeArt(selectedAnimal, paint) : infoArt(scene)}
     ${scene === 'radio' ? `<g id="dance-party" class="dance-party-layer" data-cast-key="${danceGuests(ANIMALS, selectedAnimal).map(animal => animal.id).join(',')}" hidden="" aria-hidden="true">${dancePartyMarkup(ANIMALS, selectedAnimal)}</g>` : ''}
     <g data-room-target="exit" class="world-station" tabindex="0" role="button" aria-label="${escape(text('back_world'))}">
       <path d="M740 1000v-42q60-38 120 0v108H740Z" fill="#40cea1" stroke="#101014" stroke-width="5"/>

@@ -1,4 +1,4 @@
-import { WORLD, WORLD_SPAWN, STATIONS, clamp, move, planPath, isActionKey, HOUSE_DOORS, worldTouch, canLandRocket, rocketExitPosition, touchingHomePicture, sceneHorizontalBounds } from './game-core.js';
+import { WORLD, WORLD_SPAWN, STATIONS, clamp, move, planPath, isActionKey, HOUSE_DOORS, worldTouch, canLandRocket, rocketExitPosition, touchingHomePicture, sceneHorizontalBounds, canStand } from './game-core.js';
 import { ANIMALS, BAND, TRACKS, CONCERTS, CONTACT, INFO, PALETTE, loadContent, text } from './content.js';
 import { PAINT_SURFACES, BUCKET_SURFACES, PAINT_NEXT, paintSlots, paintPages, bucketColors, nearbyPaintSurface, canPaintSurface, cleanPaint, paintCanMarkup, createPaintPreview } from './painting.js';
 import { icon, avatar, memberArt, worldMarkup } from './art.js';
@@ -20,6 +20,8 @@ import { createChocolate, savedChocolate, chocolateSpeed, chocolateMusicGain, ti
 import { chocolateMazeMarkup } from './chocolate-art.js';
 import { createFriends, savedFriends, isFriendsTrack, startFriends, releaseFriends, swapFriendsPlayer, friendsAway, friendsBlockBuildings, friendsTentNear, gatherFriends, tickFriends, friendsCameraView, FRIEND_CAMP_FADE_SECONDS, FRIEND_CAMP_PLAYER, FRIEND_TENT } from './friends-game.js';
 import { friendsHiddenMarkup, friendsWorldMarkup, friendsCampfireMarkup, friendsConfettiMarkup } from './friends-art.js';
+import { BIKE_LEVELS, BIKE_FINISH, BIKE_DOOR, BIKE_RETURN, isBikeTrack, touchingBikeDoor, bikeTime, bikeWorldSpeed, createBikeRace, startBikeRace, tickBikeRace, createBikeGarage, savedBikeGarage, unlockBicycle, nearbyBicycle, moveWorldBicycle, cleanBikeScores, addBikeScore } from './bike-race.js';
+import { bicycleMarkup, parkedBicyclesMarkup, bikeRaceMarkup, bikeTerrainMarkup, bikeRiderTransform } from './bike-art.js';
 
 const previewMode = new URLSearchParams(location.search).get('preview') === '1';
 const contentStatus = await loadContent(previewMode);
@@ -41,6 +43,11 @@ const savedDifficulty = storage.get('adventure-difficulty', 'leicht');
 const hatStorageKey = previewMode ? 'hat-preview' : 'hat-world';
 const chocolateStorageKey = previewMode ? 'chocolate-preview' : 'chocolate-world';
 const friendsStorageKey = previewMode ? 'friends-preview' : 'friends-world';
+const bikeStorageKey = previewMode ? 'bikes-preview' : 'bikes-world';
+const bikeScoreKey = previewMode ? 'bike-scores-preview' : 'bike-scores-world';
+let savedBikes = null, savedBikeScores = null;
+try { savedBikes = JSON.parse(storage.get(bikeStorageKey, 'null')); } catch { /* Invalid local bicycle rewards start locked. */ }
+try { savedBikeScores = JSON.parse(storage.get(bikeScoreKey, 'null')); } catch { /* An invalid local leaderboard starts empty. */ }
 let savedFriendCamp = null;
 try { savedFriendCamp = JSON.parse(storage.get(friendsStorageKey, 'null')); } catch { /* A missing or damaged local campsite starts locked. */ }
 let savedChocolates = null;
@@ -62,6 +69,7 @@ const state = {
   studio: null, pictureTouch: false,
   rocket: { position: { ...GROUND_ROCKET }, riding: false, airborne: false, damaged: savedRocketDamage, broken: savedRocketDamage, impact: null },
   adventure: null, landing: null, toolbox: false, homeReturns: [],
+  race: null, garage: createBikeGarage(savedBikes), bikeScores: cleanBikeScores(savedBikeScores), bikeDoor: false, bikeMusic: null,
   party: createParty(), chocolate: createChocolate(savedChocolates),
   friends: createFriends(savedFriendCamp), friendsRestartPending: false, friendsExit: null, campMusic: null,
   hat: createHatQuest(savedHat), hatActive: false, hatRestartPending: false,
@@ -69,7 +77,7 @@ const state = {
   volume: clamp(Number(storage.get('volume', '.6')) || 0, 0, 1),
   reduced: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
 };
-const game = $('#game'), modal = $('#modal'), modalContent = $('#modal-content'), audio = $('#audio'), memberAudio = $('#member-audio'), campAudio = $('#camp-audio');
+const game = $('#game'), modal = $('#modal'), modalContent = $('#modal-content'), audio = $('#audio'), memberAudio = $('#member-audio'), campAudio = $('#camp-audio'), bikeAudio = $('#bike-audio');
 game.innerHTML = worldMarkup();
 let world = $('#world-svg'), player = $('#player'), playerUse = $('#player-use'), marker = $('#destination-marker');
 $('#radio-shortcut').innerHTML = icon('music');
@@ -81,7 +89,7 @@ for (const node of document.querySelectorAll('[data-copy-aria]')) node.setAttrib
 document.title = text('page_title');
 document.querySelector('meta[name=description]')?.setAttribute('content', text('page_description'));
 audio.volume = state.volume;
-let previousFocus = null, toastTimer, lastTime = 0, stuckTime = 0, paintPreview = null, memberRequest = 0, discoFrame = null, friendsRenderKey = '', friendsEffectFrame = -1;
+let previousFocus = null, toastTimer, lastTime = 0, stuckTime = 0, paintPreview = null, memberRequest = 0, discoFrame = null, friendsRenderKey = '', friendsEffectFrame = -1, bikeTerrainStep = -1;
 
 function announce(message) { $('#announcement').textContent = message; }
 function toast(message) { clearTimeout(toastTimer); const el = $('#toast'); el.textContent = message; el.hidden = false; toastTimer = setTimeout(() => { el.hidden = true; }, 3500); }
@@ -152,6 +160,7 @@ function helpPanel() {
   return wrap(`${icon('help')} ${T('help_kicker')}`, text('help_title'), `<div class="help-board"><div class="help-list">${[1, 2, 3].map(i => `<div class="help-row"><span class="help-number">${i}</span><div><strong>${T('help_step' + i + '_title')}</strong><p class="editable-prose">${T('help_step' + i + '_body')}</p></div></div>`).join('')}</div></div>`, 'help-sign-view');
 }
 function renderPanel(id) {
+  if (id.startsWith('bike-')) return bicyclePanel(id);
   if (id.startsWith('space-')) return adventurePanel(id);
   if (id === 'characters') return characterPanel();
   if (id === 'radio' || id === 'radio-info') return radioPanel();
@@ -167,6 +176,21 @@ function adventurePanel(id) {
   const win = id === 'space-win', pause = id === 'space-pause';
   const difficulty = pause ? '' : `<div class="difficulty-picker"><p>${T('adventure_difficulty')}</p><div class="difficulty-options" role="group" aria-label="${T('adventure_difficulty')}">${Object.keys(DIFFICULTIES).map(level => `<button data-difficulty="${level}"><strong>${T('difficulty_' + level)}</strong><small>${T('difficulty_' + level + '_hint')}</small></button>`).join('')}</div></div>`;
   return `<div class="modal-wrap adventure-dialog"><div class="modal-kicker">✦ ${T('adventure_title')}</div><h2 id="modal-title">${T(win ? 'adventure_win' : pause ? 'adventure_pause' : 'adventure_ready')}</h2><p class="modal-intro editable-prose" ${win ? '' : 'data-game-hint'}>${T(win ? 'adventure_win_body' : pause ? 'adventure_keys' : 'adventure_choice_hint')}</p>${difficulty}<div class="modal-actions">${pause ? `<button class="primary-button" data-action="space-continue">${T('adventure_continue')} ${icon('arrow')}</button>` : ''}<button class="secondary-button" data-action="space-land">${T(win ? 'adventure_back' : 'adventure_land')}</button></div></div>`;
+}
+function bicyclePanel(id) {
+  const race = state.race, won = id === 'bike-win', pause = id === 'bike-pause';
+  if (!race) return '';
+  const level = race.difficulty, scores = state.bikeScores[level];
+  const board = '<h3>' + T('bike_board', { stufe: text('bike_level_' + level) }) + '</h3><p class="bike-board-local">' + T('bike_board_local') + '</p>'
+    + (scores.length ? '<ol class="bike-board">' + scores.map(item => '<li>' + escape(item.name) + '<strong>' + bikeTime(item.time / 10) + '</strong></li>').join('') + '</ol>' : '<p>' + T('bike_board_empty') + '</p>');
+  const choice = '<p>' + T('bike_choose') + '</p><div class="difficulty-options" role="group" aria-label="' + T('bike_choose') + '">'
+    + Object.keys(BIKE_LEVELS).map(level => '<button data-bike-level="' + level + '"><strong>' + T('bike_level_' + level) + '</strong><small>' + T('bike_hint_' + level) + '</small></button>').join('') + '</div>';
+  const result = won ? '<div class="bike-results"><strong>' + T('bike_result', { zeit: bikeTime(race.elapsed), anzahl: race.falls }) + '</strong><p>' + T('bike_unlock', { rad: text('bike_reward_' + level) }) + '</p></div>'
+    + (race.saved ? '<p role="status">' + T('bike_saved') + '</p>' : '<div class="bike-score-entry"><label for="bike-racer-name">' + T('bike_name') + '<input id="bike-racer-name" maxlength="18" autocomplete="off" value="' + escape(storage.get('bike-name', '')) + '"></label><button type="button" class="primary-button" data-action="bike-save">' + T('bike_save') + '</button></div>') + board : '';
+  return '<div class="modal-wrap bike-dialog"><div class="modal-kicker">' + T('bike_title') + '</div><h2 id="modal-title">' + T(won ? 'bike_win' : pause ? 'bike_pause' : 'bike_ready') + '</h2>'
+    + (!won ? '<p class="modal-intro editable-prose">' + T('bike_keys') + '</p>' : '') + result + (!pause && !won ? choice : '')
+    + '<div class="modal-actions">' + (pause ? '<button class="primary-button" data-action="bike-continue">' + T('bike_continue') + '</button>' : '')
+    + (won ? '<button class="secondary-button" data-action="bike-again">' + T('bike_again') + '</button>' : '') + '<button class="secondary-button" data-action="bike-exit">' + T('bike_back') + '</button></div></div>';
 }
 function pausePanel() {
   const options = [['map', 'map_open'], ['characters', 'pause_character'], ['radio', 'pause_radio'], ['concerts', 'pause_concerts'], ['panda', 'pause_band'], ['social', 'pause_social'], ['grownups', 'nav_grownups'], ['help', 'help_open']];
@@ -371,11 +395,11 @@ function inviteFriends() {
 function refreshChocolateItems() {
   const chocolate = state.chocolate, carry = $('#chocolate-carry');
   if (carry) {
-    carry.toggleAttribute('hidden', !chocolate.carrying || state.rocket.riding || !!state.adventure || state.scene === 'painting');
+    carry.toggleAttribute('hidden', !chocolate.carrying || state.rocket.riding || !!state.race || !!state.adventure || state.scene === 'painting');
     carry.setAttribute('transform', 'translate(' + (state.position.x + 17).toFixed(2) + ' ' + (state.position.y - 30).toFixed(2) + ') scale(' + (state.scene === 'chocolate' ? '.3' : '.42') + ')');
   }
   const badge = $('#chocolate-boost'), seconds = Math.ceil(chocolate.boost);
-  badge.hidden = !seconds || state.rocket.riding || !!state.adventure || state.scene === 'painting';
+  badge.hidden = !seconds || state.rocket.riding || !!state.race || !!state.adventure || state.scene === 'painting';
   const boostLabel = text('choco_boost', { sekunden: seconds });
   if (badge.textContent !== boostLabel) badge.textContent = boostLabel;
   const progress = $('#chocolate-progress'); progress.hidden = state.scene !== 'chocolate';
@@ -459,27 +483,33 @@ function frameChocolate(dt) {
 function renderScene() {
   clearPaintPreview();
   const hat = wearsHat(state.hat, state.hatActive);
-  const artwork = state.adventure ? adventureMarkup(state.adventure, state.animal, state.paint, hat) : state.scene === 'chocolate' ? chocolateMazeMarkup(state.chocolate.run) : state.scene === 'painting' ? studioMarkup(state.paint, PALETTE, state.studio) : outsideScene(state.scene) ? worldMarkup(state.paint, !!state.paintCan, state.scene, { ...state.rocket, hat }, state.animal) : roomMarkup(state.scene, state.shelfPage, state.tapes, state.animal, { can: state.paintCan, page: state.paintPage, world: state.paint, toolbox: state.toolbox, returns: state.homeReturns, hat: state.hat, away: awayAnimals(), chocolate: state.chocolate });
+  let artwork = state.race ? bikeRaceMarkup(state.race, state.animal, state.paint, hat) : state.adventure ? adventureMarkup(state.adventure, state.animal, state.paint, hat) : state.scene === 'chocolate' ? chocolateMazeMarkup(state.chocolate.run) : state.scene === 'painting' ? studioMarkup(state.paint, PALETTE, state.studio) : outsideScene(state.scene) ? worldMarkup(state.paint, !!state.paintCan, state.scene, { ...state.rocket, hat }, state.animal) : roomMarkup(state.scene, state.shelfPage, state.tapes, state.animal, { can: state.paintCan, page: state.paintPage, world: state.paint, toolbox: state.toolbox, returns: state.homeReturns, hat: state.hat, away: awayAnimals(), chocolate: state.chocolate, bikeDoor: state.bikeDoor });
+  if (!state.race && state.scene === 'world') {
+    artwork = artwork.replace('<g id="player"', '<g id="bicycles">' + parkedBicyclesMarkup(state.garage) + '</g><g id="player"');
+    artwork = artwork.replace(/(<use id="player-use"[^>]*\/>)/, '$1<g id="world-bicycle-frame"' + (state.garage.riding ? '' : ' hidden=""') + '>' + bicycleMarkup(state.garage.riding || 'mittel', true) + '</g>');
+  }
   const markup = colorHatMarkup(artwork, state.hat.color);
   const end = markup.lastIndexOf('</svg>');
   game.innerHTML = markup.slice(0, end) + '<g id="hat-effects"></g><g id="reception-effects"></g><g id="chocolate-carry" pointer-events="none" hidden="">' + chocolateBarMarkup() + '</g>' + markup.slice(end);
   world = $('#world-svg'); player = $('#player'); playerUse = $('#player-use'); marker = $('#destination-marker');
-  game.setAttribute('aria-label', state.adventure?.sunTime != null ? text('sun_holiday_title') : state.scene === 'chocolate' ? text('choco_title') : state.scene === 'painting' ? text('studio_title') : state.scene === 'space' ? text('space_title') : state.scene === 'sky' ? text('sky_title') : state.scene === 'world' ? text('world_title') : ROOMS[state.scene].title);
+  game.setAttribute('aria-label', state.race ? text('bike_title') : state.adventure?.sunTime != null ? text('sun_holiday_title') : state.scene === 'chocolate' ? text('choco_title') : state.scene === 'painting' ? text('studio_title') : state.scene === 'space' ? text('space_title') : state.scene === 'sky' ? text('sky_title') : state.scene === 'world' ? text('world_title') : ROOMS[state.scene].title);
   $('.wayfinder').hidden = state.scene !== 'world' || state.rocket.riding;
-  $('.exit-room').hidden = !!state.landing || state.adventure?.phase === 'intro' || state.scene === 'world' && !state.rocket.riding;
-  $('.exit-room').textContent = text(state.adventure?.sunTime != null ? 'adventure_back' : state.scene === 'chocolate' ? 'choco_back' : state.scene === 'painting' ? 'studio_close' : state.rocket.riding ? state.rocket.airborne ? 'rocket_land_button' : 'rocket_exit' : 'exit_button');
+  $('.exit-room').hidden = !!state.landing || state.adventure?.phase === 'intro' || !state.race && state.scene === 'world' && !state.rocket.riding;
+  $('.exit-room').textContent = text(state.race ? 'bike_back' : state.adventure?.sunTime != null ? 'adventure_back' : state.scene === 'chocolate' ? 'choco_back' : state.scene === 'painting' ? 'studio_close' : state.rocket.riding ? state.rocket.airborne ? 'rocket_land_button' : 'rocket_exit' : 'exit_button');
   game.classList.toggle('in-room', !outsideScene(state.scene));
-  player.toggleAttribute('hidden', state.rocket.riding);
+  player.toggleAttribute('hidden', state.rocket.riding || !!state.race);
   state.near = null; updateAnimal(); refreshCassettes(); refreshHatEffects(); refreshReceptionEffects(); resize(); updateNear(true);
   player.setAttribute('transform', `translate(${state.position.x} ${state.position.y})`);
-  refreshChocolateItems(); refreshFriendsWorld(true);
+  refreshChocolateItems(); refreshFriendsWorld(true); refreshBicycles();
+  bikeTerrainStep = -1; if (state.race) updateBicycleRace();
 }
 function showPanel(id, focusSelector = '') {
+  if (state.race && !id.startsWith('bike-')) id = state.race.phase === 'finished' ? 'bike-win' : state.race.phase === 'ready' ? 'bike-launch' : 'bike-pause';
   if (state.scene === 'chocolate') { requestChocolateExit(); return; }
   if (state.landing || ['intro', 'sun-finale'].includes(state.adventure?.phase)) return;
   if (state.adventure && !id.startsWith('space-')) id = state.adventure.phase === 'won' ? 'space-win' : state.adventure.phase === 'playing' ? 'space-pause' : 'space-launch';
   stopWalking(); clearPaintPreview(); state.modal = id; game.classList.add('paused');
-  modal.classList.toggle('space-choice', id.startsWith('space-'));
+  modal.classList.toggle('space-choice', id.startsWith('space-') || id.startsWith('bike-'));
   modalContent.innerHTML = renderPanel(id);
   if (BAND.some(member => member.id === id)) playMemberMelody(id); else stopMemberMelody();
   if (!modal.open) modal.showModal();
@@ -488,6 +518,7 @@ function showPanel(id, focusSelector = '') {
   else modalContent.querySelector('button:not(.modal-close):not([disabled]), a[href], .modal-close')?.focus();
 }
 function closePanel() {
+  if (state.race && ['ready', 'finished'].includes(state.race.phase)) { exitBicycleRace(); return; }
   if (state.adventure && ['intro', 'ready', 'won'].includes(state.adventure.phase)) { landFromAdventure(); return; }
   if (modal.open) modal.close();
 }
@@ -510,6 +541,8 @@ function beginWorld(close = true) {
   announce(text('now_animal', { tier: ANIMALS.find(a => a.id === state.animal).name }));
 }
 function enterRoom(id) {
+  if (state.race) { showPanel('bike-pause'); return false; }
+  if (state.garage.riding) return false;
   if (friendsBlockBuildings(state.friends)) return false;
   if (state.scene === 'chocolate') { requestChocolateExit(); return false; }
   const room = roomFor(id); if (!room) return;
@@ -523,6 +556,7 @@ function enterRoom(id) {
   return true;
 }
 function leaveRoom() {
+  if (state.race) { exitBicycleRace(); return; }
   if (state.scene === 'chocolate') { requestChocolateExit(); return; }
   if (state.landing) return;
   if (state.adventure) { landFromAdventure(); return; }
@@ -536,16 +570,17 @@ function leaveRoom() {
 }
 function visit(id) { if (roomFor(id)) enterRoom(id); else showPanel(id); }
 function checkWorldTouch() {
-  if (state.scene !== 'world' || state.rocket.riding || modal.open || !state.started) return;
+  if (state.scene !== 'world' || state.rocket.riding || state.garage.riding || modal.open || !state.started) return;
   const touch = worldTouch(state.position);
   if (touch) enterRoom(touch.id);
 }
 function refreshAudioVolume() {
   const campGain = state.campMusic?.fadeRemaining == null ? 1 : state.campMusic.fadeRemaining / FRIEND_CAMP_FADE_SECONDS;
   const fading = state.chocolate.boost > 0 && isChocolateTrack(playbackTrack());
-  const volume = state.volume * (state.memberMelody ? .2 : 1) * (fading ? chocolateMusicGain(state.chocolate) : 1);
+  const volume = state.volume * (state.bikeMusic ? 0 : 1) * (state.memberMelody ? .2 : 1) * (fading ? chocolateMusicGain(state.chocolate) : 1);
   if (audio.volume !== volume) audio.volume = volume;
-  campAudio.volume = state.volume * (state.memberMelody ? .2 : 1) * campGain;
+  campAudio.volume = state.volume * (state.bikeMusic ? 0 : 1) * (state.memberMelody ? .2 : 1) * campGain;
+  bikeAudio.volume = state.volume * (state.memberMelody ? .2 : 1);
 }
 function refreshPlayback() {
   refreshAudioVolume();
@@ -554,6 +589,7 @@ function refreshPlayback() {
   refreshHatQuest();
   refreshChocolatePlayback();
   refreshFriendsPlayback();
+  refreshBicycleDoor();
   $('#radio-shortcut').setAttribute('aria-label', text('room_radio'));
   $('#radio-shortcut').style.background = state.playing ? 'var(--yellow)' : '';
   $('#radio-tape')?.classList.toggle('is-playing', state.playing);
@@ -652,8 +688,113 @@ function playMemberMelody(id) {
 }
 for (const event of ['ended', 'error']) memberAudio.addEventListener(event, () => { if (state.memberMelody) stopMemberMelody(); });
 document.addEventListener('input', e => { if (e.target.id === 'volume') { state.volume = Number(e.target.value); memberAudio.volume = state.volume; refreshAudioVolume(); storage.set('volume', state.volume); } });
+function refreshBicycleDoor() {
+  const open = state.playing && !audio.ended && !audio.error && isBikeTrack(playbackTrack());
+  if (open === state.bikeDoor) return;
+  state.bikeDoor = open;
+  if (state.scene === 'radio' && !state.race) renderScene();
+}
+function startBicycleMusic() {
+  if (state.bikeMusic) return;
+  const track = TRACKS.find(track => isBikeTrack(track) && validRecording(track));
+  if (!track) return;
+  stopCampMusic(); state.bikeMusic = track.id;
+  bikeAudio.src = track.src; bikeAudio.currentTime = isBikeTrack(playbackTrack()) ? audio.currentTime || 0 : 0; bikeAudio.loop = true;
+  refreshAudioVolume();
+  bikeAudio.play().catch(() => { stopBicycleMusic(); announce(text('audio_error')); });
+}
+function stopBicycleMusic() {
+  state.bikeMusic = null; bikeAudio.pause(); bikeAudio.loop = false; bikeAudio.removeAttribute('src'); bikeAudio.load();
+  refreshAudioVolume();
+}
+bikeAudio.addEventListener('error', () => { if (state.bikeMusic) stopBicycleMusic(); });
+function enterBicycleRace() {
+  if (state.scene !== 'radio' || !state.bikeDoor || state.race) return false;
+  stopWalking(); closePanel(); state.race = createBikeRace(storage.get('bike-difficulty', 'leicht'));
+  startBicycleMusic(); renderScene(); showPanel('bike-launch'); return true;
+}
+function launchBicycleRace(level) {
+  if (!state.race || state.race.phase !== 'ready' || !Object.hasOwn(BIKE_LEVELS, level)) return;
+  state.race = createBikeRace(level); startBikeRace(state.race); storage.set('bike-difficulty', level);
+  startBicycleMusic(); closePanel(); renderScene(); game.focus({ preventScroll: true }); announce(text('bike_keys'));
+}
+function chooseBicycleRace() {
+  if (!state.race) return;
+  state.race = createBikeRace(state.race.difficulty); renderScene(); showPanel('bike-launch');
+}
+function exitBicycleRace() {
+  if (!state.race) return;
+  state.race = null; stopWalking(); stopBicycleMusic(); if (modal.open) modal.close();
+  state.scene = 'radio'; state.position = { ...BIKE_RETURN };
+  renderScene(); game.focus({ preventScroll: true });
+}
+function saveBicycleResult() {
+  const race = state.race; if (!race || race.phase !== 'finished' || race.saved) return;
+  const name = $('#bike-racer-name')?.value || ANIMALS.find(animal => animal.id === state.animal).name;
+  state.bikeScores = addBikeScore(state.bikeScores, race.difficulty, name, race.elapsed);
+  storage.set(bikeScoreKey, JSON.stringify(state.bikeScores)); storage.set('bike-name', String(name).slice(0, 18)); race.saved = true;
+  showPanel('bike-win'); announce(text('bike_saved'));
+}
+function updateBicycleRace() {
+  const race = state.race; if (!race) return;
+  const step = Math.floor(race.progress / 3);
+  if (step !== bikeTerrainStep) { $('#bike-terrain').innerHTML = bikeTerrainMarkup(race, state.paint); bikeTerrainStep = step; }
+  $('#bike-rider')?.setAttribute('transform', bikeRiderTransform(race, state.reduced));
+  const clock = $('#bike-clock'), value = bikeTime(race.elapsed);
+  if (clock && clock.textContent !== value) clock.textContent = value;
+  const falls = $('#bike-falls'), label = text('bike_falls', { anzahl: race.falls });
+  if (falls && falls.textContent !== label) falls.textContent = label;
+  $('#bike-progress')?.setAttribute('width', (336 * race.progress / BIKE_FINISH).toFixed(1));
+  $('#bike-recovery')?.toggleAttribute('hidden', !race.fall);
+  if (race.fall) $('#bike-recovery-text').textContent = text('bike_recover', { sekunden: (Math.ceil(race.fall * 10) / 10).toFixed(1).replace('.', ',') });
+}
+function frameBicycleRace(elapsed, steering) {
+  if (!state.race || state.race.phase !== 'racing') return;
+  const event = tickBikeRace(state.race, elapsed, steering); updateBicycleRace();
+  if (event === 'fall') announce(text('bike_recover', { sekunden: '3,0' }));
+  if (event === 'finish') {
+    unlockBicycle(state.garage, state.race.difficulty);
+    storage.set(bikeStorageKey, JSON.stringify(savedBikeGarage(state.garage)));
+    stopWalking(); showPanel('bike-win'); announce(text('bike_win'));
+  }
+}
+function refreshBicycles() {
+  game.classList.toggle('is-bike-race', !!state.race);
+  game.classList.toggle('is-cycling', !!state.garage.riding);
+  game.classList.toggle('bike-fallen', state.garage.fall > 0 && state.scene === 'world');
+  if (state.scene === 'world' && !state.race) playerUse.setAttribute('y', state.garage.riding ? '-98' : '-77');
+}
+function canRideBicycleAt(point) {
+  if (!canStand(point.x, point.y, 21, 'world', state.rocket.position) || worldTouch(point)) return false;
+  return !PAINT_SURFACES.filter(surface => surface.id.startsWith('tree-')).some(surface => {
+    const b = surface.bounds, dx = (point.x - b.x - b.w / 2) / (b.w / 2 + 17), dy = (point.y - 16 - b.y - b.h / 2) / (b.h / 2 + 17);
+    return dx * dx + dy * dy < 1;
+  });
+}
+function mountBicycle(level) {
+  const bike = nearbyBicycle(state.garage, state.position);
+  if (state.scene !== 'world' || state.rocket.riding || !bike || bike.level !== level) return;
+  stopWalking(); state.garage.riding = level; state.position = { x: bike.x, y: bike.y };
+  startBicycleMusic(); renderScene(); game.focus({ preventScroll: true }); announce(text('bike_mounted'));
+}
+function dismountBicycle() {
+  const level = state.garage.riding; if (!level) return;
+  const point = { ...state.position }; state.garage.positions[level] = point; state.garage.riding = null;
+  const exit = [[45, 0], [-45, 0], [0, 45], [0, -45]].map(([x, y]) => ({ x: point.x + x, y: point.y + y }))
+    .find(p => canStand(p.x, p.y, WORLD.radius, 'world', state.rocket.position) && !worldTouch(p));
+  if (exit) state.position = exit;
+  stopWalking(); stopBicycleMusic(); renderScene(); game.focus({ preventScroll: true });
+}
+function activateBicycle(level) {
+  if (!state.garage.unlocked.includes(level) || state.scene !== 'world' || state.garage.riding) return;
+  if (nearbyBicycle(state.garage, state.position)?.level === level) mountBicycle(level);
+  else { const point = state.garage.positions[level]; navigateTo(point.x, point.y); }
+}
+
 function currentInteraction() {
-  if (state.adventure || state.landing) return null;
+  if (state.race || state.adventure || state.landing || state.garage.fall > 0) return null;
+  if (state.garage.riding) return { id: state.garage.riding, kind: 'bike-dismount', label: text('bike_dismount') };
+  if (state.scene === 'world' && !state.rocket.riding) { const bike = nearbyBicycle(state.garage, state.position); if (bike) return { ...bike, id: bike.level, kind: 'bike-mount', label: text('bike_mount', { rad: text('bike_reward_' + bike.level) }) }; }
   if (state.chocolate.carrying && state.scene !== 'painting' && !state.rocket.riding && state.chocolate.run?.phase !== 'leaving') return { id: 'eat-chocolate', kind: 'eat-chocolate', label: text('choco_eat') };
   if (state.scene === 'chocolate') return null;
   if (state.scene === 'wardrobe' && state.chocolate.unlocked && Math.hypot(state.position.x - CHOCOLATE_DRAWER.x, state.position.y - CHOCOLATE_DRAWER.y) < 75) return { ...CHOCOLATE_DRAWER, kind: 'take-chocolate', label: text('choco_take') };
@@ -684,7 +825,7 @@ function currentInteraction() {
   return interaction;
 }
 function boardRocket() {
-  if (state.rocket.damaged || state.rocket.repair != null || state.landing || state.adventure) return;
+  if (state.garage.riding || state.race || state.rocket.damaged || state.rocket.repair != null || state.landing || state.adventure) return;
   stopWalking(); state.paintTarget = null; state.rocket.riding = true; state.rocket.airborne = false;
   state.position = { ...state.rocket.position }; renderScene(); game.focus({ preventScroll: true });
   toast(text('rocket_boarded')); announce(text('rocket_boarded'));
@@ -847,6 +988,8 @@ function performInteraction() {
   if (!near) return;
   if (state.scene === 'painting') { studioAction(near); return; }
   stopWalking();
+  if (near.kind === 'bike-mount') { mountBicycle(near.level); return; }
+  if (near.kind === 'bike-dismount') { dismountBicycle(); return; }
   if (near.kind === 'take-chocolate') { if (takeChocolate(state.chocolate)) { renderScene(); announce(text('choco_taken')); } return; }
   if (near.kind === 'friends-camp') { inviteFriends(); return; }
   if (near.kind === 'enter-room') { enterRoom(near.id); return; }
@@ -921,6 +1064,7 @@ function navigateTo(x, y, destination = null) {
   marker.removeAttribute('hidden'); marker.setAttribute('transform', `translate(${x} ${y})`); game.focus({ preventScroll: true });
 }
 function goToStation(id) {
+  if (state.race) { showPanel('bike-pause'); return; }
   if (state.scene === 'chocolate') { requestChocolateExit(); return; }
   const station = STATIONS.find(s => s.id === id); if (!station) return;
   if (state.rocket.riding) { closePanel(); toast(text('rocket_land_first')); return; }
@@ -930,6 +1074,8 @@ function goToStation(id) {
   navigateTo(s.x, s.y, BAND.some(member => member.id === id) ? { kind: 'station', id } : null); announce(text('walk_target', { ziel: s.label }));
 }
 function goToTape(id) {
+  if (state.race) { showPanel('bike-pause'); return; }
+  if (state.garage.riding) return;
   if (friendsBlockBuildings(state.friends)) return;
   if (!TRACKS.some(t => t.id === id)) return;
   if (state.rocket.riding) { closePanel(); toast(text('rocket_land_first')); return; }
@@ -964,6 +1110,11 @@ document.addEventListener('click', e => {
     state.difficulty = btn.dataset.difficulty; state.adventure.nextDifficulty = state.difficulty; storage.set('adventure-difficulty', state.difficulty);
     playAdventure(); return;
   }
+  if (btn.dataset.bikeLevel) { launchBicycleRace(btn.dataset.bikeLevel); return; }
+  if (action === 'bike-exit') { exitBicycleRace(); return; }
+  if (action === 'bike-continue') { closePanel(); return; }
+  if (action === 'bike-again') { chooseBicycleRace(); return; }
+  if (action === 'bike-save') { saveBicycleResult(); return; }
   if (action === 'space-continue') { closePanel(); return; }
   if (action === 'space-land') { landFromAdventure(); return; }
   if (btn.dataset.open) { visit(btn.dataset.open); return; }
@@ -975,7 +1126,7 @@ document.addEventListener('click', e => {
   if (action === 'put-paint') { putPaintDown(); return; }
   if (action === 'close') closePanel();
   if (action === 'leave') leaveRoom();
-  if (action === 'exit-walk') { if (state.scene === 'chocolate') requestChocolateExit(); else if (state.scene === 'painting') closePainting(); else if (state.rocket.riding) returnToGround(); else navigateTo(EXIT.x, 1020, { kind: 'exit' }); }
+  if (action === 'exit-walk') { if (state.race) exitBicycleRace(); else if (state.scene === 'chocolate') requestChocolateExit(); else if (state.scene === 'painting') closePainting(); else if (state.rocket.riding) returnToGround(); else navigateTo(EXIT.x, 1020, { kind: 'exit' }); }
   if (action === 'start') beginWorld();
   if (action === 'start-radio') { beginWorld(false); enterRoom('radio'); }
   if (action === 'world') { if (state.scene !== 'world') leaveRoom(); else { closePanel(); if (!state.started) showPanel('characters'); else game.focus(); } }
@@ -1015,6 +1166,7 @@ function tickHomeReturns(dt) {
   if (arrived && state.scene === 'wardrobe') renderScene();
 }
 modalContent.addEventListener('keydown', e => {
+  if (e.target.id === 'bike-racer-name') { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); if (!e.repeat) saveBicycleResult(); } return; }
   if (inspectionPanels.has(state.modal)) {
     if (isActionKey(e)) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) closePanel(); return; }
     if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) {
@@ -1046,6 +1198,7 @@ modalContent.addEventListener('keydown', e => {
   controls[nextMenuIndex(controls.indexOf(document.activeElement), e.key, controls.length)]?.focus();
 });
 function activateRoomTarget(id) {
+  if (id === 'bike-door') { if (state.scene === 'radio' && state.bikeDoor) navigateTo(BIKE_DOOR.x, BIKE_DOOR.y); return; }
   if (id === 'choco-door') { if (state.scene === 'radio' && state.chocolate.active) navigateTo(CHOCOLATE_DOOR.x, CHOCOLATE_DOOR.y); return; }
   if (id === 'chocolate-exit') { requestChocolateExit(); return; }
   if (id === 'chocolate-drawer') { if (state.scene !== 'wardrobe' || !state.chocolate.unlocked) return; if (currentInteraction()?.kind === 'take-chocolate') performInteraction(); else navigateTo(CHOCOLATE_DRAWER.x, CHOCOLATE_DRAWER.y); return; }
@@ -1090,7 +1243,7 @@ function activateHatTarget(id, walkOnly = false) {
   else navigateTo(spot.x, spot.y);
 }
 game.addEventListener('click', e => {
-  if (modal.open || !state.started || state.adventure || state.landing) return;
+  if (modal.open || !state.started || state.race || state.adventure || state.landing) return;
   if (state.scene === 'painting') {
     const matrix = world.getScreenCTM(); if (!matrix) return;
     const point = new DOMPoint(e.clientX, e.clientY).matrixTransform(matrix.inverse());
@@ -1105,6 +1258,8 @@ game.addEventListener('click', e => {
   if (social) { const pad = socialPads(state.scene).find(p => p.id === social.dataset.social); if (pad) navigateTo(pad.x, pad.y); return; }
   const station = e.target.closest('[data-station]');
   if (station) { const s = STATIONS.find(s => s.id === station.dataset.station); if (!s) return; if (BAND.some(member => member.id === s.id) && Math.hypot(s.x - state.position.x, s.y - state.position.y) < 110) visit(s.id); else goToStation(s.id); return; }
+  const bicycle = e.target.closest('[data-bicycle]');
+  if (bicycle && state.scene === 'world') { activateBicycle(bicycle.dataset.bicycle); return; }
   const prop = e.target.closest('[data-room-target]');
   if (prop) { activateRoomTarget(prop.dataset.roomTarget); return; }
   walkToPointer(e);
@@ -1115,7 +1270,7 @@ function walkToPointer(event) {
   navigateTo(point.x, point.y);
 }
 game.addEventListener('keydown', e => {
-  if (state.adventure || state.landing) return;
+  if (state.race || state.adventure || state.landing) return;
   if (!isActionKey(e)) return;
   if (state.scene === 'painting') {
     const color = e.target.closest('[data-studio-color]'), control = e.target.closest('[data-studio-control]');
@@ -1123,6 +1278,8 @@ game.addEventListener('keydown', e => {
     if (point) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) { state.position = { x: point.x, y: point.y }; studioAction(currentInteraction()); } }
     return;
   }
+  const bicycle = e.target.closest('[data-bicycle]');
+  if (bicycle && state.scene === 'world') { e.preventDefault(); e.stopPropagation(); if (!e.repeat) activateBicycle(bicycle.dataset.bicycle); return; }
   const tent = e.target.closest('[data-friends-tent]');
   if (tent && state.scene === 'world') { e.preventDefault(); e.stopPropagation(); if (!e.repeat) { if (currentInteraction()?.kind === 'friends-camp') inviteFriends(); else navigateTo(FRIEND_TENT.x, FRIEND_TENT.y - 75); } return; }
   const hat = e.target.closest('[data-hat-target]');
@@ -1143,6 +1300,12 @@ game.addEventListener('keydown', e => {
 const directions = new Map([['ArrowUp', [0, -1]], ['KeyW', [0, -1]], ['ArrowDown', [0, 1]], ['KeyS', [0, 1]], ['ArrowLeft', [-1, 0]], ['KeyA', [-1, 0]], ['ArrowRight', [1, 0]], ['KeyD', [1, 0]]]);
 window.addEventListener('keydown', e => {
   if (modal.open || !state.started || state.landing) return;
+  if (state.race) {
+    if (e.key === 'Escape') { e.preventDefault(); if (!e.repeat) showPanel('bike-pause'); return; }
+    if (['ArrowLeft', 'ArrowRight'].includes(e.code) && (document.activeElement === game || game.contains(document.activeElement))) { e.preventDefault(); state.keys.add(e.code); }
+    else if (e.key.startsWith('Arrow') || isActionKey(e)) e.preventDefault();
+    return;
+  }
   if (state.adventure && e.key === 'Escape') { e.preventDefault(); if (!e.repeat) { if (['intro', 'sun-finale'].includes(state.adventure.phase)) landFromAdventure(); else showPanel(state.adventure.phase === 'playing' ? 'space-pause' : state.adventure.phase === 'won' ? 'space-win' : 'space-launch'); } return; }
   if (state.scene === 'painting' && e.key === 'Escape') { e.preventDefault(); if (!e.repeat) closePainting(); return; }
   if (e.key === 'Escape') { e.preventDefault(); if (!e.repeat) { if (state.scene === 'chocolate') requestChocolateExit(); else if (state.paintCan) putPaintDown(); else outsideScene(state.scene) ? showPanel('pause') : leaveRoom(); } return; }
@@ -1167,7 +1330,7 @@ $('#dpad').querySelectorAll('button').forEach(btn => {
   });
   const release = e => { state.pad.delete(e.pointerId); btn.classList.remove('pressed'); };
   btn.addEventListener('pointerup', release); btn.addEventListener('pointercancel', release); btn.addEventListener('lostpointercapture', release);
-  btn.addEventListener('click', e => { if (e.detail === 0 && state.started && !modal.open && !state.landing) { const [dx, dy] = padVectors[btn.dataset.direction]; if (state.adventure?.phase === 'playing') { const event = tickAdventure(state.adventure, .05, dx, dy); updateAdventure(); finishAdventureTick(event); } else if (!state.adventure) navigateTo(state.position.x + dx * 28, state.position.y + dy * 28); } });
+  btn.addEventListener('click', e => { if (e.detail === 0 && state.started && !modal.open && !state.landing) { const [dx, dy] = padVectors[btn.dataset.direction]; if (state.race?.phase === 'racing') { frameBicycleRace(.05, dx); } else if (state.adventure?.phase === 'playing') { const event = tickAdventure(state.adventure, .05, dx, dy); updateAdventure(); finishAdventureTick(event); } else if (!state.adventure && !state.race) navigateTo(state.position.x + dx * 28, state.position.y + dy * 28); } });
 });
 $('#interact').addEventListener('click', () => { if (!['paint', 'paint-hat'].includes(currentInteraction()?.kind)) performInteraction(); });
 function updateNear(force = false) {
@@ -1183,6 +1346,7 @@ function updateNear(force = false) {
 }
 function resize() {
   const r = game.getBoundingClientRect(); if (!r.width || !r.height) return;
+  if (state.race) { world.setAttribute('viewBox', '0 0 1000 700'); return; }
   if (state.adventure) {
     if (state.adventure.width !== r.width || state.adventure.height !== r.height) { resizeAdventure(state.adventure, r.width, r.height); renderScene(); }
     world.setAttribute('viewBox', `0 0 ${r.width} ${r.height}`); return;
@@ -1199,7 +1363,7 @@ function resize() {
   state.viewport = { w, h }; updateCamera(1, true);
 }
 function updateCamera(dt, snap = false) {
-  if (state.scene === 'painting' || state.adventure) return;
+  if (state.scene === 'painting' || state.adventure || state.race) return;
   const roomCamera = ROOMS[state.scene]?.camera;
   if (roomCamera) {
     const { w, h } = state.viewport; state.camera.x = roomCamera.x; state.camera.y = roomCamera.y;
@@ -1253,6 +1417,15 @@ function frame(time) {
     updateDanceGuests();
     if (departing && !state.party.departing) refreshDanceParty();
   }
+  if (state.garage.fall > 0 && !modal.open && !document.hidden) { state.garage.fall = Math.max(0, state.garage.fall - dt); refreshBicycles(); }
+  if (state.race) {
+    if (!modal.open && !document.hidden) {
+      let steering = (state.keys.has('ArrowRight') ? 1 : 0) - (state.keys.has('ArrowLeft') ? 1 : 0);
+      for (const direction of state.pad.values()) if (direction === 'left' || direction === 'right') steering += direction === 'left' ? -1 : 1;
+      frameBicycleRace(elapsed, steering);
+    }
+    requestAnimationFrame(frame); return;
+  }
   if (frameFriendsExit(dt)) { requestAnimationFrame(frame); return; }
   if (state.scene === 'chocolate') { frameChocolate(dt); requestAnimationFrame(frame); return; }
   if (state.rocket.broken && state.rocket.repair == null && state.rocket.impact !== null && state.rocket.impact < .8 && !document.hidden) {
@@ -1291,7 +1464,7 @@ function frame(time) {
     requestAnimationFrame(frame); return;
   }
   let walking = false;
-  if (state.started && !modal.open && !document.hidden) {
+  if (state.started && !modal.open && !document.hidden && !state.garage.fall) {
     let dx = 0, dy = 0;
     for (const code of state.keys) { const v = directions.get(code); if (v) { dx += v[0]; dy += v[1]; } }
     for (const direction of state.pad.values()) { const v = padVectors[direction]; dx += v[0]; dy += v[1]; }
@@ -1307,7 +1480,7 @@ function frame(time) {
       }
     }
     if (dx || dy) {
-      const old = state.position, stepTime = state.path.length ? Math.min(dt, Math.hypot(dx, dy) / (state.scene === 'painting' ? 400 : state.rocket.riding ? ROCKET_SPEED : WORLD.speed * chocolateSpeed(state.chocolate))) : dt;
+      const old = state.position, stepTime = state.path.length ? Math.min(dt, Math.hypot(dx, dy) / (state.scene === 'painting' ? 400 : state.rocket.riding ? ROCKET_SPEED : state.garage.riding ? bikeWorldSpeed(state.garage.riding) : WORLD.speed * chocolateSpeed(state.chocolate))) : dt;
       if (state.rocket.riding) {
         if (!state.rocket.airborne && dy < 0) { state.rocket.airborne = true; renderScene(); announce(text('rocket_flying')); }
         if (state.rocket.airborne) {
@@ -1326,7 +1499,11 @@ function frame(time) {
           }
         }
       } else if (state.scene === 'painting') { const length = Math.hypot(dx, dy); state.position = { x: clamp(old.x + dx / length * 400 * stepTime, 30, 1570), y: clamp(old.y + dy / length * 400 * stepTime, 110, 1055) }; }
-      else state.position = move(old, dx, dy, stepTime, state.scene, state.rocket.position, chocolateSpeed(state.chocolate));
+      else if (state.garage.riding) {
+        const moved = moveWorldBicycle(state.garage, old, dx, dy, stepTime, canRideBicycleAt);
+        state.position = moved.position;
+        if (moved.crashed) { stopWalking(); stopBicycleMusic(); renderScene(); announce(text('bike_crashed')); }
+      } else state.position = move(old, dx, dy, stepTime, state.scene, state.rocket.position, chocolateSpeed(state.chocolate));
       walking = Math.hypot(state.position.x - old.x, state.position.y - old.y) > .05;
       if (state.path.length) {
         stuckTime = walking ? 0 : stuckTime + dt;
@@ -1337,10 +1514,11 @@ function frame(time) {
     checkWorldTouch();
     checkPictureTouch();
     if (state.scene === 'radio' && state.chocolate.active && touchingChocolateDoor(state.position)) enterChocolateMaze();
+    if (state.scene === 'radio' && state.bikeDoor && touchingBikeDoor(state.position)) { enterBicycleRace(); requestAnimationFrame(frame); return; }
     updateNear(); updateCamera(dt);
   }
   player.classList.toggle('is-moving', walking); player.setAttribute('transform', `translate(${state.position.x.toFixed(2)} ${state.position.y.toFixed(2)})`);
-  refreshChocolateItems();
+  refreshChocolateItems(); refreshBicycles();
   if (outsideScene(state.scene) && state.rocket.riding) $('#rocket')?.setAttribute('transform', `translate(${state.position.x.toFixed(2)} ${state.position.y.toFixed(2)})`);
   requestAnimationFrame(frame);
 }
