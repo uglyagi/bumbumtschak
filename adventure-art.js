@@ -33,7 +33,7 @@ function adventureBackdropMarkup(game, paint = {}) {
   let seed = 553311; const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
   const stars = Array.from({ length: 200 }, (_, i) => `<circle cx="${(random() * w * 2).toFixed(1)}" cy="${(random() * h).toFixed(1)}" r="${(1 + random() * 1.7).toFixed(1)}" fill="${['#fffcee','#fff20b','#aee5ff','#ffb5df'][i % 4]}" opacity="${i % 3 ? '.7' : '1'}"/>`).join('');
   const sunRadius = SUN_DIAMETER / 2;
-  return `<rect width="${w}" height="${h}" fill="#10152d"/><ellipse cx="${w * .75}" cy="${h * .48}" rx="${w * .55}" ry="${h * .3}" fill="#9563db" opacity=".12"/>
+  return `<rect width="${w}" height="${h}" fill="#10152d"/>
     <g id="adventure-stars" aria-hidden="true" transform="translate(${-game.progress * .18 % w} 0)">${stars}</g>
     <path id="adventure-paint-trail" d="${adventureTrailPath(game)}" fill="none" stroke="${/^#[a-f0-9]{6}$/i.test(game.trailColor) ? game.trailColor : 'none'}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" aria-hidden="true"/>
     <g id="adventure-course" opacity="${adventureCourseOpacity(game)}" transform="translate(${w * .25 - game.progress} 0)">

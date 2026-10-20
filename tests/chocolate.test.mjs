@@ -51,12 +51,12 @@ test('automatic returns follow a clear maze path to the exit even when the music
   }
 });
 
-test('the drawer reward persists, one confirmation takes a bar, the next eats it and refreshes a nineteen-and-a-half-second boost', () => {
+test('the drawer reward persists, one confirmation takes a bar, the next eats it and refreshes a 19.75-second boost', () => {
   const locked = createChocolate(); assert(!takeChocolate(locked)); assert(!eatChocolate(locked));
   const chocolate = createChocolate({ unlocked: true }); assert(takeChocolate(chocolate)); assert(!takeChocolate(chocolate)); assert.equal(chocolateSpeed(chocolate), 1);
-  assert(eatChocolate(chocolate)); assert(!eatChocolate(chocolate)); assert.equal(chocolate.boost, 19.5); assert.equal(chocolateSpeed(chocolate), 2);
-  tickChocolate(chocolate, 19.4); assert(Math.abs(chocolateSpeed(chocolate) - 1.025) < 1e-10); assert(takeChocolate(chocolate)); assert(eatChocolate(chocolate)); assert.equal(chocolate.boost, 19.5);
-  tickChocolate(chocolate, 19.5); assert.equal(chocolateSpeed(chocolate), 1); assert.equal(chocolate.boost, 0);
+  assert(eatChocolate(chocolate)); assert(!eatChocolate(chocolate)); assert.equal(chocolate.boost, 19.75); assert.equal(chocolateSpeed(chocolate), 2);
+  tickChocolate(chocolate, 19.65); assert(Math.abs(chocolateSpeed(chocolate) - 1.025) < 1e-10); assert(takeChocolate(chocolate)); assert(eatChocolate(chocolate)); assert.equal(chocolate.boost, 19.75);
+  tickChocolate(chocolate, 19.75); assert.equal(chocolateSpeed(chocolate), 1); assert.equal(chocolate.boost, 0);
   assert.deepEqual(savedChocolate(chocolate), { unlocked: true });
   const reload = createChocolate(savedChocolate(chocolate)); assert(reload.unlocked); assert(!reload.carrying); assert.equal(reload.boost, 0);
 });
@@ -88,7 +88,7 @@ test('revisiting keeps a collection without repeating rewards and a fresh casset
 test('the final four boost seconds fade from double to ordinary speed and from full volume to silence', () => {
   const chocolate = createChocolate({ unlocked: true }); takeChocolate(chocolate); eatChocolate(chocolate);
   assert.equal(chocolateSpeed(chocolate), 2); assert.equal(chocolateMusicGain(chocolate), 1);
-  tickChocolate(chocolate, 15.5); assert.equal(chocolate.boost, 4); assert.equal(chocolateSpeed(chocolate), 2); assert.equal(chocolateMusicGain(chocolate), 1);
+  tickChocolate(chocolate, 15.75); assert.equal(chocolate.boost, 4); assert.equal(chocolateSpeed(chocolate), 2); assert.equal(chocolateMusicGain(chocolate), 1);
   tickChocolate(chocolate, 2); assert.equal(chocolateSpeed(chocolate), 1.5); assert.equal(chocolateMusicGain(chocolate), .5);
   tickChocolate(chocolate, 2); assert.equal(chocolate.boost, 0); assert.equal(chocolateSpeed(chocolate), 1); assert.equal(chocolateMusicGain(chocolate), 0);
   tickChocolate(chocolate, 100); assert.equal(chocolateSpeed(chocolate), 1);
