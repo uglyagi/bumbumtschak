@@ -287,19 +287,19 @@ function refreshChocolateItems() {
   }
 }
 function refreshChocolatePlayback() {
-  const chocolate = state.chocolate, track = playbackTrack(), previous = chocolate.active;
+  const chocolate = state.chocolate, track = playbackTrack(), previous = chocolate.active, previousDoor = chocolate.session;
   chocolate.active = state.playing && !audio.ended && !audio.error && isChocolateTrack(track);
   if (chocolate.active) chocolate.session = true;
   if (!isChocolateTrack(track) || audio.ended || audio.error) {
     chocolate.session = false;
     if (state.scene === 'chocolate') requestChocolateExit('song');
   }
-  if (previous !== chocolate.active && state.scene === 'radio') renderScene();
+  if ((previous !== chocolate.active || previousDoor !== chocolate.session) && state.scene === 'radio') renderScene();
   refreshChocolateItems();
 }
 function enterChocolateMaze() {
   if (state.scene !== 'radio' || !state.chocolate.active) return false;
-  stopWalking(); closePanel(); state.chocolate.run = newChocolateRun();
+  stopWalking(); closePanel(); state.chocolate.run = newChocolateRun(state.chocolate.collected);
   state.scene = 'chocolate'; state.position = { ...MAZE_SPAWN };
   renderScene(); game.focus({ preventScroll: true }); announce(text('choco_collect_hint')); return true;
 }
@@ -341,6 +341,7 @@ function frameChocolate(dt) {
     }
     const collected = collectChocolate(run, state.position);
     if (collected) {
+      state.chocolate.collected = [...run.collected];
       for (const treat of MAZE_CHOCOLATES) if (run.collected.includes(treat.id)) $('#maze-' + treat.id)?.setAttribute('hidden', '');
       announce(text('choco_count', { anzahl: run.collected.length }));
       if (collected === 'complete') {
@@ -471,6 +472,8 @@ function playRecording(track, time = 0, playing = true) {
   refreshPlayback();
 }
 function loadRecording() {
+  // Only inserting or ejecting a cassette replenishes the maze, never a room visit.
+  state.chocolate.collected = []; state.chocolate.session = false;
   state.boostMusic = null;
   const track = playbackTrack();
   state.hatRestartPending = isHatTrack(track);

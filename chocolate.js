@@ -76,13 +76,16 @@ export function chocolatePath(start, end) {
 }
 export const isChocolateTrack = track => !!track && (['schokolade', 'song-66d899a2-18b0-4eba-ac96-b41a7aedc6ed'].includes(track.id) || track.title?.trim().toLocaleLowerCase('de') === 'schokolade');
 export const touchingChocolateDoor = position => Math.abs(position.x - CHOCOLATE_DOOR.x) <= 29 && position.y >= 482 && position.y <= 510;
-export function createChocolate(saved) { return { unlocked: saved?.unlocked === true, carrying: false, boost: 0, active: false, session: false, run: null }; }
+export function createChocolate(saved) { return { unlocked: saved?.unlocked === true, carrying: false, boost: 0, active: false, session: false, collected: [], run: null }; }
 export const savedChocolate = chocolate => ({ unlocked: chocolate.unlocked });
 export const chocolateSpeed = chocolate => chocolate.boost > 0 ? 2 : 1;
 export function tickChocolate(chocolate, elapsed) { chocolate.boost = Math.max(0, chocolate.boost - Math.max(0, elapsed)); }
 export function takeChocolate(chocolate) { if (!chocolate.unlocked || chocolate.carrying) return false; chocolate.carrying = true; return true; }
 export function eatChocolate(chocolate) { if (!chocolate.carrying) return false; chocolate.carrying = false; chocolate.boost = CHOCOLATE_SPEED_SECONDS; return true; }
-export function newChocolateRun() { return { phase: 'search', collected: [], celebration: 0, exitPath: [], exitReason: null }; }
+export function newChocolateRun(collected = []) {
+  const found = [...new Set(Array.isArray(collected) ? collected : [])].filter(id => MAZE_CHOCOLATES.some(treat => treat.id === id));
+  return { phase: 'search', collected: found, celebration: 0, exitPath: [], exitReason: null };
+}
 export function collectChocolate(run, position) {
   if (!run || run.phase !== 'search') return null;
   const treat = MAZE_CHOCOLATES.find(treat => !run.collected.includes(treat.id) && Math.hypot(treat.x - position.x, treat.y - position.y) < 27);

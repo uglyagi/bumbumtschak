@@ -73,3 +73,14 @@ test('only Schokolade opens the speaker; all collected graphics disappear and th
   for (const color of ['#ff87ce', '#1d55ff', '#4acb59', '#fff20b']) assert(svg.includes(color));
   collectChocolate(run, MAZE_CHOCOLATES[0]); assert(chocolateMazeMarkup(run).includes('id="maze-chocolate-1" transform="translate(' + MAZE_CHOCOLATES[0].x + ' ' + (MAZE_CHOCOLATES[0].y - 4) + ') scale(.66)" hidden=""'));
 });
+
+test('revisiting keeps a collection without repeating rewards and a fresh cassette starts empty', () => {
+  const ids = MAZE_CHOCOLATES.map(treat => treat.id), first = newChocolateRun(ids.slice(0, 2));
+  assert.deepEqual(first.collected, ids.slice(0, 2)); assert.equal(collectChocolate(first, MAZE_CHOCOLATES[0]), null);
+  assert.equal(collectChocolate(first, MAZE_CHOCOLATES[2]), 'collected'); assert.equal(first.collected.length, 3);
+  const finished = newChocolateRun([...ids, ids[0], 'unknown']);
+  assert.deepEqual(finished.collected, ids); assert.equal(finished.phase, 'search'); assert.equal(finished.celebration, 0);
+  for (const treat of MAZE_CHOCOLATES) assert.equal(collectChocolate(finished, treat), null);
+  assert.equal(newChocolateRun().collected.length, 0);
+  assert.equal(createChocolate({ unlocked: true }).collected.length, 0, 'a new visit does not persist a half-played cassette');
+});

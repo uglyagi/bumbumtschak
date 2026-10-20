@@ -1138,3 +1138,36 @@ try {
   assert.equal(alreadyPlaying.state.boostMusic, null); assert.equal(alreadyPlaying.get('#audio').currentTime, 43, 'Schokolade already playing continues smoothly');
 } finally { content.TRACKS.splice(content.TRACKS.indexOf(boostTrack), 1); content.TRACKS[1].src = originalBoostCassette; }
 console.log('PASS: eating with Enter, Space or Numpad Enter plays Schokolade for the twenty-second boost, restores an empty, paused or playing radio at its saved position, leaves cassettes in place, supports repeated treats and respects a newly selected cassette.');
+
+const returnTrack = { id: 'schokolade', title: 'Schokolade', src: 'uploads/schokolade.mp3', color: '#ff87ce', image: 'assets/hut.png' };
+content.TRACKS.push(returnTrack);
+try {
+  const h = await harness(false, 'dog'); h.enterRoom('radio'); h.state.tapes.loaded = returnTrack.id; h.loadRecording(); h.game.focus(); let clock = 0;
+  const step = () => h.frame(++clock * 16);
+  const enter = () => { h.state.position = { ...chocolate.CHOCOLATE_DOOR }; step(); assert.equal(h.state.scene, 'chocolate'); };
+  const leave = () => { h.press(h.windowHandlers, h.event('Escape', 'Escape', h.game)); const deadline = clock + 3500; while (h.state.scene === 'chocolate' && clock < deadline) step(); assert.equal(h.state.scene, 'radio'); };
+  const visibleBars = () => [...h.game.innerHTML.matchAll(/<g id="maze-chocolate-[1-5]"[^>]*>/g)].filter(match => !match[0].includes('hidden=""')).length;
+  enter();
+  h.state.position = { ...chocolate.MAZE_CHOCOLATES[0] }; step(); assert.equal(h.state.chocolate.collected.length, 1); leave();
+  assert(h.game.innerHTML.includes('data-room-target="choco-door"'), 'the door stays open after returning while the song is playing');
+  enter(); assert.equal(visibleBars(), 4); assert.equal(h.get('#chocolate-status').textContent, content.text('choco_count', { anzahl: 1 }));
+  for (const bar of chocolate.MAZE_CHOCOLATES.slice(1)) { h.state.position = { ...bar }; step(); }
+  assert.equal(h.state.chocolate.run.phase, 'celebrate'); const deadline = clock + 3500;
+  while (h.state.scene === 'chocolate' && clock < deadline) step();
+  assert.equal(h.state.scene, 'radio'); assert(h.game.innerHTML.includes('data-room-target="choco-door"'));
+  enter(); assert.equal(visibleBars(), 0); assert.equal(h.state.chocolate.run.collected.length, 5); assert.equal(h.state.chocolate.run.phase, 'search', 'a completed collection does not replay confetti');
+  leave(); h.get('#audio').pause(); for (const cb of h.get('#audio').handlers.get('pause')) cb({});
+  assert(h.game.innerHTML.includes('data-room-target="choco-door"'), 'pausing does not turn the doorway back into a speaker');
+  await h.get('#audio').play(); for (const cb of h.get('#audio').handlers.get('play')) cb({});
+  enter(); assert.equal(visibleBars(), 0);
+  h.get('#audio').ended = true; h.get('#audio').paused = true; for (const cb of h.get('#audio').handlers.get('ended')) cb({});
+  while (h.state.scene === 'chocolate' && clock < deadline + 3500) step();
+  assert.equal(h.state.scene, 'radio'); assert(!h.game.innerHTML.includes('data-room-target="choco-door"'));
+  await h.get('#audio').play(); for (const cb of h.get('#audio').handlers.get('play')) cb({});
+  enter(); assert.equal(visibleBars(), 0, 'replaying without removing the cassette does not replenish bars'); leave();
+  h.state.position = { ...rooms.RADIO }; h.game.focus(); h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game));
+  assert.equal(h.state.tapes.loaded, null); assert.equal(h.state.tapes.carrying, returnTrack.id); assert(!h.game.innerHTML.includes('data-room-target="choco-door"'));
+  h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game)); assert.equal(h.state.tapes.loaded, returnTrack.id);
+  assert(h.game.innerHTML.includes('data-room-target="choco-door"')); enter(); assert.equal(visibleBars(), 5); assert.equal(h.state.chocolate.run.collected.length, 0);
+} finally { content.TRACKS.splice(content.TRACKS.indexOf(returnTrack), 1); }
+console.log('PASS: returning from the maze keeps the speaker doorway open, collected bars and 0/5–5/5 counts persist across visits and replay, pause preserves the doorway, song end closes it, and physically ejecting/reinserting the cassette alone restores all five bars.');
