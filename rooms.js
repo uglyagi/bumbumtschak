@@ -8,6 +8,7 @@ export const ROOMS = {
   radio: { color: '#ff87ce', station: 'radio' },
   concerts: { color: '#fff20b', station: 'concerts' },
   wardrobe: { color: '#ff87ce', station: 'wardrobe', spawn: { x: 800, y: 740 } },
+  social: { color: '#c9ced4', station: 'social', spawn: { x: 800, y: 940 }, outside: { x: 1375, y: 905 }, camera: { x: 800, y: 790, w: 720, h: 660 } },
 };
 export const ROOM_SPAWN = { x: 800, y: 870 };
 export const EXIT = { x: 800, y: 980 };
@@ -33,7 +34,7 @@ export function findTapeSlot(tapes, id) {
 }
 export function roomFor(id) { return ROOMS[id] ? id : null; }
 export const ROOM_PROPS = {
-  radio: [], concerts: [{ id: 'concerts', x: 800, y: 570 }], wardrobe: [],
+  radio: [], concerts: [{ id: 'concerts', x: 800, y: 570 }], wardrobe: [], social: [],
 };
 export function refreshBandWayfinding() {
   for (const [id, room] of Object.entries(ROOMS)) { room.title = text(`room_${id}`); room.kicker = text(`kicker_${id}`); }
@@ -70,6 +71,8 @@ export function nearbyInteraction(scene, position, tapes, shelfPage = 0, paint =
   if (scene === 'world') {
     if (distance(position, rocketPosition) < ROCKET_REACH) return { id: 'rocket', kind: 'rocket-board', label: text('rocket_board') };
     const choices = STATIONS.filter(s => BAND.some(member => member.id === s.id)).map(s => ({ ...s, kind: 'read', label: text('action_member', { name: s.label }), distance: distance(position, s) })).filter(s => s.distance < 110);
+    const mailbox = STATIONS.find(station => station.id === 'social'), mailboxDistance = distance(position, mailbox);
+    if (mailboxDistance < 75) choices.push({ ...mailbox, kind: 'enter-room', label: text('room_social'), distance: mailboxDistance });
     const object = nearbyWorldObject(position);
     if (object) choices.push({ ...object, kind: 'read', label: text(object.id === 'grownups' ? 'action_grownups' : 'sign_help') });
     return [...links, ...choices].sort((a, b) => a.distance - b.distance)[0] || null;

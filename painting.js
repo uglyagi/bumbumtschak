@@ -1,5 +1,5 @@
 import { escapeXML } from './utils.js';
-import { SKY } from './sky-world.js';
+import { SKY, WORLD_BOUNDS } from './sky-world.js';
 
 export const DEFAULT_PALETTE = [
   { id: 'yellow-dark', name: 'Dunkelgelb', color: '#d5a600' },
@@ -57,6 +57,7 @@ export const FLOWERS = [
   [245, 165, '#fff20b', 30], [430, 100, '#ff87ce', 28], [505, 390, '#fff20b', 28],
   [665, 540, '#ff87ce', 32], [1115, 735, '#fff20b', 32], [1145, 940, '#ff87ce', 30],
   [185, 825, '#fff20b', 28], [1460, 425, '#ff87ce', 32],
+  [-170, 370, '#fff20b', 35], [-160, 770, '#ff87ce', 34], [1710, 360, '#ff87ce', 35], [1690, 875, '#fff20b', 38],
 ].map(([x, y, color, size]) => {
   const larger = Math.round(size * 1.25), extra = larger - size;
   return [x - extra / 2, y - extra * 1.2, color, larger];
@@ -92,7 +93,7 @@ export const PAINT_SURFACES = [
   ...CLOUDS.map(([x, y, w, h], i) => ({ id: `cloud-${i}`, key: 'paint_cloud', bounds: rect(x, y, w, h), walk: { x: x + w / 2, y: y + h + 38 }, reach: 60, sky: true })),
   ...TREES.map(([x, y, w, h], i) => ({ id: `tree-${i}`, key: 'paint_tree', bounds: rect(x, y, w, h * .71), walk: [{ x: 215, y: 200 }, { x: 1350, y: 160 }, { x: 1390, y: 610 }, { x: 205, y: 950 }, { x: 470, y: 875 }][i], reach: 65 })),
   ...FLOWERS.map(([x, y, , size], i) => ({ id: `flower-${i}`, key: 'paint_flower', bounds: rect(x, y, size, size * .7), walk: { x: x + size / 2, y: y + size + 20 }, reach: 42 })),
-  { id: 'water', key: 'paint_water', bounds: rect(0, 1025, 1600, 75), walk: { x: 800, y: 1005 }, reach: 55 },
+  { id: 'water', key: 'paint_water', bounds: rect(WORLD_BOUNDS.left, 1025, WORLD_BOUNDS.width, 75), walk: { x: 800, y: 1005 }, reach: 55 },
   { id: 'path', key: 'paint_path', walk: { x: 650, y: 650 }, ground: true },
   { id: 'grass', key: 'paint_grass', walk: { x: 1000, y: 600 }, ground: true },
   { id: 'sky', key: 'paint_sky', walk: { x: 800, y: SKY.top + 230 }, ground: true, sky: true },

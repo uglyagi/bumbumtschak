@@ -14,7 +14,22 @@ export function wreckageTransforms(seconds = 1) {
   const t = Math.max(0, Math.min(1, seconds / .8)), ease = 1 - (1 - t) ** 3;
   return pieces.map(piece => ({ id: piece.id, transform: `translate(${(piece.x * ease).toFixed(2)} ${(-28 * (1 - ease) + piece.y * ease - Math.sin(t * Math.PI) * 22).toFixed(2)}) rotate(${(piece.angle * ease).toFixed(2)})` }));
 }
-export function rocketWreckageMarkup(seconds = 1) {
-  const transforms = wreckageTransforms(seconds);
-  return `<g id="rocket-wreckage" role="img" aria-label="${escape(text('rocket_wreckage'))}" stroke="#101014" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"><ellipse cy="22" rx="111" ry="20" fill="#101014" stroke="none" opacity=".12"/>${pieces.map((piece, i) => `<g id="rocket-debris-${piece.id}" transform="${transforms[i].transform}">${piece.art}</g>`).join('')}</g>`;
+
+export const ROCKET_REPAIR_SECONDS = 2;
+const repairTargets = {
+  nose: { x: 0, y: -123 }, cabin: { x: 0, y: -81 }, 'left-fin': { x: 28, y: -42 },
+  'right-fin': { x: -25, y: -42 }, engine: { x: 0, y: -23 }, panel: { x: 0, y: -51 }, bolt: { x: 0, y: -68 },
+};
+export const rocketRepairOpacity = seconds => Math.max(0, Math.min(1, (seconds - 1.65) / .35));
+export function rocketRepairTransforms(seconds) {
+  return pieces.map((piece, i) => {
+    const progress = Math.max(0, Math.min(1, (seconds - i * .13) / .9)), amount = progress * progress * (3 - 2 * progress), target = repairTargets[piece.id];
+    const x = piece.x + (target.x - piece.x) * amount, y = piece.y + (target.y - piece.y) * amount - Math.sin(progress * Math.PI) * 20;
+    return { id: piece.id, transform: 'translate(' + x.toFixed(2) + ' ' + y.toFixed(2) + ') rotate(' + (piece.angle * (1 - amount)).toFixed(2) + ')' };
+  });
+}
+
+export function rocketWreckageMarkup(seconds = 1, repairing = null) {
+  const transforms = repairing == null ? wreckageTransforms(seconds) : rocketRepairTransforms(repairing);
+  return `<g id="rocket-wreckage" opacity="${repairing == null ? 1 : 1 - rocketRepairOpacity(repairing)}" role="img" aria-label="${escape(text('rocket_wreckage'))}" stroke="#101014" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"><ellipse cy="22" rx="111" ry="20" fill="#101014" stroke="none" opacity=".12"/>${pieces.map((piece, i) => `<g id="rocket-debris-${piece.id}" transform="${transforms[i].transform}">${piece.art}</g>`).join('')}</g>`;
 }

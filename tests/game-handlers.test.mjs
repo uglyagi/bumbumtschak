@@ -192,7 +192,7 @@ more.press(more.windowHandlers, more.event(' ', 'Space', more.game));
 assert.equal(more.state.tapes.carrying, null); assert.equal(more.state.tapes.slots[6], carried);
 more.press(more.windowHandlers, more.event('Enter', 'Enter', more.game));
 assert.equal(more.state.tapes.carrying, carried, 'pick up a relocated tape from its new slot');
-more.leaveRoom(); more.state.position = social.socialPads('world').find(p => p.id === 'email'); more.game.focus();
+more.enterRoom('social'); more.state.position = social.socialPads('social').find(p => p.id === 'email'); more.game.focus();
 more.press(more.windowHandlers, more.event(' ', 'Space', more.game));
 assert.equal(more.state.modal, 'letter'); assert.equal(more.opened.length, 0);
 assert(more.renderPanel('letter').includes(content.CONTACT.email)); more.closePanel();
@@ -282,33 +282,34 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
   h.leaveRoom(); h.state.position = { x: 1265, y: 867 };
   h.press(h.windowHandlers, h.event(key, code, h.game));
   assert.equal(h.modal.open, false); assert.equal(h.state.scene, 'world'); assert.equal(h.opened.length, 0);
-  const facebook = social.socialPads('world').find(p => p.id === 'facebook'); h.state.position = { ...facebook };
+  h.enterRoom('social');
+  const facebook = social.socialPads('social').find(p => p.id === 'facebook'); h.state.position = { ...facebook };
   const pad = new h.Element('Facebook', 'g', { social: 'facebook' });
   for (const callback of h.game.handlers.get('click')) callback({ target: pad });
   assert.equal(h.opened.length, 0, 'clicking a symbol walks there without opening its link');
   h.press(h.windowHandlers, h.event(key, code, h.game));
   assert.equal(h.opened.at(-1)[0], facebook.url);
-  const email = social.socialPads('world').find(p => p.id === 'email'); h.state.position = { ...email };
+  const email = social.socialPads('social').find(p => p.id === 'email'); h.state.position = { ...email };
   h.press(h.windowHandlers, h.event(key, code, h.game));
-  assert.equal(h.state.modal, 'letter'); assert.equal(h.state.scene, 'world');
+  assert.equal(h.state.modal, 'letter'); assert.equal(h.state.scene, 'social');
   const count = h.opened.length;
   h.press(h.documentHandlers, h.event(key, code, h.get('#modal-content')));
   assert.equal(h.modal.open, false); assert.equal(h.opened.length, count);
   assert.equal(h.state.position.x, email.x); assert.equal(h.state.position.y, email.y);
 }
-assert.equal(rooms.roomFor('social'), null); assert.equal(rooms.roomFor('grownups'), null);
-assert.equal(social.socialPads('social').length, 0);
+assert.equal(rooms.roomFor('social'), 'social'); assert.equal(rooms.roomFor('grownups'), null);
+assert.equal(social.socialPads('social').length, 5); assert.equal(social.socialPads('world').length, 0);
 const index = await fs.readFile(new URL('index.html', root), 'utf8');
 assert(!index.includes('class="scene-heading"')); assert(!index.includes('class="keyboard-hint"'));
 assert(art.worldMarkup().includes('data-station="help"'));
-console.log('PASS: automatic door entry/exit, wall rejection, office/help require nearby confirmation, no automatic reopening, all three confirmation keys close inspections, Escape close, inactive empty ground, outdoor contact pads and letter without navigation.');
+console.log('PASS: automatic door entry/exit, wall rejection, office/help require nearby confirmation, no automatic reopening, all three confirmation keys close inspections, Escape close, inactive empty ground, contact-room pads and letter without external navigation.');
 for (const id of ['radio', 'concerts', 'wardrobe', 'grownups', 'help', 'social']) {
   const h = await harness(); h.state.started = true; h.closePanel(); h.game.focus(); h.goToStation(id);
   let tick = 0;
   while (tick < 1500 && !h.modal.open && h.state.scene === 'world' && h.state.path.length) h.frame(++tick * 16);
   h.frame(++tick * 16);
   if (['radio', 'concerts', 'wardrobe'].includes(id)) assert.equal(h.state.scene, id, 'wayfinding walks through the actual entrance');
-  else if (id === 'social') { assert.equal(h.state.scene, 'world'); assert.equal(h.modal.open, false); assert.equal(h.opened.length, 0); }
+  else if (id === 'social') { assert.equal(h.state.scene, 'world'); assert.equal(h.modal.open, false); assert.equal(h.opened.length, 0); h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game)); assert.equal(h.state.scene, 'social'); }
   else {
     assert.equal(h.modal.open, false, 'wayfinding reaches the object without opening it');
     h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game));
@@ -527,22 +528,24 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
   h.state.position = { ...sky.GROUND_ROCKET }; h.game.focus(); h.press(h.windowHandlers, h.event(key, code, h.game));
   h.state.keys.add('ArrowUp'); let clock = 0, firstSpace = null;
   while (!h.state.adventure && clock < 520) { h.frame(++clock * 16); if (clock * 16 < 6000) assert.notEqual(h.state.scene, 'space'); if (h.state.scene === 'space' && firstSpace === null) firstSpace = clock * 16; }
-  assert.equal(h.state.adventure.phase, 'intro'); assert(!h.modal.open); assert(h.game.innerHTML.includes('id="adventure-course" hidden=""'));
+  assert.equal(h.state.adventure.phase, 'intro'); assert(!h.modal.open); assert(h.game.innerHTML.includes('id="adventure-course" opacity="0"'));
   const startingPose = adventureArt.adventureShipPose(h.state.adventure); assert.deepEqual({ ...startingPose }, { ...h.state.adventure.entry });
   h.showPanel('space-launch'); assert(!h.modal.open, 'the choice cannot open before the transition finishes');
   new h.Element('early difficulty', 'button', { difficulty: 'profi' }).click(); assert.equal(h.state.adventure.phase, 'intro');
   for (let i = 0; i < 35; i++) h.frame(++clock * 16);
   const departingPose = adventureArt.adventureShipPose(h.state.adventure);
   assert.equal(h.state.adventure.phase, 'intro'); assert(!h.modal.open); assert.equal(departingPose.scale, startingPose.scale); assert.equal(departingPose.x, startingPose.x); assert(departingPose.y < startingPose.y);
-  assert(h.get('#adventure-course').attrs.has('hidden')); assert.equal(h.state.adventure.meteors.length, 0);
+  assert(!h.get('#adventure-course').attrs.has('hidden')); assert.equal(h.state.adventure.meteors.length, 0);
   while (h.state.adventure.phase === 'intro' && clock < 800) h.frame(++clock * 16);
   assert(firstSpace >= 6000 && firstSpace <= 7000, String(firstSpace));
   assert.equal(h.state.adventure.phase, 'ready'); assert.equal(h.state.modal, 'space-launch');
   assert(h.modalContent.innerHTML.includes('Zurück zur Wiese')); assert.equal((h.modalContent.innerHTML.match(/<button\b/g) || []).length, 4); assert(!h.modalContent.innerHTML.includes('data-action="space-start"'));
   assert.equal(h.state.adventure.width, 1200); assert.equal(h.state.paintCan, 'yellow'); assert.equal(h.state.animal, 'monkey');
-  assert(h.get('#adventure-course').attrs.has('hidden')); assert(h.get('#rocket-paint').innerHTML.includes('#fff20b'));
-  assert.equal(h.state.adventure.angle, 0, 'the rocket stays upright during departure and is offscreen at the choice');
+  assert(!h.get('#adventure-course').attrs.has('hidden')); assert.equal(h.get('#adventure-course').getAttribute('opacity'), '1.000'); assert(h.get('#rocket-paint').innerHTML.includes('#fff20b'));
+  assert.equal(h.state.adventure.angle, 90, 'the choice already shows the sideways rocket in its starting position');
+  const readyPose = adventureArt.adventureShipPose(h.state.adventure);
   const start = new h.Element('choose easy and start', 'button', { difficulty: 'leicht' }); h.press(h.documentHandlers, h.event(key, code, start));
+  assert.deepEqual(adventureArt.adventureShipPose(h.state.adventure), readyPose, 'selecting a difficulty keeps the rocket in exactly the same place');
   assert.equal(h.state.adventure.phase, 'playing'); assert.equal(h.modal.open, false);
   const initialShip = { ...h.state.adventure.ship }; h.state.keys.add('ArrowRight'); h.state.keys.add('ArrowUp');
   for (let i = 0; i < 55; i++) h.frame(++clock * 16);
@@ -607,7 +610,16 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
   h.state.position = { ...rooms.TOOLBOX_SPOT }; h.game.focus(); h.press(h.windowHandlers, h.event(key, code, h.game));
   assert(h.state.toolbox); assert(h.get('#carried-toolbox').innerHTML.includes('#ff3935'));
   h.leaveRoom(); h.state.position = { ...h.state.rocket.position }; h.game.focus(); assert.equal(h.currentInteraction().kind, 'rocket-repair');
-  h.press(h.windowHandlers, h.event(key, code, h.game)); assert(!h.state.rocket.damaged && !h.state.rocket.broken && !h.state.rocket.riding); assert.equal(h.stored.get('bbt-rocket-damaged'), '0');
+  h.press(h.windowHandlers, h.event(key, code, h.game));
+  assert(h.state.rocket.damaged && h.state.rocket.broken && !h.state.rocket.riding); assert.equal(h.state.rocket.repair, 0);
+  assert(!h.state.toolbox, 'the tool is consumed when repair starts');
+  const oldNose = h.get('#rocket-debris-nose').getAttribute('transform');
+  for(let i=0;i<30;i++) h.frame(++clock*16);
+  assert(h.state.rocket.damaged && h.state.rocket.broken, 'the ship stays damaged while parts are moving');
+  assert.notEqual(h.get('#rocket-debris-nose').getAttribute('transform'), oldNose);
+  h.press(h.windowHandlers,h.event(key,code,h.game)); assert(!h.state.rocket.riding, 'repair cannot be interrupted by boarding');
+  const repairDeadline=clock+180; while(h.state.rocket.repair != null && clock<repairDeadline) h.frame(++clock*16);
+  assert(!h.state.rocket.damaged && !h.state.rocket.broken && !h.state.rocket.riding); assert.equal(h.stored.get('bbt-rocket-damaged'), '0');
   assert(!h.state.toolbox, 'using the toolbox removes it from the player');
   assert(h.get('#carried-toolbox').attrs.has('hidden')); assert.equal(h.get('#carried-toolbox').innerHTML, '');
   assert(!h.game.innerHTML.includes('id="rocket-wreckage"')); assert(h.game.innerHTML.includes('id="rocket-hull"'));
@@ -625,7 +637,7 @@ assert.equal(choosingLand.state.modal, 'space-launch'); choosingLand.closePanel(
 assert(choosingLand.state.landing && !choosingLand.state.rocket.damaged, 'Escape at the launch choice lands safely');
 for (let time = 4500; time < 10000; time += 16) choosingLand.frame(time);
 assert.equal(choosingLand.state.scene, 'world'); assert(!choosingLand.state.rocket.riding && !choosingLand.state.rocket.damaged);
-console.log('PASS: space entry at 6–7 seconds, original-size straight upward departure, hidden planets, only three difficulties and return to meadow, immediate start on difficulty choice, four-direction flight, upright pilot, pause, Sun landing, carried/unfolded lounger, sunglasses, sunbathing before congratulations, replay, vibrating nose-down crash, scattering wreckage, persistent damage, consuming and replacing the toolbox, repair and restart work with Enter, Space and NumpadEnter.');
+console.log('PASS: space entry at 6–7 seconds, original-size straight upward departure, smooth entry into the visible starting scene, only three difficulties and return to meadow, immediate start on difficulty choice, four-direction flight, upright pilot, pause, Sun landing, carried/unfolded lounger, sunglasses, sunbathing before congratulations, replay, vibrating nose-down crash, scattering wreckage, persistent damage, consuming and replacing the toolbox, repair and restart work with Enter, Space and NumpadEnter.');
 
 const dancingTrack = content.TRACKS.find(track => track.id === 'tanzen'), originalDanceAudio = dancingTrack.src;
 try {
@@ -701,7 +713,7 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
   assert(h.state.position.x < beforeBrush, 'direction keys move the brush');
   for (const surface of studio.largeSurfaces) {
     const p = surface.bounds ? { x: surface.bounds.x + surface.bounds.w / 2, y: surface.bounds.y + surface.bounds.h / 2 } : surface.id === 'path' ? { x: 650, y: 475 } : surface.id === 'grass' ? { x: 1000, y: 700 } : { x: 900, y: -150 };
-    h.state.position = { x: studio.CANVAS.x + p.x * studio.CANVAS.scale, y: studio.CANVAS.y + (p.y + 380) * studio.CANVAS.scale };
+    h.state.position = { x: studio.CANVAS.x + (p.x - core.WORLD.left) * studio.CANVAS.scale, y: studio.CANVAS.y + (p.y + 380) * studio.CANVAS.scale };
     assert.equal(h.currentInteraction()?.id, surface.id);
     const before = h.state.paint[surface.id];
     h.press(h.windowHandlers, h.event(key, code, h.game, true)); assert.equal(h.state.paint[surface.id], before, 'holding a confirmation key does not paint repeatedly');
@@ -728,7 +740,7 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space']]) {
   for (const color of studio.studioColors(content.PALETTE)) {
     h.state.position = { ...color }; h.game.focus(); h.press(h.windowHandlers, h.event(key, code, h.game));
     assert.equal(h.state.studio.color, color.id);
-    h.state.position = { x: studio.CANVAS.x + 1000 * studio.CANVAS.scale, y: studio.CANVAS.y + 1080 * studio.CANVAS.scale };
+    h.state.position = { x: studio.CANVAS.x + (1000 - core.WORLD.left) * studio.CANVAS.scale, y: studio.CANVAS.y + 1080 * studio.CANVAS.scale };
     h.press(h.windowHandlers, h.event(key, code, h.game));
     assert.equal(h.state.paint.grass, color.color, color.name + ' paints through the actual keyboard handler');
   }
@@ -770,7 +782,7 @@ carriedStudio.leaveRoom(); assert.equal(carriedStudio.state.paintCan, 'red');
 console.log('PASS: painting keeps a carried bucket, hides its indicator while the brush is active and returns to the house through the visible close button.');
 
 const preciseBrush = await harness(false, 'cat'); preciseBrush.enterRoom('wardrobe'); preciseBrush.state.position = { ...rooms.PICTURE_SPOT }; preciseBrush.frame(16);
-preciseBrush.state.position = { x: studio.CANVAS.x + 1000 * studio.CANVAS.scale, y: studio.CANVAS.y + 1080 * studio.CANVAS.scale };
+preciseBrush.state.position = { x: studio.CANVAS.x + (1000 - core.WORLD.left) * studio.CANVAS.scale, y: studio.CANVAS.y + 1080 * studio.CANVAS.scale };
 const flowerHit = new preciseBrush.Element('flower', 'use', { paintTarget: 'flower-0' });
 const roofHit = new preciseBrush.Element('roof', 'path', { paintTarget: 'home-roof' });
 let screenPoint;
@@ -1009,14 +1021,14 @@ try {
   h.state.position = { ...chocolate.CHOCOLATE_DRAWER }; h.game.focus();
   h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game, true)); assert(!h.state.chocolate.carrying);
   h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game)); assert(h.state.chocolate.carrying); assert.equal(h.state.chocolate.boost, 0);
-  h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game)); assert(!h.state.chocolate.carrying); assert.equal(h.state.chocolate.boost, 19);
+  h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game)); assert(!h.state.chocolate.carrying); assert.equal(h.state.chocolate.boost, 19.5);
   h.leaveRoom(); h.state.position = { x: 650, y: 650 }; h.game.focus(); h.state.keys.add('ArrowRight');
   const before = { ...h.state.position }; h.frame(++clock * 16);
   assert(Math.abs(h.state.position.x - before.x - core.WORLD.speed * .016 * 2) < 1e-8);
-  h.state.keys.clear(); h.frame(clock * 16 + 19001); assert.equal(h.state.chocolate.boost, 0); assert.equal(chocolate.chocolateSpeed(h.state.chocolate), 1);
+  h.state.keys.clear(); h.frame(clock * 16 + 19501); assert.equal(h.state.chocolate.boost, 0); assert.equal(chocolate.chocolateSpeed(h.state.chocolate), 1);
   const reload = await harness(false, 'cat', null, false, null, JSON.parse(h.stored.get('bbt-chocolate-world'))); reload.enterRoom('wardrobe');
   assert(reload.game.innerHTML.includes('data-room-target="chocolate-drawer"')); assert(!reload.state.chocolate.carrying); assert.equal(reload.state.chocolate.boost, 0);
-  console.log('PASS: Schokolade changes only the left speaker into a door, walking enters without confirmation, five reachable bars collect by touch, confetti plays, the figure walks itself out, the drawer persists, separate presses take/eat and the nineteen-second boost gradually returns to normal speed.');
+  console.log('PASS: Schokolade changes only the left speaker into a door, walking enters without confirmation, five reachable bars collect by touch, confetti plays, the figure walks itself out, the drawer persists, separate presses take/eat and the nineteen-and-a-half-second boost gradually returns to normal speed.');
 
   for (const reason of ['ended', 'changed', 'escape']) {
     const h = await harness(false, 'dog'); h.enterRoom('radio'); h.state.tapes.loaded = chocolateTrack.id; h.loadRecording();
@@ -1036,7 +1048,7 @@ try {
     const h = await harness(true, 'horse', null, false, null, { unlocked: true }); h.enterRoom('wardrobe'); h.state.position = { ...chocolate.CHOCOLATE_DRAWER }; h.game.focus();
     h.press(h.windowHandlers, h.event(key, code, h.game)); assert(h.state.chocolate.carrying); assert.equal(h.state.chocolate.boost, 0);
     h.press(h.windowHandlers, h.event(key, code, h.game, true)); assert(h.state.chocolate.carrying);
-    h.press(h.windowHandlers, h.event(key, code, h.game)); assert(!h.state.chocolate.carrying); assert.equal(h.state.chocolate.boost, 19);
+    h.press(h.windowHandlers, h.event(key, code, h.game)); assert(!h.state.chocolate.carrying); assert.equal(h.state.chocolate.boost, 19.5);
     assert(h.stored.has('bbt-chocolate-preview')); assert(!h.stored.has('bbt-chocolate-world'));
   }
   console.log('PASS: Space and Numpad Enter take and eat a single bar in two distinct presses; held keys do not eat it and preview rewards are separate.');
@@ -1074,7 +1086,7 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space']]) {
   h.state.position = { ...studio.studioColors(content.PALETTE).find(color => color.id === 'gray') }; h.game.focus();
   h.press(h.windowHandlers, h.event(key, code, h.game));
   const point = { x: mailbox.bounds.x + mailbox.bounds.w / 2, y: mailbox.bounds.y + 40 };
-  h.state.position = { x: studio.CANVAS.x + point.x * studio.CANVAS.scale, y: studio.CANVAS.y + (point.y + 380) * studio.CANVAS.scale };
+  h.state.position = { x: studio.CANVAS.x + (point.x - core.WORLD.left) * studio.CANVAS.scale, y: studio.CANVAS.y + (point.y + 380) * studio.CANVAS.scale };
   assert.equal(h.currentInteraction()?.id, 'mailbox'); h.press(h.windowHandlers, h.event(key, code, h.game));
   assert.equal(h.state.paint.mailbox, '#969ba5'); assert.equal(h.state.paintCan, 'red');
   const reload = await harness(false, 'cat', JSON.parse(h.stored.get('bbt-paint-world'))); assert.equal(reload.state.paint.mailbox, '#969ba5');
@@ -1111,11 +1123,11 @@ try {
       }
       const before = JSON.stringify(h.state.tapes); h.enterRoom('wardrobe'); h.state.position = { ...chocolate.CHOCOLATE_DRAWER }; h.game.focus();
       h.press(h.windowHandlers, h.event(key, code, h.game)); h.press(h.windowHandlers, h.event(key, code, h.game));
-      assert.equal(h.state.chocolate.boost, 19); assert.equal(h.get('#audio').src, boostTrack.src); assert(h.state.playing);
+      assert.equal(h.state.chocolate.boost, 19.5); assert.equal(h.get('#audio').src, boostTrack.src); assert(h.state.playing);
       assert.equal(h.state.boostMusic.id, boostTrack.id); assert.equal(JSON.stringify(h.state.tapes), before, 'bonus music does not relocate any cassette');
       assert(!h.state.party.active); assert(!h.state.hatActive); assert(h.state.chocolate.active);
-      h.frame(16); h.frame(18016); assert(h.state.boostMusic); assert.equal(h.state.chocolate.boost, 1);
-      h.frame(19017); assert.equal(h.state.boostMusic, null); assert.equal(h.state.chocolate.boost, 0); assert.equal(h.get('#audio').loop, false);
+      h.frame(16); h.frame(18516); assert(h.state.boostMusic); assert.equal(h.state.chocolate.boost, 1);
+      h.frame(19517); assert.equal(h.state.boostMusic, null); assert.equal(h.state.chocolate.boost, 0); assert.equal(h.get('#audio').loop, false);
       if (previousMode === 'empty') assert(h.get('#audio').paused);
       else {
         assert.equal(h.get('#audio').src, 'uploads/tanzen.mp3'); assert.equal(h.get('#audio').currentTime, 37.5);
@@ -1128,8 +1140,8 @@ try {
   for (let press = 0; press < 2; press++) renewed.press(renewed.windowHandlers, renewed.event('Enter', 'Enter', renewed.game));
   renewed.frame(16); renewed.frame(5016);
   for (let press = 0; press < 2; press++) renewed.press(renewed.windowHandlers, renewed.event('Enter', 'Enter', renewed.game));
-  assert.equal(renewed.state.chocolate.boost, 19); assert.equal(renewed.state.boostMusic.previous.time, 18); assert.equal(renewed.get('#audio').currentTime, 0);
-  renewed.frame(24017); assert.equal(renewed.state.boostMusic, null); assert.equal(renewed.get('#audio').src, 'uploads/tanzen.mp3'); assert.equal(renewed.get('#audio').currentTime, 18);
+  assert.equal(renewed.state.chocolate.boost, 19.5); assert.equal(renewed.state.boostMusic.previous.time, 18); assert.equal(renewed.get('#audio').currentTime, 0);
+  renewed.frame(24517); assert.equal(renewed.state.boostMusic, null); assert.equal(renewed.get('#audio').src, 'uploads/tanzen.mp3'); assert.equal(renewed.get('#audio').currentTime, 18);
   renewed.state.position = { ...chocolate.CHOCOLATE_DRAWER };
   for (let press = 0; press < 2; press++) renewed.press(renewed.windowHandlers, renewed.event('Enter', 'Enter', renewed.game));
   renewed.state.tapes.loaded = 'freundschaft'; const chosen = content.TRACKS.find(track => track.id === 'freundschaft'), oldSrc = chosen.src; chosen.src = 'uploads/freunde.mp3'; renewed.loadRecording();
@@ -1141,7 +1153,7 @@ try {
   alreadyPlaying.press(alreadyPlaying.windowHandlers, alreadyPlaying.event('Enter', 'Enter', alreadyPlaying.game)); alreadyPlaying.press(alreadyPlaying.windowHandlers, alreadyPlaying.event('Enter', 'Enter', alreadyPlaying.game));
   assert.equal(alreadyPlaying.state.boostMusic.continuing, true); assert.equal(alreadyPlaying.get('#audio').currentTime, 43, 'Schokolade already playing continues smoothly until it fades out');
 } finally { content.TRACKS.splice(content.TRACKS.indexOf(boostTrack), 1); content.TRACKS[1].src = originalBoostCassette; }
-console.log('PASS: eating with Enter, Space or Numpad Enter plays Schokolade for the nineteen-second boost, restores an empty, paused or playing radio at its saved position, leaves cassettes in place, supports repeated treats and respects a newly selected cassette.');
+console.log('PASS: eating with Enter, Space or Numpad Enter plays Schokolade for the nineteen-and-a-half-second boost, restores an empty, paused or playing radio at its saved position, leaves cassettes in place, supports repeated treats and respects a newly selected cassette.');
 
 const returnTrack = { id: 'schokolade', title: 'Schokolade', src: 'uploads/schokolade.mp3', color: '#ff87ce', image: 'assets/hut.png' };
 content.TRACKS.push(returnTrack);
@@ -1187,7 +1199,7 @@ try {
   while (h.state.scene === 'radio' && clock < exitLimit) step();
   assert.equal(h.state.scene, 'world'); assert.equal(h.state.friendsExit, null); assert(!h.modal.open);
   assert(h.get('#friends-hidden').innerHTML.includes('href="#animal-dog"'));
-  h.enterRoom('wardrobe'); assert.equal((h.game.innerHTML.match(/id="home-animal-/g) || []).length, 0, 'friends hiding outside have no home duplicates'); h.leaveRoom();
+  assert.equal(h.enterRoom('wardrobe'), false); assert.equal(h.state.scene, 'world', 'Home sweet Home stays closed during tag');
   const first = h.state.friends.actors[0]; h.state.position = { x: first.position.x, y: first.position.y + 100 }; step();
   assert.equal(first.status, 'running'); const before = { ...first.position }; step(); assert(Math.hypot(first.position.x - before.x, first.position.y - before.y) > 0);
   h.state.position = { ...first.position }; step(); assert.equal(first.status, 'following'); assert.equal(h.state.friends.caught.length, 1);
@@ -1199,11 +1211,11 @@ try {
   const campLimit = clock + 2500;
   while (h.state.friends.phase !== 'camping' && clock < campLimit) step();
   assert.equal(h.state.friends.phase, 'camping'); assert(h.state.friends.unlocked); assert(JSON.parse(h.stored.get('bbt-friends-world')).tent);
-  assert(h.get('#friends-world').innerHTML.includes('id="friend-tent"')); assert(!h.get('#friend-fire-flame').attrs.has('hidden'));
+  assert(h.get('#friends-world').innerHTML.includes('id="friend-tent"')); assert(!h.get('#friend-fire-flame').attrs.has('hidden')); assert(h.game.classList.contains('is-camping'));
   assert(Math.hypot(h.state.position.x - friends.FRIEND_CAMP_PLAYER.x, h.state.position.y - friends.FRIEND_CAMP_PLAYER.y) < 10, 'the player walks to the water with the friends');
   h.state.keys.add('ArrowRight'); const leaveLimit = clock + 160;
   while (h.state.friends.phase === 'camping' && clock < leaveLimit) step(); h.state.keys.clear();
-  assert.equal(h.state.friends.phase, 'returning'); assert(h.get('#friend-fire-flame').attrs.has('hidden'));
+  assert.equal(h.state.friends.phase, 'returning'); assert(h.get('#friend-fire-flame').attrs.has('hidden')); assert(!h.game.classList.contains('is-camping'));
   const homeLimit = clock + 2000; while (h.state.friends.phase !== 'idle' && clock < homeLimit) step();
   assert.equal(h.state.friends.phase, 'idle'); assert(h.state.friends.unlocked); assert.equal(friends.friendsAway(h.state.friends).length, 0);
   h.enterRoom('wardrobe'); assert.equal((h.game.innerHTML.match(/id="home-animal-/g) || []).length, 3); h.leaveRoom();
@@ -1276,7 +1288,7 @@ console.log('PASS: Enter, Space and Numpad Enter invite camp friends with Beste 
     const [, y, , height] = h.get('#world-svg').getAttribute('viewBox').split(' ').map(Number);
     assert(Math.abs(y + height / 2 - (h.state.position.y - core.WORLD.cameraOffsetY)) < .02, 'the animal body is centered even beside the lower shoreline');
   }
-  assert(h.game.innerHTML.includes('V11100H0Z'), 'the water continues beneath the camera without an empty edge');
+  assert(h.game.innerHTML.includes('V11100H' + core.WORLD.left + 'Z'), 'the water continues beneath the camera without an empty edge');
 }
 console.log('PASS: the outdoor camera centers the controlled animal at the start and beside the lower shoreline.');
 
@@ -1290,17 +1302,117 @@ try {
     h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game)); h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game));
     h.leaveRoom(); h.state.position = { x: 650, y: 650 }; h.frame(16);
     assert.equal(h.get('#audio').volume, .6); assert.equal(chocolate.chocolateSpeed(h.state.chocolate), 2);
-    h.frame(15016); assert.equal(h.state.chocolate.boost, 4); assert.equal(h.get('#audio').volume, .6);
-    h.frame(17016); assert.equal(h.state.chocolate.boost, 2); assert.equal(h.get('#audio').volume, .3); assert.equal(chocolate.chocolateSpeed(h.state.chocolate), 1.5);
+    h.frame(15516); assert.equal(h.state.chocolate.boost, 4); assert.equal(h.get('#audio').volume, .6);
+    h.frame(17516); assert.equal(h.state.chocolate.boost, 2); assert.equal(h.get('#audio').volume, .3); assert.equal(chocolate.chocolateSpeed(h.state.chocolate), 1.5);
     const volume = new h.Element('volume', 'input'); volume.id = 'volume'; volume.value = '.8';
     for (const cb of h.documentHandlers.get('input') || []) cb({ target: volume });
     assert.equal(h.get('#audio').volume, .4, 'the fade follows the selected master volume');
     h.showPanel('panda'); assert.equal(h.get('#audio').volume, .4, 'closing or opening a biography does not reset the fade'); h.closePanel(); h.game.focus();
-    h.state.keys.add('ArrowRight'); const x = h.state.position.x; h.frame(17032); h.state.keys.clear();
+    h.state.keys.add('ArrowRight'); const x = h.state.position.x; h.frame(17532); h.state.keys.clear();
     const travelled = h.state.position.x - x; assert(travelled > core.WORLD.speed * .016 && travelled < core.WORLD.speed * .016 * 2);
-    h.frame(19017); assert.equal(h.state.chocolate.boost, 0); assert.equal(chocolate.chocolateSpeed(h.state.chocolate), 1);
+    h.frame(19517); assert.equal(h.state.chocolate.boost, 0); assert.equal(chocolate.chocolateSpeed(h.state.chocolate), 1);
     if (mode === 'other') { assert.equal(h.get('#audio').src, 'uploads/tanzen.mp3'); assert(!h.get('#audio').paused); assert.equal(h.get('#audio').volume, .8); }
     else assert(h.get('#audio').paused, 'Schokolade ends quietly after the boost, including when its cassette was already playing');
   }
 } finally { content.TRACKS.splice(content.TRACKS.indexOf(fadingTrack), 1); content.TRACKS[1].src = preFadeTanzen; }
-console.log('PASS: the boost keeps full speed and volume for fifteen seconds, fades volume and walking smoothly for the final four seconds, follows volume controls, ends at normal speed and silence, and restores a different previously playing cassette.');
+console.log('PASS: the boost keeps full speed and volume for fifteen and a half seconds, fades volume and walking smoothly for the final four seconds, follows volume controls, ends at normal speed and silence, and restores a different previously playing cassette.');
+
+const uncutFriendsSrc = friendsTrack.src;
+try {
+  friendsTrack.src = 'uploads/beste-freunde.mp3';
+  const h = await harness(false, 'cat', null, false, null, null, { tent: true });
+  h.state.tapes.loaded = friendsTrack.id; h.loadRecording();
+  friends.releaseFriends(h.state.friends);
+  h.state.position = { x: friends.FRIEND_TENT.x, y: friends.FRIEND_TENT.y - 75 }; h.game.focus();
+  const radio = h.get('#audio'); radio.currentTime = 37;
+  h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game));
+  assert.equal(h.state.friends.phase, 'gathering');
+  assert.equal(h.state.campMusic, null, 'a playing Beste Freunde cassette is not replaced by camp music');
+  assert.equal(radio.currentTime, 37); assert(!radio.paused); assert(h.get('#camp-audio').paused);
+  h.frame(16); h.state.position = { x: 1100, y: 750 }; h.frame(32);
+  assert.equal(h.state.friends.phase, 'returning'); assert.equal(h.state.campMusic, null);
+  h.frame(6032);
+  assert(!radio.paused); assert.equal(radio.volume, .6, 'leaving the camp never fades or pauses the playing cassette');
+  assert.equal(radio.currentTime, 37, 'the cassette is not restarted or repositioned');
+} finally { friendsTrack.src = uncutFriendsSrc; }
+console.log('PASS: the playing Beste Freunde cassette stays at full volume and at its current position when inviting camp friends and when walking away.');
+
+for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'NumpadEnter']]) {
+  const h = await harness(false, 'cat'); h.game.focus(); let clock = 16;
+  h.state.position = { x: 1375, y: 867 }; h.frame(clock);
+  assert.equal(h.state.scene, 'world', 'standing in front of the mailbox never enters automatically');
+  assert(!h.game.innerHTML.includes('data-social='), 'contact symbols are absent outdoors');
+  h.press(h.windowHandlers, h.event(key, code, h.game, true)); assert.equal(h.state.scene, 'world');
+  h.press(h.windowHandlers, h.event(key, code, h.game)); assert.equal(h.state.scene, 'social');
+  assert.equal((h.game.innerHTML.match(/data-social=/g)||[]).length, 5);
+  assert(!h.modal.open);
+  for (const link of social.socialPads('social').filter(link => link.id !== 'email')) {
+    h.state.position = { x: link.x, y: link.y };
+    h.press(h.windowHandlers, h.event(key, code, h.game));
+    assert.equal(h.opened.at(-1)[0], link.url);
+  }
+  h.state.position = { ...social.socialPads('social').find(link => link.id === 'email') };
+  h.press(h.windowHandlers, h.event(key, code, h.game)); assert.equal(h.state.modal, 'letter');
+  assert(h.renderPanel('letter').includes(content.CONTACT.email)); h.closePanel();
+  h.state.position = { x: 800, y: 960 }; h.state.keys.add('ArrowDown');
+  while(h.state.scene === 'social' && clock < 2000) h.frame(clock += 16);
+  h.state.keys.clear(); assert.equal(h.state.scene, 'world'); assert(!h.modal.open);
+  assert.equal(h.state.position.x, 1375); assert.equal(h.state.position.y, 905);
+}
+console.log('PASS: the mailbox requires a fresh Enter/Space/Numpad press, contains five working contact symbols and a letter, and has a visible automatic walking exit.');
+
+{
+  const h = await harness(false, 'cat');
+  h.state.adventure = adventure.createAdventure(1200, 700); h.state.adventure.phase = 'ready';
+  h.showPanel('space-launch');
+  const choices = ['leicht', 'mittel', 'profi'].map(difficulty => new h.Element(difficulty, 'button', { difficulty }));
+  choices.push(new h.Element('land', 'button', { action: 'space-land' }));
+  const originalQuery = h.modalContent.querySelectorAll;
+  h.modalContent.querySelectorAll = () => choices;
+  choices[0].focus();
+  for (let i = 1; i < 4; i++) {
+    h.press(h.modalContent.handlers, h.event('ArrowDown', 'ArrowDown', choices[i - 1]));
+    assert.equal(h.doc.activeElement, choices[i]);
+  }
+  h.press(h.modalContent.handlers, h.event('ArrowUp', 'ArrowUp', choices[3]));
+  assert.equal(h.doc.activeElement, choices[2]);
+  assert.equal(h.state.adventure.phase, 'ready', 'arrow navigation does not launch before confirmation');
+  h.press(h.documentHandlers, h.event(' ', 'Space', choices[2]));
+  assert.equal(h.state.adventure.phase, 'playing'); assert.equal(h.state.adventure.difficulty, 'profi');
+  h.modalContent.querySelectorAll = originalQuery;
+}
+{
+  const h = await harness(false, 'cat'); let clock = 16;
+  h.state.position = { ...h.state.rocket.position }; h.game.focus();
+  h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game));
+  h.state.keys.add('ArrowUp'); h.frame(clock);
+  while (!h.state.adventure && clock < 10000) {
+    const wasDark = sky.spaceViewIsDark(h.state.camera, h.state.viewport);
+    h.frame(clock += 16);
+    if (h.state.adventure) assert(wasDark, 'the entire previous outdoor view is already dark before space begins');
+  }
+  assert(h.state.adventure); assert(clock >= 6400 && clock <= 7100, 'the smooth transition keeps the six-to-seven-second climb');
+}
+console.log('PASS: the flight choices navigate vertically with Up/Down and launch only on confirmation; the space transition waits for a fully dark view.');
+
+{
+  const h = await harness(false, 'cat');
+  friends.startFriends(h.state.friends, content.ANIMALS, h.state.animal, h.state.position);
+  h.game.focus();
+  for (const id of ['radio', 'concerts', 'wardrobe', 'social']) {
+    assert.equal(h.enterRoom(id), false); assert.equal(h.state.scene, 'world');
+  }
+  for (const door of core.HOUSE_DOORS) {
+    h.state.position = { x: door.x, y: (door.top + door.bottom) / 2 };
+    h.checkWorldTouch(); assert.equal(h.state.scene, 'world', 'automatic doors stay closed during tag');
+  }
+  h.state.position = { x: 1375, y: 867 };
+  for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space']]) {
+    h.press(h.windowHandlers, h.event(key, code, h.game)); assert.equal(h.state.scene, 'world', 'confirmation cannot enter the mailbox during tag');
+  }
+  for (const phase of ['celebrate', 'to-camp', 'building']) {
+    h.state.friends.phase = phase; assert.equal(h.enterRoom('radio'), false);
+  }
+  h.state.friends.phase = 'camping'; assert(h.enterRoom('social')); assert.equal(h.state.scene, 'social');
+}
+console.log('PASS: every building and the mailbox stay closed throughout tag and the group walk; normal entry returns at the campfire.');

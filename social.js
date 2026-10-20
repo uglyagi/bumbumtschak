@@ -16,9 +16,12 @@ export function contactLinks() {
 }
 export function socialPads(scene) {
   const links = contactLinks();
-  if (scene === 'world') return links.map((l, i) => ({ ...l, x: 1170 + i * 70, y: 935, radius: 31, reach: 30 }));
+  if (scene === 'social') {
+    const spots = [{ x: 650, y: 720 }, { x: 800, y: 720 }, { x: 950, y: 720 }, { x: 700, y: 855 }, { x: 900, y: 855 }];
+    return links.map((link, i) => ({ ...link, ...spots[i % spots.length], radius: 31, reach: 36 }));
+  }
   return [];
 }
 export function socialPadsMarkup(scene, active = true) {
-  return socialPads(scene).map(p => `<g class="social-pad" ${active ? `data-social="${p.id}" role="link" tabindex="0" aria-label="${escape(p.id === 'email' ? text('action_email', { adresse: p.email }) : text('action_external', { kanal: p.label }))}"` : ''} transform="translate(${p.x} ${p.y})"><ellipse cy="${p.radius + 5}" rx="${p.radius * .82}" ry="8" fill="#101014" opacity=".12"/><circle r="${p.radius}" fill="#fffcee" stroke="#101014" stroke-width="${scene === 'world' ? 3 : 5}"/><use href="#brand-${p.id}" x="${-p.radius * .73}" y="${-p.radius * .73}" width="${p.radius * 1.46}" height="${p.radius * 1.46}"/>${scene === 'social' ? `<text y="${p.radius + 34}" text-anchor="middle" font-size="22" font-weight="900">${escape(p.label)}</text><text y="${p.radius + 56}" text-anchor="middle" font-size="${p.id === 'email' ? 17 : 13}">${escape(p.id === 'email' ? p.email : text('social_pad_hint'))}</text>` : ''}</g>`).join('');
+  return socialPads(scene).map(p => `<g class="social-pad" ${active ? `data-social="${p.id}" role="link" tabindex="0" aria-label="${escape(p.id === 'email' ? text('action_email', { adresse: p.email }) : text('action_external', { kanal: p.label }))}"` : ''} transform="translate(${p.x} ${p.y})"><ellipse cy="${p.radius + 5}" rx="${p.radius * .82}" ry="8" fill="#101014" opacity=".12"/><circle r="${p.radius}" fill="#fffcee" stroke="#101014" stroke-width="${scene === 'world' ? 3 : 5}"/><use href="#brand-${p.id}" x="${-p.radius * .73}" y="${-p.radius * .73}" width="${p.radius * 1.46}" height="${p.radius * 1.46}"/>${scene === 'social' ? `<text y="${p.radius + 25}" text-anchor="middle" font-size="16" font-weight="900">${escape(p.label)}</text>` : ''}</g>`).join('');
 }

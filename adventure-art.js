@@ -1,6 +1,6 @@
 import { defs, rocketMarkup, landscapeMarkup } from './art.js';
 import { planetMarkup } from './space-art.js';
-import { COURSE, FINISH_DISTANCE, SUN_DIAMETER, INTRO_DURATION } from './rocket-adventure.js';
+import { COURSE, FINISH_DISTANCE, SUN_DIAMETER, INTRO_DURATION, INTRO_DEPARTURE_DURATION } from './rocket-adventure.js';
 import { text } from './content.js';
 import { sunHolidayMarkup } from './sun-holiday.js';
 import { escapeXML as esc } from './utils.js';
@@ -10,12 +10,17 @@ export function meteorMarkup(meteor) {
   return `<g transform="translate(${meteor.x.toFixed(1)} ${meteor.y.toFixed(1)})"><g transform="rotate(${meteor.angle.toFixed(1)}) scale(${meteor.radius})" fill="#a68d83" stroke="#101014" stroke-width=".1" stroke-linejoin="round"><path d="M-.95-.2-.65-.82.05-1 .65-.7 1-.12.75.6.12 1-.6.74-1 .2Z"/><ellipse cx="-.3" cy="-.25" rx=".27" ry=".2" fill="#7b6869" stroke-width=".05"/><circle cx=".35" cy=".3" r=".18" fill="#c4afa0" stroke-width=".05"/></g></g>`;
 }
 export function adventureShipPose(game) {
-  if (!['intro', 'ready'].includes(game.phase)) return { ...game.ship, scale: .72 };
-  const progress = game.phase === 'ready' ? 1 : Math.max(0, Math.min(1, game.introTime / INTRO_DURATION));
-  const amount = progress * progress * (3 - 2 * progress), endY = -140 * game.entry.scale;
-  // Retain the actual rocket size and horizontal position until it has left the screen.
-  return { x: game.entry.x, y: game.entry.y + (endY - game.entry.y) * amount, scale: game.entry.scale };
+  if (game.phase !== 'intro') return { ...game.ship, scale: .72 };
+  if (game.introTime <= INTRO_DEPARTURE_DURATION) {
+    const progress = Math.max(0, Math.min(1, game.introTime / INTRO_DEPARTURE_DURATION));
+    const amount = progress * progress * (3 - 2 * progress), endY = -140 * game.entry.scale;
+    return { x: game.entry.x, y: game.entry.y + (endY - game.entry.y) * amount, scale: game.entry.scale };
+  }
+  const progress = Math.max(0, Math.min(1, (game.introTime - INTRO_DEPARTURE_DURATION) / (INTRO_DURATION - INTRO_DEPARTURE_DURATION)));
+  const amount = progress * progress * (3 - 2 * progress);
+  return { x: -140 + (game.ship.x + 140) * amount, y: game.ship.y, scale: .72 };
 }
+export const adventureCourseOpacity = game => game.phase === 'intro' ? Math.max(0, Math.min(1, (game.introTime - .55) / .8)) : 1;
 
 export function adventureTrailPath(game) {
   if (!/^#[a-f0-9]{6}$/i.test(game.trailColor) || !game.paintTrail.length) return '';
@@ -31,7 +36,7 @@ function adventureBackdropMarkup(game, paint = {}) {
   return `<rect width="${w}" height="${h}" fill="#10152d"/><ellipse cx="${w * .75}" cy="${h * .48}" rx="${w * .55}" ry="${h * .3}" fill="#9563db" opacity=".12"/>
     <g id="adventure-stars" aria-hidden="true" transform="translate(${-game.progress * .18 % w} 0)">${stars}</g>
     <path id="adventure-paint-trail" d="${adventureTrailPath(game)}" fill="none" stroke="${/^#[a-f0-9]{6}$/i.test(game.trailColor) ? game.trailColor : 'none'}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" aria-hidden="true"/>
-    <g id="adventure-course" ${['playing', 'sun-finale', 'won'].includes(game.phase) ? '' : 'hidden=""'} transform="translate(${w * .25 - game.progress} 0)">
+    <g id="adventure-course" opacity="${adventureCourseOpacity(game)}" transform="translate(${w * .25 - game.progress} 0)">
       <g transform="translate(-160 ${h * .57})"><circle r="124" fill="#1d55ff" stroke="#101014" stroke-width="5"/><defs><clipPath id="bum-planet-clip"><circle r="120"/></clipPath></defs><g clip-path="url(#bum-planet-clip)">${landscapeMarkup(paint,'bum-planet',-124,-124,248)}</g><circle r="124" fill="none" stroke="#101014" stroke-width="5"/><text y="156" text-anchor="middle" fill="#fffcee" font-weight="900" font-size="22">${esc(text('adventure_home_planet'))}</text></g>
       ${COURSE.map(planet => planetMarkup({ ...planet, y: planetY(planet, h) })).join('')}
       <g data-planet="sun" transform="translate(${FINISH_DISTANCE + sunRadius} ${h * .5})"><circle r="${sunRadius}" fill="#fff20b" stroke="#101014" stroke-width="6"/><circle r="${sunRadius - 35}" fill="#ffc647"/><path d="M${-sunRadius + 36} -100q-32 100 0 200" fill="none" stroke="#fff7a8" stroke-width="15"/><text x="${-sunRadius + 70}" y="0" fill="#101014" font-size="28" font-weight="900">${esc(text('adventure_sun'))}</text></g>
@@ -47,7 +52,7 @@ export function adventureMarkup(game, animal, paint = {}, hat = false) {
   const w = game.width, h = game.height, pose = adventureShipPose(game);
   return `<svg id="world-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" font-family="Trebuchet MS,Arial,sans-serif" aria-label="${esc(text('adventure_title'))}">
     ${defs()}${backdrop}
-    <g id="adventure-ship" transform="translate(${pose.x} ${pose.y}) scale(${pose.scale})">${rocketMarkup({ position: { x: 0, y: 86 }, riding: true, airborne: ['intro', 'playing'].includes(game.phase), angle: game.angle, hat }, animal)}</g>
+    <g id="adventure-ship" transform="translate(${pose.x} ${pose.y}) scale(${pose.scale})">${rocketMarkup({ position: { x: 0, y: 86 }, riding: true, airborne: ['intro', 'ready', 'playing'].includes(game.phase), angle: game.angle, hat }, animal)}</g>
     <g id="player" hidden=""><use id="player-use"/></g><g id="destination-marker" hidden=""></g>
   </svg>`;
 }

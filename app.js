@@ -1,4 +1,4 @@
-import { WORLD, WORLD_SPAWN, STATIONS, clamp, move, planPath, isActionKey, HOUSE_DOORS, worldTouch, canLandRocket, rocketExitPosition, touchingHomePicture } from './game-core.js';
+import { WORLD, WORLD_SPAWN, STATIONS, clamp, move, planPath, isActionKey, HOUSE_DOORS, worldTouch, canLandRocket, rocketExitPosition, touchingHomePicture, sceneHorizontalBounds } from './game-core.js';
 import { ANIMALS, BAND, TRACKS, CONCERTS, CONTACT, INFO, PALETTE, loadContent, text } from './content.js';
 import { PAINT_SURFACES, BUCKET_SURFACES, PAINT_NEXT, paintSlots, paintPages, bucketColors, nearbyPaintSurface, canPaintSurface, cleanPaint, paintCanMarkup, createPaintPreview } from './painting.js';
 import { icon, avatar, memberArt, worldMarkup } from './art.js';
@@ -6,19 +6,19 @@ import { cassetteMarkup, cassetteSVG, roomMarkup, slotContents, slotDescription 
 import { ROOMS, ROOM_SPAWN, EXIT, RADIO, TAPE_SLOTS, SHELF_SWITCH, ROOM_PROPS, ANIMAL_SPOTS, PICTURE_SPOT, TOOLBOX_SPOT, slotsOnPage, tapePages, findTapeSlot, refreshBandWayfinding, roomFor, createCassetteState, tapeLocation, cassetteAction, nearbyInteraction, throughExit, nextMenuIndex } from './rooms.js';
 import { brandIcon, socialPads, contactLinks } from './social.js';
 import { adminURL } from './connection.js';
-import { SPACE, ROCKET_SPEED, GROUND_ROCKET, moveRocket, outsideScene, flightScene } from './sky-world.js';
+import { SPACE, ROCKET_SPEED, GROUND_ROCKET, moveRocket, outsideScene, flightScene, spaceViewIsDark } from './sky-world.js';
 import { createParty, syncParty, tickParty, guestPose, guestExitPose, dancePartyMarkup, discoLightPoses } from './dance-party.js';
 import { studioMarkup, studioInteraction, studioColors, studioPages, STUDIO_CONTROLS, largeSurfaces } from './painting-studio.js';
 import { createAdventure, startAdventure, resizeAdventure, tickAdventure, FINISH_DISTANCE, landingPose, crashVibration, DIFFICULTIES } from './rocket-adventure.js';
-import { adventureMarkup, adventureShipPose, adventureTrailPath, meteorMarkup } from './adventure-art.js';
+import { adventureMarkup, adventureShipPose, adventureCourseOpacity, adventureTrailPath, meteorMarkup } from './adventure-art.js';
 import { toolboxMarkup } from './toolbox.js';
-import { wreckageTransforms } from './rocket-wreckage.js';
+import { wreckageTransforms, rocketRepairTransforms, rocketRepairOpacity, ROCKET_REPAIR_SECONDS } from './rocket-wreckage.js';
 import { sunHolidayPose, holidayTransform } from './sun-holiday.js';
 import { createHatQuest, savedHatQuest, startHatQuest, tickHatQuest, hatInteraction, findHat, toggleHat, paintHat, returnHat, wearsHat, animalHref, colorHatMarkup, hatEffectsMarkup, isHatTrack, hatSpot, HAT_STAND, HAT_HEADS } from './hat-quest.js';
 import { createReception, landReception, stopReceptionFireworks, tickReception, receptionMarkup, receptionAway, swapReceptionPilot } from './reception.js';
 import { createChocolate, savedChocolate, chocolateSpeed, chocolateMusicGain, tickChocolate, takeChocolate, eatChocolate, newChocolateRun, collectChocolate, beginChocolateExit, advanceChocolateExit, isChocolateTrack, touchingChocolateDoor, CHOCOLATE_DOOR, CHOCOLATE_RETURN, CHOCOLATE_DRAWER, MAZE_SPAWN, MAZE_EXIT, MAZE_CHOCOLATES, chocolateBarMarkup, chocolateConfetti } from './chocolate.js';
 import { chocolateMazeMarkup } from './chocolate-art.js';
-import { createFriends, savedFriends, isFriendsTrack, startFriends, releaseFriends, swapFriendsPlayer, friendsAway, friendsTentNear, gatherFriends, tickFriends, friendsCameraView, FRIEND_CAMP_FADE_SECONDS, FRIEND_CAMP_PLAYER, FRIEND_TENT } from './friends-game.js';
+import { createFriends, savedFriends, isFriendsTrack, startFriends, releaseFriends, swapFriendsPlayer, friendsAway, friendsBlockBuildings, friendsTentNear, gatherFriends, tickFriends, friendsCameraView, FRIEND_CAMP_FADE_SECONDS, FRIEND_CAMP_PLAYER, FRIEND_TENT } from './friends-game.js';
 import { friendsHiddenMarkup, friendsWorldMarkup, friendsCampfireMarkup, friendsConfettiMarkup } from './friends-art.js';
 
 const previewMode = new URLSearchParams(location.search).get('preview') === '1';
@@ -310,6 +310,7 @@ function frameFriendsExit(dt) {
 function refreshFriendsWorld(force = false) {
   const friends = state.friends, badge = $('#friends-progress');
   const showing = state.scene === 'world' && !state.rocket.riding;
+  game.classList.toggle('is-camping', showing && friends.phase === 'camping' && !state.reduced);
   const active = ['chasing', 'celebrate', 'to-camp', 'building'].includes(friends.phase);
   badge.hidden = !showing || !active;
   const count = text('friends_progress', { anzahl: friends.caught.length });
@@ -509,12 +510,13 @@ function beginWorld(close = true) {
   announce(text('now_animal', { tier: ANIMALS.find(a => a.id === state.animal).name }));
 }
 function enterRoom(id) {
+  if (friendsBlockBuildings(state.friends)) return false;
   if (state.scene === 'chocolate') { requestChocolateExit(); return false; }
   const room = roomFor(id); if (!room) return;
   if (state.scene === 'painting') closePainting();
   if (state.rocket.riding) { closePanel(); toast(text('rocket_land_first')); return false; }
   if (!state.started) beginWorld(false);
-  state.returnPosition = { ...HOUSE_DOORS.find(door => door.id === room).outside };
+  state.returnPosition = { ...(HOUSE_DOORS.find(door => door.id === room)?.outside || ROOMS[room].outside || WORLD_SPAWN) };
   stopWalking(); closePanel(); state.paintTarget = null; state.scene = room; state.position = { ...(ROOMS[room].spawn || ROOM_SPAWN) };
   renderScene(); game.focus({ preventScroll: true });
   announce(text('entered_room', { haus: ROOMS[room].title }));
@@ -532,7 +534,7 @@ function leaveRoom() {
   }
   game.focus({ preventScroll: true }); announce(text('left_room'));
 }
-function visit(id) { if (id === 'social') goToStation('social'); else if (roomFor(id)) enterRoom(id); else showPanel(id); }
+function visit(id) { if (roomFor(id)) enterRoom(id); else showPanel(id); }
 function checkWorldTouch() {
   if (state.scene !== 'world' || state.rocket.riding || modal.open || !state.started) return;
   const touch = worldTouch(state.position);
@@ -541,7 +543,7 @@ function checkWorldTouch() {
 function refreshAudioVolume() {
   const campGain = state.campMusic?.fadeRemaining == null ? 1 : state.campMusic.fadeRemaining / FRIEND_CAMP_FADE_SECONDS;
   const fading = state.chocolate.boost > 0 && isChocolateTrack(playbackTrack());
-  const volume = state.volume * (state.memberMelody ? .2 : 1) * (fading ? chocolateMusicGain(state.chocolate) : 1) * (state.campMusic?.radio ? campGain : 1);
+  const volume = state.volume * (state.memberMelody ? .2 : 1) * (fading ? chocolateMusicGain(state.chocolate) : 1);
   if (audio.volume !== volume) audio.volume = volume;
   campAudio.volume = state.volume * (state.memberMelody ? .2 : 1) * campGain;
 }
@@ -605,17 +607,18 @@ function finishChocolateMusic() {
   else playRecording(playbackTrack(), previous.time, previous.playing && !isChocolateTrack(playbackTrack()));
 }
 for (const event of ['play', 'pause', 'ended']) audio.addEventListener(event, () => {
+  if (event === 'play' && state.campMusic) stopCampMusic();
   if (event === 'ended' && isHatTrack(playbackTrack())) state.hatRestartPending = true;
   if (event === 'ended' && isFriendsTrack(playbackTrack())) state.friendsRestartPending = true;
   refreshPlayback();
 });
 audio.addEventListener('error', () => { refreshPlayback(); toast(text('audio_error')); });
 function stopCampMusic() {
-  const radio = state.campMusic?.radio;
   state.campMusic = null; campAudio.pause(); campAudio.loop = false; campAudio.removeAttribute('src'); campAudio.load();
-  if (radio) { audio.pause(); audio.loop = false; refreshPlayback(); }
 }
 function startCampMusic() {
+  // A playing cassette keeps its own position and volume, even beside the tent.
+  if (state.playing && !state.boostMusic && isFriendsTrack(playbackTrack())) return;
   const track = TRACKS.find(track => isFriendsTrack(track) && validRecording(track));
   if (!track) return;
   stopCampMusic(); state.boostMusic = null; audio.pause(); audio.loop = false; state.playing = false;
@@ -627,7 +630,6 @@ function startCampMusic() {
   campAudio.play().catch(() => { if (state.campMusic === session) { stopCampMusic(); announce(text('audio_error')); } });
 }
 function fadeCampMusic() {
-  if (!state.campMusic && state.playing && isFriendsTrack(playbackTrack())) state.campMusic = { track: playbackTrack().id, radio: true, fadeRemaining: null };
   if (state.campMusic && state.campMusic.fadeRemaining === null) state.campMusic.fadeRemaining = FRIEND_CAMP_FADE_SECONDS;
 }
 function tickCampMusic(elapsed) {
@@ -635,7 +637,7 @@ function tickCampMusic(elapsed) {
   state.campMusic.fadeRemaining = Math.max(0, state.campMusic.fadeRemaining - Math.max(0, elapsed));
   if (!state.campMusic.fadeRemaining) stopCampMusic();
 }
-campAudio.addEventListener('error', () => { if (state.campMusic && !state.campMusic.radio) stopCampMusic(); });
+campAudio.addEventListener('error', () => { if (state.campMusic) stopCampMusic(); });
 function stopMemberMelody() {
   memberRequest++; state.memberMelody = null; memberAudio.pause(); memberAudio.removeAttribute('src'); memberAudio.load(); refreshAudioVolume();
 }
@@ -670,6 +672,7 @@ function currentInteraction() {
   if (state.rocket.riding && !state.rocket.airborne) return { id: 'rocket', kind: 'rocket-exit', label: text('rocket_exit') };
   if (state.rocket.riding && state.scene !== 'sky') return null;
   const interaction = nearbyInteraction(state.scene, state.position, state.tapes, state.shelfPage, { can: state.paintCan, page: state.paintPage, toolbox: state.toolbox, animal: state.animal, returns: state.homeReturns, away: awayAnimals() }, state.rocket.position);
+  if (interaction?.kind === 'rocket-board' && state.rocket.repair != null) return null;
   if (interaction?.kind === 'rocket-board') return state.rocket.damaged ? { ...interaction, kind: state.toolbox ? 'rocket-repair' : 'rocket-damaged', label: text(state.toolbox ? 'rocket_repair' : 'rocket_needs_tools') } : interaction;
   const color = bucketColors(PALETTE).find(color => color.id === state.paintCan);
   if (outsideScene(state.scene) && color) {
@@ -681,7 +684,7 @@ function currentInteraction() {
   return interaction;
 }
 function boardRocket() {
-  if (state.rocket.damaged || state.landing || state.adventure) return;
+  if (state.rocket.damaged || state.rocket.repair != null || state.landing || state.adventure) return;
   stopWalking(); state.paintTarget = null; state.rocket.riding = true; state.rocket.airborne = false;
   state.position = { ...state.rocket.position }; renderScene(); game.focus({ preventScroll: true });
   toast(text('rocket_boarded')); announce(text('rocket_boarded'));
@@ -739,7 +742,8 @@ function updateAdventure() {
   if (adventure.sunTime !== null) { updateSunHoliday(); return; }
   const pose = adventureShipPose(adventure), angle = adventure.angle;
   const flight = ['playing', 'won'].includes(adventure.phase);
-  $('#adventure-course')?.toggleAttribute('hidden', !flight);
+  $('#adventure-course')?.removeAttribute('hidden');
+  $('#adventure-course')?.setAttribute('opacity', adventureCourseOpacity(adventure).toFixed(3));
   $('#adventure-hud')?.toggleAttribute('hidden', !flight);
   $('.exit-room').hidden = adventure.phase === 'intro';
   $('#adventure-ship')?.setAttribute('transform', `translate(${pose.x.toFixed(2)} ${pose.y.toFixed(2)}) scale(${pose.scale.toFixed(3)})`);
@@ -845,6 +849,7 @@ function performInteraction() {
   stopWalking();
   if (near.kind === 'take-chocolate') { if (takeChocolate(state.chocolate)) { renderScene(); announce(text('choco_taken')); } return; }
   if (near.kind === 'friends-camp') { inviteFriends(); return; }
+  if (near.kind === 'enter-room') { enterRoom(near.id); return; }
   if (near.kind === 'eat-chocolate') { if (eatChocolate(state.chocolate)) { startChocolateMusic(); renderScene(); toast(text('choco_eaten')); announce(text('choco_eaten')); } return; }
   if (near.kind === 'find-hat') {
     if (findHat(state.hat, state.scene, state.position, state.hatActive)) { saveHat(); renderScene(); toast(text('hat_found')); announce(text('hat_found')); }
@@ -860,7 +865,7 @@ function performInteraction() {
     return;
   }
   if (near.kind === 'rocket-damaged') { toast(text('rocket_needs_tools')); return; }
-  if (near.kind === 'rocket-repair') { state.rocket.damaged = false; state.rocket.broken = false; state.rocket.impact = null; state.rocket.angle = 0; state.toolbox = false; storage.set(rocketStorageKey, '0'); renderScene(); toast(text('rocket_repaired')); announce(text('rocket_repaired')); return; }
+  if (near.kind === 'rocket-repair') { stopWalking(); state.toolbox = false; state.rocket.broken = true; state.rocket.repair = 0; renderScene(); return; }
   if (near.kind === 'take-toolbox' || near.kind === 'return-toolbox') { state.toolbox = near.kind === 'take-toolbox'; renderScene(); announce(text(state.toolbox ? 'toolbox_taken' : 'toolbox_returned')); return; }
   if (near.kind === 'rocket-board') { boardRocket(); return; }
   if (near.kind === 'rocket-exit') { exitRocket(); return; }
@@ -910,7 +915,7 @@ function activateSocial(id) {
   else navigateTo(p.x, p.y);
 }
 function navigateTo(x, y, destination = null) {
-  const path = state.scene === 'painting' ? [{ x: clamp(x, 30, 1570), y: clamp(y, 110, 1055) }] : state.rocket.riding ? [{ x: clamp(x, 65, 1535), y: clamp(y, SPACE.top + 160, 1040) }] : planPath(state.position, { x, y }, state.scene, state.rocket.position);
+  const path = state.scene === 'painting' ? [{ x: clamp(x, 30, 1570), y: clamp(y, 110, 1055) }] : state.rocket.riding ? [{ x: clamp(x, WORLD.left + 65, WORLD.right - 65), y: clamp(y, SPACE.top + 160, 1040) }] : planPath(state.position, { x, y }, state.scene, state.rocket.position);
   if (!path.length) { toast(text('walk_blocked')); return; }
   state.path = path; state.destination = destination; stuckTime = 0;
   marker.removeAttribute('hidden'); marker.setAttribute('transform', `translate(${x} ${y})`); game.focus({ preventScroll: true });
@@ -925,6 +930,7 @@ function goToStation(id) {
   navigateTo(s.x, s.y, BAND.some(member => member.id === id) ? { kind: 'station', id } : null); announce(text('walk_target', { ziel: s.label }));
 }
 function goToTape(id) {
+  if (friendsBlockBuildings(state.friends)) return;
   if (!TRACKS.some(t => t.id === id)) return;
   if (state.rocket.riding) { closePanel(); toast(text('rocket_land_first')); return; }
   if (state.scene !== 'radio') enterRoom('radio'); else closePanel();
@@ -1181,6 +1187,8 @@ function resize() {
     if (state.adventure.width !== r.width || state.adventure.height !== r.height) { resizeAdventure(state.adventure, r.width, r.height); renderScene(); }
     world.setAttribute('viewBox', `0 0 ${r.width} ${r.height}`); return;
   }
+  const roomCamera = ROOMS[state.scene]?.camera;
+  if (roomCamera) { const aspect = r.width / r.height, w = Math.max(roomCamera.w, roomCamera.h * aspect); state.viewport = { w, h: w / aspect }; updateCamera(1, true); return; }
   if (state.scene === 'painting') { state.viewport = { w: 1600, h: 1100 }; world.setAttribute('viewBox', '0 0 1600 1100'); return; }
   if (state.scene === 'space') {
     const w = Math.min(r.width, WORLD.width);
@@ -1192,6 +1200,13 @@ function resize() {
 }
 function updateCamera(dt, snap = false) {
   if (state.scene === 'painting' || state.adventure) return;
+  const roomCamera = ROOMS[state.scene]?.camera;
+  if (roomCamera) {
+    const { w, h } = state.viewport; state.camera.x = roomCamera.x; state.camera.y = roomCamera.y;
+    const viewBox = [roomCamera.x - w / 2, roomCamera.y - h / 2, w, h].map(value => value.toFixed(2)).join(' ');
+    if (world.getAttribute('viewBox') !== viewBox) world.setAttribute('viewBox', viewBox);
+    return;
+  }
   const group = state.scene === 'world' && !state.rocket.riding ? friendsCameraView(state.friends, state.position, state.viewport) : null;
   if (group) {
     state.camera.x = group.x + group.w / 2; state.camera.y = group.y + group.h / 2;
@@ -1200,19 +1215,36 @@ function updateCamera(dt, snap = false) {
     return;
   }
   const { w, h } = state.viewport;
-  const outside = outsideScene(state.scene), top = outside ? WORLD.top : 0;
+  const outside = outsideScene(state.scene), top = outside ? WORLD.top : 0, bounds = sceneHorizontalBounds(state.scene);
   const bottom = WORLD.height - h + (outside ? h / 2 : 0);
-  const tx = clamp(state.position.x, w / 2, WORLD.width - w / 2), ty = clamp(state.position.y - (outside ? WORLD.cameraOffsetY : 130), top + h / 2, bottom + h / 2);
+  const tx = clamp(state.position.x, bounds.left + w / 2, bounds.right - w / 2), ty = clamp(state.position.y - (outside ? WORLD.cameraOffsetY : 130), top + h / 2, bottom + h / 2);
   const amount = snap || state.reduced ? 1 : Math.min(1, dt * 9);
   state.camera.x += (tx - state.camera.x) * amount; state.camera.y += (ty - state.camera.y) * amount;
-  const viewBox = `${clamp(state.camera.x - w / 2, 0, WORLD.width - w).toFixed(2)} ${clamp(state.camera.y - h / 2, top, bottom).toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)}`;
+  const viewBox = `${clamp(state.camera.x - w / 2, bounds.left, bounds.right - w).toFixed(2)} ${clamp(state.camera.y - h / 2, top, bottom).toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)}`;
   if (world.getAttribute('viewBox') !== viewBox) world.setAttribute('viewBox', viewBox);
 }
+function tickRocketRepair(dt) {
+  if (state.rocket.repair == null) return;
+  state.rocket.repair = Math.min(ROCKET_REPAIR_SECONDS, state.rocket.repair + dt);
+  if (outsideScene(state.scene)) {
+    for (const piece of rocketRepairTransforms(state.rocket.repair)) $('#rocket-debris-' + piece.id)?.setAttribute('transform', piece.transform);
+    const opacity = rocketRepairOpacity(state.rocket.repair);
+    $('#rocket-repaired')?.setAttribute('opacity', opacity.toFixed(3));
+    $('#rocket-wreckage')?.setAttribute('opacity', (1 - opacity).toFixed(3));
+  }
+  if (state.rocket.repair >= ROCKET_REPAIR_SECONDS) {
+    state.rocket.repair = null; state.rocket.damaged = false; state.rocket.broken = false; state.rocket.impact = null; state.rocket.angle = 0;
+    storage.set(rocketStorageKey, '0'); if (outsideScene(state.scene)) renderScene();
+    announce(text('rocket_repaired'));
+  }
+}
+
 function frame(time) {
   const elapsed = Math.max(0, (time - (lastTime || time)) / 1000), dt = Math.min(.05, elapsed); lastTime = time;
   tickChocolate(state.chocolate, elapsed); tickCampMusic(elapsed);
   if (!state.chocolate.boost && state.boostMusic) finishChocolateMusic();
   refreshAudioVolume(); refreshChocolateItems();
+  if (state.started && !document.hidden && !modal.open) tickRocketRepair(dt);
   if (state.started && !document.hidden) {
     if (!modal.open && state.homeReturns.length) tickHomeReturns(dt);
     if (!modal.open) { tickHats(dt); updateReception(dt); updateFriends(dt); }
@@ -1223,7 +1255,7 @@ function frame(time) {
   }
   if (frameFriendsExit(dt)) { requestAnimationFrame(frame); return; }
   if (state.scene === 'chocolate') { frameChocolate(dt); requestAnimationFrame(frame); return; }
-  if (state.rocket.broken && state.rocket.impact !== null && state.rocket.impact < .8 && !document.hidden) {
+  if (state.rocket.broken && state.rocket.repair == null && state.rocket.impact !== null && state.rocket.impact < .8 && !document.hidden) {
     state.rocket.impact += dt;
     for (const piece of wreckageTransforms(state.rocket.impact)) $(`#rocket-debris-${piece.id}`)?.setAttribute('transform', piece.transform);
   }
@@ -1280,10 +1312,13 @@ function frame(time) {
         if (!state.rocket.airborne && dy < 0) { state.rocket.airborne = true; renderScene(); announce(text('rocket_flying')); }
         if (state.rocket.airborne) {
           state.position = moveRocket(old, dx, dy, stepTime); state.rocket.position = { ...state.position };
-          const scene = flightScene(state.position.y);
+          let scene = flightScene(state.position.y);
+          if (scene === 'space') {
+            if (spaceViewIsDark(state.camera, state.viewport)) { enterSpaceAdventure(); requestAnimationFrame(frame); return; }
+            scene = 'sky';
+          }
           if (scene !== state.scene) {
             state.scene = scene; state.paintTarget = null;
-            if (scene === 'space') { enterSpaceAdventure(); requestAnimationFrame(frame); return; }
             renderScene();
           }
           if (dy > 0 && canLandRocket(state.position)) {

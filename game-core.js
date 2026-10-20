@@ -1,7 +1,7 @@
-import { SPACE, SKY, GROUND_ROCKET, rocketBody } from './sky-world.js';
+import { SPACE, SKY, GROUND_ROCKET, rocketBody, WORLD_BOUNDS } from './sky-world.js';
 import { canStandChocolate, chocolatePath } from './chocolate.js';
 
-export const WORLD = { width: 1600, height: 1100, top: SPACE.top, radius: 18, speed: 205, cameraOffsetY: 38 };
+export const WORLD = { ...WORLD_BOUNDS, height: 1100, top: SPACE.top, radius: 18, speed: 205, cameraOffsetY: 38 };
 export const WORLD_SPAWN = { x: 650, y: 650 };
 export const HOME_PICTURE = { x: 1010, y: 270, w: 200, h: 190 };
 export function touchingHomePicture(position) {
@@ -58,20 +58,24 @@ const WALLS = [{ x: 125, y: 100, w: 1350, h: 145 }, { x: 125, y: 210, w: 35, h: 
 export function sceneObstacles(scene = 'world', parkedRocket = GROUND_ROCKET) {
   if (scene === 'world') return parkedRocket ? [...OBSTACLES, rocketBody(parkedRocket)] : OBSTACLES;
   if (scene === 'sky' || scene === 'space') return [];
+  if (scene === 'social') return [{ x: 525, y: 485, w: 550, h: 125 }, { x: 525, y: 600, w: 35, h: 470 }, { x: 1040, y: 600, w: 35, h: 470 }, { x: 525, y: 1000, w: 215, h: 80 }, { x: 860, y: 1000, w: 215, h: 80 }];
   const props = scene === 'radio' ? [{ x: 615, y: 285, w: 370, h: 180 }, { x: 215, y: 300, w: 355, h: 195 }, { x: 980, y: 275, w: 420, h: 60 }]
     : scene === 'wardrobe' ? [HOME_PICTURE]
     : [{ x: 500, y: 280, w: 600, h: 200 }];
   return [...WALLS, ...props];
 }
+export const sceneHorizontalBounds = scene => ['world', 'sky', 'space'].includes(scene) ? WORLD_BOUNDS : { left: 0, right: 1600, width: 1600 };
 export function canStand(x, y, radius = WORLD.radius, scene = 'world', parkedRocket = GROUND_ROCKET) {
   if (scene === 'chocolate') return canStandChocolate(x, y, radius);
   if (scene === 'space') return false;
-  if (x < radius + 24 || x > WORLD.width - radius - 24) return false;
+  const bounds = sceneHorizontalBounds(scene);
+  if (x < bounds.left + radius + 24 || x > bounds.right - radius - 24) return false;
   if (scene === 'sky') {
     if (y < SKY.top + radius + 45 || y > SKY.bottom - radius - 27) return false;
   } else {
     if (y < radius + 45 || y > WORLD.height - radius - 35) return false;
     if (scene !== 'world' && (x < 160 + radius || x > 1440 - radius || y < 245 + radius)) return false;
+    if (scene === 'social' && (x < 560 + radius || x > 1040 - radius || y < 610 + radius)) return false;
   }
   return !sceneObstacles(scene, parkedRocket).some(o => {
     const dx = x - clamp(x, o.x, o.x + o.w);
@@ -115,9 +119,9 @@ export function planPath(start, end, scene = 'world', parkedRocket = GROUND_ROCK
   const avoidedDoors = scene === 'world' ? HOUSE_DOORS.filter(door => !inDoor(start, door, WORLD.radius + 7) && !inDoor(end, door)) : [];
   const free = (x, y, radius = WORLD.radius) => canStand(x, y, radius, scene, parkedRocket) && !avoidedDoors.some(door => inDoor({ x, y }, door, radius));
   if (!free(start.x, start.y) || !free(end.x, end.y)) return [];
-  const originY = scene === 'sky' ? SKY.top : 0;
-  const step = 28, cols = Math.ceil(WORLD.width / step), rows = Math.ceil((scene === 'sky' ? -SKY.top : WORLD.height) / step);
-  const gridPoint = point => ({ x: point.x * step, y: originY + point.y * step });
+  const originY = scene === 'sky' ? SKY.top : 0, bounds = sceneHorizontalBounds(scene), originX = bounds.left;
+  const step = 28, cols = Math.ceil(bounds.width / step), rows = Math.ceil((scene === 'sky' ? -SKY.top : WORLD.height) / step);
+  const gridPoint = point => ({ x: originX + point.x * step, y: originY + point.y * step });
   const margin = WORLD.radius + 7;
   const clearSegment = (a, b, radius = WORLD.radius) => {
     const samples = Math.max(1, Math.ceil(Math.hypot(a.x - b.x, a.y - b.y) / 5));
@@ -125,11 +129,11 @@ export function planPath(start, end, scene = 'world', parkedRocket = GROUND_ROCK
     return true;
   };
   const cell = point => {
-    const cx = Math.round(point.x / step), cy = Math.round((point.y - originY) / step), candidates = [];
+    const cx = Math.round((point.x - originX) / step), cy = Math.round((point.y - originY) / step), candidates = [];
     for (let dx = -3; dx <= 3; dx++) for (let dy = -3; dy <= 3; dy++) {
       const x = cx + dx, y = cy + dy;
-      if (x < 0 || x >= cols || y < 0 || y >= rows || !free(x * step, originY + y * step, margin)) continue;
-      candidates.push({ x, y, distance: Math.hypot(x * step - point.x, originY + y * step - point.y) });
+      if (x < 0 || x >= cols || y < 0 || y >= rows || !free(originX + x * step, originY + y * step, margin)) continue;
+      candidates.push({ x, y, distance: Math.hypot(originX + x * step - point.x, originY + y * step - point.y) });
     }
     candidates.sort((a, b) => a.distance - b.distance);
     return candidates.find(p => clearSegment(point, gridPoint(p)));
@@ -144,7 +148,7 @@ export function planPath(start, end, scene = 'world', parkedRocket = GROUND_ROCK
     if (p.x === b.x && p.y === b.y) { found = p; break; }
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const q = { x: p.x + dx, y: p.y + dy };
-      if (q.x < 0 || q.x >= cols || q.y < 0 || q.y >= rows || previous.has(key(q)) || !free(q.x * step, originY + q.y * step, margin)) continue;
+      if (q.x < 0 || q.x >= cols || q.y < 0 || q.y >= rows || previous.has(key(q)) || !free(originX + q.x * step, originY + q.y * step, margin)) continue;
       if (!clearSegment(gridPoint(p), gridPoint(q), margin)) continue;
       previous.set(key(q), p); queue.push(q);
     }

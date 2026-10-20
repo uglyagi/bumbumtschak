@@ -1,4 +1,4 @@
-export const CHOCOLATE_SPEED_SECONDS = 19;
+export const CHOCOLATE_SPEED_SECONDS = 19.5;
 export const CHOCOLATE_FADE_SECONDS = 4;
 export const CHOCOLATE_DOOR = { x: 679, y: 494 };
 export const CHOCOLATE_RETURN = { x: 679, y: 550 };

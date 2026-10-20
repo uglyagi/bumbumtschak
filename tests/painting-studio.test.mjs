@@ -5,8 +5,8 @@ import { landscapeMarkup } from '../art.js';
 import { roomMarkup } from '../room-art.js';
 import { ANIMALS, PALETTE } from '../content.js';
 import { ANIMAL_SPOTS, PICTURE_SPOT, ROOM_SPAWN } from '../rooms.js';
-import { canStand, planPath } from '../game-core.js';
-export const inCanvas = point => ({ x: CANVAS.x + point.x * CANVAS.scale, y: CANVAS.y + (point.y + 380) * CANVAS.scale });
+import { canStand, planPath, WORLD } from '../game-core.js';
+export const inCanvas = point => ({ x: CANVAS.x + (point.x - WORLD.left) * CANVAS.scale, y: CANVAS.y + (point.y + 380) * CANVAS.scale });
 
 test('the brush can address every large color surface, while trees and flowers remain separate', () => {
   for (const surface of largeSurfaces) {

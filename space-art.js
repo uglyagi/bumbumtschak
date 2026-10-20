@@ -1,13 +1,13 @@
 import { PALETTE, text } from './content.js';
 import { escapeXML } from './utils.js';
-import { SPACE, SKY } from './sky-world.js';
+import { SPACE, SKY, WORLD_BOUNDS, SPACE_DARK_START } from './sky-world.js';
 import { PLANETS } from './solar-system.js';
 import { paintAttributes } from './painting.js';
 
 let seed = 24681357;
 const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
 export const STARS = Array.from({ length: 840 }, (_, i) => ({
-  x: 24 + random() * 1552, y: SPACE.top + 30 + random() * (SPACE.bottom - SPACE.top - 60),
+  x: WORLD_BOUNDS.left + 24 + random() * (WORLD_BOUNDS.width - 48), y: SPACE.top + 30 + random() * (SPACE.bottom - SPACE.top - 60),
   radius: 1 + random() * 1.8, glint: i % 13 === 0, color: ['#fffcee', '#fff20b', '#ffb3d8', '#b2d8ff'][i % 4],
 }));
 const starField = STARS.map(star => star.glint
@@ -35,9 +35,9 @@ export function planetMarkup(planet) {
 }
 export function spaceMarkup(paint = {}, showPlanets = true) {
   return `<g id="space-world"><defs><linearGradient id="space-atmosphere" x1="0" y1="0" x2="0" y2="1"><stop stop-color="${SPACE.color}"/><stop offset="1" ${paintAttributes('sky', SKY.color, paint, false, 'stop-color', '', PALETTE)}/></linearGradient></defs>
-    <rect x="0" y="${SPACE.top}" width="1600" height="${SKY.top - SPACE.top}" fill="${SPACE.color}"/>
+    <rect x="${WORLD_BOUNDS.left}" y="${SPACE.top}" width="${WORLD_BOUNDS.width}" height="${SKY.top - SPACE.top}" fill="${SPACE.color}"/>
     <ellipse cx="870" cy="${SPACE.bottom - 2800}" rx="420" ry="2200" fill="#a47bf4" opacity=".08" transform="rotate(8 870 ${SPACE.bottom - 2800})"/>
     <g aria-hidden="true">${starField}</g>
-    <rect x="0" y="${SPACE.bottom}" width="1600" height="${SKY.top - SPACE.bottom}" fill="url(#space-atmosphere)"/>
+    <rect x="${WORLD_BOUNDS.left}" y="${SPACE_DARK_START}" width="${WORLD_BOUNDS.width}" height="${SKY.top - SPACE_DARK_START}" fill="url(#space-atmosphere)"/>
     ${showPlanets ? PLANETS.map(planetMarkup).join('') : ''}</g>`;
 }

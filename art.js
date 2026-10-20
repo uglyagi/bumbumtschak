@@ -6,7 +6,7 @@ import { WORLD, WORLD_SPAWN } from './game-core.js';
 import { FLOWERS, TREES, CLOUDS, WORLD_PATH, PAINT_SURFACES, BUCKET_SURFACES, paintAttributes, paintColor, readableInk } from './painting.js';
 import { SKY, GROUND_ROCKET } from './sky-world.js';
 import { spaceMarkup } from './space-art.js';
-import { rocketWreckageMarkup } from './rocket-wreckage.js';
+import { rocketWreckageMarkup, rocketRepairOpacity } from './rocket-wreckage.js';
 import { animalHref } from './hat-quest.js';
 export const icon = (name, cls = '') => {
   const paths = {
@@ -42,7 +42,10 @@ const stationMarkup = (id, label, content, active = true) => `<g class="world-st
 export function rocketMarkup(rocket, animal) {
   const position = rocket.position || GROUND_ROCKET;
   const interactionLabel = text(rocket.damaged ? 'rocket_needs_tools' : 'rocket_board');
-  if (rocket.broken) return `<g id="rocket" class="world-station" data-station="rocket" role="button" tabindex="0" aria-label="${escape(interactionLabel)}" transform="translate(${position.x} ${position.y})">${rocketWreckageMarkup(rocket.impact ?? 1)}</g>`;
+  if (rocket.broken) {
+    const assembled = rocket.repair == null ? '' : rocketMarkup({ ...rocket, position: { x: 0, y: 0 }, broken: false, damaged: false, riding: false, angle: 0 }, animal).replace('id="rocket"', 'id="rocket-repaired" pointer-events="none" opacity="' + rocketRepairOpacity(rocket.repair).toFixed(3) + '"');
+    return `<g id="rocket" class="world-station" data-station="rocket" role="button" tabindex="0" aria-label="${escape(interactionLabel)}" transform="translate(${position.x} ${position.y})">${assembled}${rocketWreckageMarkup(rocket.impact ?? 1, rocket.repair)}</g>`;
+  }
   return `<g id="rocket" transform="translate(${position.x} ${position.y})" ${rocket.riding ? '' : `class="world-station" data-station="rocket" role="button" tabindex="0" aria-label="${escape(interactionLabel)}"`}>
     <g id="rocket-vibration"><g id="rocket-hull" transform="rotate(${rocket.angle || 0} 0 -86)" stroke="#101014" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
       <ellipse id="rocket-shadow" cy="3" rx="36" ry="9" fill="#101014" stroke="none" opacity=".15" ${rocket.airborne ? 'hidden=""' : ''}/>
@@ -80,13 +83,13 @@ export function worldMarkup(paint = {}, painting = false, scene = 'world', rocke
   const activeGround = scene === 'world' && !rocket.riding && !snapshot;
   const station = (id, label, content) => stationMarkup(id, label, content, activeGround);
   const flowers = FLOWERS;
-  const grass = [[175, 690], [480, 700], [1420, 520], [380, 230], [1170, 975], [650, 780], [890, 985], [1100, 265], [210, 1010]];
+  const grass = [[175, 690], [480, 700], [1420, 520], [380, 230], [1170, 975], [650, 780], [890, 985], [1100, 265], [210, 1010], [-160, 490], [-100, 870], [1705, 625], [1730, 980]];
   return `<svg id="world-svg" xmlns="http://www.w3.org/2000/svg" viewBox="60 120 1480 850" font-family="Trebuchet MS, Arial, sans-serif" aria-hidden="false" aria-label="${escape(text('world_title'))}" preserveAspectRatio="xMidYMid meet">
     ${defs()}
-    <rect x="0" y="${SKY.top}" width="1600" height="${WORLD.height - SKY.top}" ${P('sky', SKY.color)}/>
+    <rect x="${WORLD.left}" y="${SKY.top}" width="${WORLD.width}" height="${WORLD.height - SKY.top}" ${P('sky', SKY.color)}/>
     ${snapshot ? '' : spaceMarkup(paint, false)}
-    <path d="M0 12Q160-9 320 9T640 9 960 9 1280 9 1600 8V${WORLD.height}H0Z" ${P('grass', '#40cea1')}/>
-    <path d="M0 12Q160-9 320 9T640 9 960 9 1280 9 1600 8" fill="none" stroke="#101014" stroke-width="4"/>
+    <path d="M${WORLD.left} 12Q-120-5 0 12Q160-9 320 9T640 9 960 9 1280 9 1600 8Q1720-8 ${WORLD.right} 8V${WORLD.height}H${WORLD.left}Z" ${P('grass', '#40cea1')}/>
+    <path d="M${WORLD.left} 12Q-120-5 0 12Q160-9 320 9T640 9 960 9 1280 9 1600 8Q1720-8 ${WORLD.right} 8" fill="none" stroke="#101014" stroke-width="4"/>
     <g fill="none" stroke="#101014" stroke-linecap="round" stroke-linejoin="round">
       <path d="${WORLD_PATH}" stroke-width="115"/>
       <path d="${WORLD_PATH}" ${P('path', '#fff20b', 'stroke')} stroke-width="106"/>
@@ -108,28 +111,27 @@ export function worldMarkup(paint = {}, painting = false, scene = 'world', rocke
     }).join('')}
     ${station('radio', text('sign_radio'), `<g stroke="#101014" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><rect x="169" y="467" width="272" height="21" rx="7" ${P('radio-lower', '#1d55ff')}/><path d="M254 352v-26h105v26" fill="none"/><path d="M388 351 413 290" fill="none"/><circle cx="414" cy="286" r="5" fill="#fff20b"/><rect x="182" y="351" width="247" height="119" rx="19" ${P('radio-wall', '#ff87ce')}/><rect x="188" y="345" width="235" height="18" rx="7" ${P('radio-roof', '#1d55ff')}/><circle cx="225" cy="418" r="31" fill="url(#speaker)"/><circle cx="389" cy="418" r="31" fill="url(#speaker)"/><path d="M279 489v-70q29-37 58 0v70Z" ${P('radio-lower', '#1d55ff')}/><path d="M289 428h38" stroke="#fffcee" stroke-width="3"/><circle cx="325" cy="450" r="4" fill="#fff20b"/><text data-paint-ink="radio-wall" x="305" y="385" text-anchor="middle" stroke="none" fill="${readableInk(paintColor('radio-wall', '#ff87ce', paint, PALETTE))}" font-size="${Math.min(18, 210 / (text('sign_radio').length * .61 || 1))}" font-weight="900">${escape(text('sign_radio'))}</text></g><use href="#note" class="floating-note" x="448" y="340" width="33" height="44"/>`)}
     ${station('concerts', text('sign_concerts'), `<g stroke="#101014" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="m1144 329 28-25h220l29 25" ${P('concert-roof', '#ff87ce')}/><rect x="1151" y="328" width="263" height="150" rx="8" ${P('concert-wall', '#fff20b')}/><rect x="1163" y="340" width="240" height="126" rx="3" ${P('concert-wall', '#1d55ff')}/><path d="m1193 399-7 43 51 8 7-45Z" ${P('concert-poster-left', '#ff87ce')} stroke-width="3"/><path d="M1258 474v-50q24-30 48 0v50Z" ${P('concert-door', '#fffcee')} stroke-width="3"/><circle cx="1295" cy="448" r="4" fill="#fff20b" stroke-width="2"/><path d="m1330 401-6 40 51 4 5-42Z" ${P('concert-poster-right', '#40cea1')} stroke-width="3"/><path d="M1201 414h24m-25 9h20M1338 414l21 3m-21 6 21 3" stroke-width="3"/></g><text data-paint-ink="concert-wall" x="1281" y="379" text-anchor="middle" fill="${readableInk(paintColor('concert-wall', '#1d55ff', paint, PALETTE))}" font-size="25" font-weight="900" transform="rotate(-2 1281 379)">${escape(text('concert_board'))}</text>`)}
-    ${station('social', text('sign_social'), `<g transform="translate(110 0)"><g stroke="#101014" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M1264 784v58m-20 0h41" stroke-width="9"/><path d="M1264 784v58m-20 0h41" ${P('mailbox', '#c9ced4', 'stroke')} stroke-width="4"/><path d="M1234 683v27m62-27v27" stroke-width="4"/><path d="M1214 786v-48q0-34 51-34t52 34v48Z" ${P('mailbox', '#c9ced4')}/><path d="M1244 707q29 10 27 39v40" fill="none"/><path d="M1221 734q1-16 21-20" fill="none" stroke="#f9fafb" stroke-width="4"/><path d="M1222 750h38v27h-38Z" fill="#ffffff" stroke-width="3"/><path d="m1223 751 19 14 17-14" fill="none" stroke-width="2"/><path d="M1315 733v-30h19v13h-18" ${P('mailbox', '#c9ced4')}/></g>${mapLabel(1265, 668, text('sign_social'), 120, '#ffffff')}</g>`)}
+    ${station('social', text('sign_social'), `<g transform="translate(110 0)"><g stroke="#101014" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M1264 784v58m-20 0h41" stroke-width="9"/><path d="M1264 784v58m-20 0h41" ${P('mailbox', '#c9ced4', 'stroke')} stroke-width="4"/><path d="M1234 683v27m62-27v27" stroke-width="4"/><path d="M1214 786v-48q0-34 51-34t52 34v48Z" ${P('mailbox', '#c9ced4')}/><path d="M1244 707q29 10 27 39v40" fill="none"/><path d="M1221 734q1-16 21-20" fill="none" stroke="#f9fafb" stroke-width="4"/><path d="M1222 750h38v27h-38Z" fill="#ffffff" stroke-width="3"/><path d="m1223 751 19 14 17-14" fill="none" stroke-width="2"/><path d="M1315 733v-30h19v13h-18" ${P('mailbox', '#c9ced4')}/><path d="M1246 842v-44q18-23 36 0v44Z" fill="#fffcee" stroke-width="3"/><path d="m1257 826 7-7 7 7m-7-7v16" fill="none" stroke-width="3"/></g>${mapLabel(1265, 668, text('sign_social'), 120, '#ffffff')}</g>`)}
     ${station('grownups', text('sign_grownups'), `<g stroke="#101014" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"><ellipse cx="300" cy="807" rx="115" ry="12" fill="#101014" stroke="none" opacity=".14"/><rect x="196" y="690" width="208" height="112" rx="4" ${P('office-wall', '#fffcee')}/><path d="M183 690 210 650h180l27 40Z" ${P('office-roof', '#1d55ff')}/><path d="M191 802h218" fill="none"/><rect x="229" y="702" width="142" height="30" rx="5" fill="#ffffff" stroke-width="2"/><text x="300" y="723" text-anchor="middle" font-size="${Math.min(20, 130 / (text('sign_grownups').length * .6 || 1))}" stroke="none" font-weight="900">${escape(text('sign_grownups'))}</text><path d="M280 802v-43q20-20 40 0v43Z" ${P('office-door', '#ff87ce')}/><circle cx="310" cy="778" r="3" fill="#fff20b" stroke-width="2"/><rect x="213" y="747" width="39" height="32" rx="3" ${P('office-window-left', '#40cea1')} stroke-width="3"/><rect x="348" y="747" width="39" height="32" rx="3" ${P('office-window-right', '#40cea1')} stroke-width="3"/><path d="M232 749v28m-17-14h35M368 749v28m-18-14h35" stroke="#fffcee" stroke-width="2"/></g>`)}
     ${station('wardrobe', text('sign_wardrobe'), `<g transform="translate(800 718)" stroke="#101014" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><ellipse cy="2" rx="88" ry="12" fill="#101014" opacity=".14" stroke="none"/><g ${P('home-wall', '#fffcee')}><rect x="38" y="-150" width="15" height="30" rx="2"/><rect x="-78" y="-108" width="156" height="108" rx="4"/></g><path d="M-88-108-65-140H65l23 32Z" ${P('home-roof', '#ff3935')}/><path d="M-86-106H86" fill="none"/><path d="M-19 0v-38q19-24 38 0V0Z" ${P('home-door', '#1d55ff')}/><circle cx="10" cy="-17" r="3" fill="#fff20b" stroke-width="2"/><rect x="-62" y="-64" width="28" height="30" rx="3" fill="#40cea1" stroke-width="3"/><rect x="34" y="-64" width="28" height="30" rx="3" fill="#40cea1" stroke-width="3"/><path d="M-48-62v26m-12-13h24M48-62v26M36-49h24" stroke="#fffcee" stroke-width="2"/><path d="M-69-64v30m42-30v30M27-64v30m42-30v30" ${P('home-trim', '#1d55ff', 'stroke')} stroke-width="5"/><rect x="-58" y="-100" width="116" height="20" rx="4" fill="#fffcee" stroke-width="2"/><text x="0" y="-86" text-anchor="middle" stroke="none" font-size="${Math.min(9, 106 / (text('sign_wardrobe').length * .57 || 1))}" font-weight="900">${escape(text('sign_wardrobe'))}</text></g>`)}
     ${station('help', text('help_open'), `<g transform="translate(200 0)" stroke="#101014" stroke-linecap="round" stroke-linejoin="round"><path d="M800 718v37" stroke-width="10"/><path d="M800 718v37" stroke="#fffcee" stroke-width="4"/><rect x="755" y="671" width="90" height="56" rx="10" ${P('help-sign', '#fff20b')} stroke-width="4"/><path d="M785 688h29m-29 10h20" stroke-width="3"/><circle cx="826" cy="698" r="8" fill="#ff87ce" stroke-width="2"/><text x="826" y="702" text-anchor="middle" font-size="13" font-weight="900" stroke="none">?</text><text data-paint-ink="help-sign" fill="${readableInk(paintColor('help-sign', '#fff20b', paint, PALETTE))}" x="800" y="716" text-anchor="middle" font-size="9" font-weight="900" stroke="none">${escape(text('help_board_label'))}</text></g>`)}
     ${flowers.map(([x, y, color, size], i) => `<use href="#flower" x="${x}" y="${y}" width="${size}" height="${size * 1.2}" ${P(`flower-${i}`, color, 'color')}/>`).join('')}
-    <g fill="#1d55ff" stroke="#101014" stroke-width="4"><path d="M0 1040q170-40 350-3t350-4 400 7 500-1V${snapshot ? WORLD.height : WORLD.height + 10000}H0Z" ${P('water', '#1d55ff')}/></g>
-    ${socialPadsMarkup('world', activeGround)}
+    <g fill="#1d55ff" stroke="#101014" stroke-width="4"><path d="M${WORLD.left} 1040Q-120 1000 0 1040q170-40 350-3t350-4 400 7 500-1Q1720 1000 ${WORLD.right} 1040V${snapshot ? WORLD.height : WORLD.height + 10000}H${WORLD.left}Z" ${P('water', '#1d55ff')}/></g>
     ${snapshot ? '' : rocketMarkup(rocket, animal)}
     ${snapshot ? '' : `
     <g id="friends-world"></g>
+    <g id="friends-fire"></g>
     <g id="destination-marker" hidden=""><ellipse rx="17" ry="8" fill="none" stroke="#101014" stroke-width="3" stroke-dasharray="4 4"/></g>
     <g id="player" transform="translate(${WORLD_SPAWN.x} ${WORLD_SPAWN.y})"><ellipse cx="0" cy="0" rx="25" ry="9" fill="#101014" opacity=".18"/><g id="player-body"><use id="player-use" href="#animal-cat" x="-34" y="-77" width="68" height="82"/><g id="carried-tape" transform="translate(-29 -39) scale(.44)" hidden=""></g><g id="carried-toolbox" transform="translate(-43 -63) scale(.4)" hidden=""></g><g id="carried-paint" transform="translate(12 -44) scale(.38)" hidden=""></g></g><path d="m-5-91 5 6 5-6" fill="none" stroke="#101014" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>`}
-    ${snapshot ? '' : '<g id="friends-fire"></g>'}
   </svg>`;
 }
 
 export function landscapeMarkup(paint, prefix, x, y, width) {
-  const scale = width / 1600;
+  const scale = width / WORLD.width;
   const source = worldMarkup(paint, false, 'world', {}, ANIMALS[0].id, true);
   const body = source.slice(source.indexOf('>') + 1, source.lastIndexOf('</svg>'))
     .replace(/\bid="([^"]+)"/g, (_, id) => `id="${prefix}-${id}"`)
     .replace(/href="#([^"]+)"/g, (_, id) => `href="#${prefix}-${id}"`)
     .replace(/url\(#([^\)]+)\)/g, (_, id) => `url(#${prefix}-${id})`);
-  return `<g transform="translate(${x} ${y + 380 * scale}) scale(${scale})"><defs><clipPath id="${prefix}-crop"><rect y="-380" width="1600" height="1480"/></clipPath></defs><g clip-path="url(#${prefix}-crop)">${body}</g></g>`;
+  return `<g transform="translate(${x - WORLD.left * scale} ${y + 380 * scale}) scale(${scale})"><defs><clipPath id="${prefix}-crop"><rect x="${WORLD.left}" y="-380" width="${WORLD.width}" height="1480"/></clipPath></defs><g clip-path="url(#${prefix}-crop)">${body}</g></g>`;
 }

@@ -16,6 +16,7 @@ export const savedFriends = friends => ({ tent: friends.unlocked });
 export function createFriends(saved) {
   return { phase: 'idle', unlocked: saved?.tent === true, actors: [], caught: [], trail: [], elapsed: 0, celebration: null, pilot: null, campBuild: 1 };
 }
+export const friendsBlockBuildings = friends => ['chasing', 'celebrate', 'to-camp', 'building'].includes(friends?.phase);
 export const friendsAway = friends => friends?.actors.filter(actor => actor.status !== 'home').map(actor => actor.id) || [];
 function actorFor(id, position, status, index) {
   return { id, position: { ...position }, status, index, path: [], goal: null, rethink: 0, runningTime: 0, walking: false, delay: 0 };
@@ -201,7 +202,7 @@ export function friendsCameraView(friends, player, viewport) {
   const focusY = player.y - WORLD.cameraOffsetY, aspect = viewport.w / viewport.h;
   const w = Math.max(viewport.w, right - left, Math.max(focusY - top, bottom - focusY) * 2 * aspect), h = w / aspect;
   // Fit the full bodies immediately; easing must never leave a walker outside the view.
-  const x = Math.max(Math.min(0, WORLD.width - w), Math.min(Math.max(0, WORLD.width - w), (left + right - w) / 2));
+  const x = Math.max(Math.min(WORLD.left, WORLD.right - w), Math.min(Math.max(WORLD.left, WORLD.right - w), (left + right - w) / 2));
   const y = Math.max(WORLD.top, Math.min(WORLD.height - h / 2, focusY - h / 2));
   return { x, y, w, h };
 }

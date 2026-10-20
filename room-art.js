@@ -8,6 +8,7 @@ import { danceGuests, dancePartyMarkup } from './dance-party.js';
 import { HOME_PICTURE } from './game-core.js';
 import { toolboxMarkup } from './toolbox.js';
 import { CHOCOLATE_DRAWER } from './chocolate.js';
+import { socialPadsMarkup } from './social.js';
 
 export function cassetteMarkup(track) {
   return `<g stroke="#101014" stroke-width="2.8" stroke-linejoin="round" stroke-linecap="round">
@@ -91,8 +92,25 @@ function wardrobeArt(selectedAnimal, paint) {
     `;
 }
 
+
+function contactRoomMarkup(room) {
+  return '<svg id="world-svg" xmlns="http://www.w3.org/2000/svg" viewBox="240 460 1120 660" font-family="Trebuchet MS,Arial,sans-serif" aria-label="' + escape(room.title) + '">'
+    + defs() + '<rect x="-2000" y="-2000" width="5600" height="5600" fill="' + room.color + '"/>'
+    + '<rect x="525" y="485" width="550" height="585" rx="20" fill="#101014"/>'
+    + '<path d="M560 610h480v390H860v65H740v-65H560Z" fill="#fff6da" stroke="#101014" stroke-width="6"/>'
+    + '<path d="M548 498h504v110H548Z" fill="#c9ced4" stroke="#101014" stroke-width="5"/>'
+    + fitted(800, 565, room.title, 455, 30)
+    + socialPadsMarkup('social')
+    + '<g data-room-target="exit" class="world-station" tabindex="0" role="button" aria-label="' + escape(text('back_world')) + '">'
+    + '<path d="M740 1000v-42q60-38 120 0v108H740Z" fill="#40cea1" stroke="#101014" stroke-width="5"/>'
+    + '<path d="M800 975v60m-17-18 17 18 17-18" stroke="#101014" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+    + mapLabel(800, 934, text('exit_sign'), 225, '#fff20b') + '</g><g id="destination-marker" hidden=""></g>'
+    + playerMarkup.replace('translate(800 870)', 'translate(800 940)') + '</svg>';
+}
+
 export function roomMarkup(scene, shelfPage = 0, tapes = createCassetteState(), selectedAnimal = 'cat', paint = {}) {
   const room = ROOMS[scene];
+  if (scene === 'social') return contactRoomMarkup(room);
   const tiles = [];
   for (let x = 190; x <= 1400; x += 110) for (let y = 290; y < 1000; y += 110) tiles.push(`<path d="M${x} ${y}h35m-17-17v35" stroke="#101014" stroke-width="1.5" opacity=".1"/>`);
   return `<svg id="world-svg" xmlns="http://www.w3.org/2000/svg" viewBox="60 120 1480 850" font-family="Trebuchet MS, Arial, sans-serif" aria-label="${escape(room.title)}" preserveAspectRatio="xMidYMid meet">

@@ -112,7 +112,7 @@ test('the campsite keeps the tent clear of the water and the flame clear of ever
     assert(spot.x + 34 < flame.left || spot.x - 34 > flame.right || spot.y + 12 < flame.top || spot.y - 77 > flame.bottom, 'no seated figure covers the flame');
   }
   const world = worldMarkup();
-  assert(world.indexOf('id="friends-fire"') > world.indexOf('id="player"'), 'the fire remains visible in the foreground');
+  assert(world.indexOf('id="friends-fire"') < world.indexOf('id="player"'), 'the controlled animal is drawn in front of the fire');
 });
 
 test('the camping camera immediately fits the complete group on wide and narrow screens', () => {
@@ -135,4 +135,23 @@ test('the camping camera immediately fits the complete group on wide and narrow 
     }
   }
   friends.phase = 'chasing'; assert.equal(friendsCameraView(friends, player, { w: 600, h: 700 }), null);
+});
+
+test('the expanded meadow is reachable on both sides while indoor walls keep their original bounds', () => {
+  for (const point of [{ x: -120, y: 600 }, { x: 1730, y: 600 }]) {
+    assert(canStand(point.x, point.y));
+    const path = planPath(WORLD_SPAWN, point); assert(path.length, 'a walking route reaches the added meadow');
+    for (const position of path) assert(canStand(position.x, position.y));
+    assert(!canStand(point.x, point.y, WORLD.radius, 'radio'));
+    assert(!canStand(point.x, point.y, WORLD.radius, 'wardrobe'));
+    assert(!canStand(point.x, point.y, WORLD.radius, 'concerts'));
+  }
+  assert(!canStand(WORLD.left, 600)); assert(!canStand(WORLD.right, 600));
+  let position = { x: 60, y: 600 };
+  for (let i = 0; i < 80; i++) position = move(position, -1, 0, .016);
+  assert(position.x < 0 && position.x > WORLD.left);
+  const friends = createFriends(); startFriends(friends, ANIMALS, 'cat', WORLD_SPAWN);
+  const actor = friends.actors[0]; actor.position = { x: -50, y: 600 }; actor.status = 'running';
+  tickFriends(friends, .05, 'world', { x: 20, y: 600 });
+  assert(actor.position.x < -50, 'a fleeing animal can actually use the new left meadow');
 });
