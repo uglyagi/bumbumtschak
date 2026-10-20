@@ -30,6 +30,7 @@ test('every requested color surface changes while all black outlines and their g
   assert(original.includes('Musikhaus')); assert(original.includes('Home sweet Home')); assert(original.includes('Büro'));
   assert.equal(text('nav_grownups'), 'für Eltern und Veranstalter');
   assert(!original.includes('mapLabel(1280'));
+  for (const svg of [original, painted]) assert(svg.includes('<path d="M530 305h556v38H530Z" fill="#101014" stroke-width="5"/>'), 'the stage floor remains solid black after repainting every surface');
 });
 
 test('ground painting spots can be walked to; sky objects require a flight above the horizon', () => {
@@ -151,9 +152,13 @@ test('temporary previews restore each original fill, tree color and readable lab
   restoreTree(); assert.equal(tree.style.color, '#ff87ce'); assert.equal(tree.getAttribute('stroke'), '#101014');
 });
 
-test('buckets offer only trees and flowers, with larger flowers and preserved stem positions', () => {
-  assert.equal(BUCKET_SURFACES.length, 24);
-  assert(BUCKET_SURFACES.every(surface => /^(tree|flower)-/.test(surface.id)));
+test('buckets paint plants and selected details while the mailbox stays exclusive to the picture', () => {
+  assert.equal(BUCKET_SURFACES.length, 34);
+  assert(BUCKET_SURFACES.every(surface => surface.bucket || /^(tree|flower)-/.test(surface.id)));
+  assert(!BUCKET_SURFACES.some(surface => surface.id === 'mailbox'));
+  assert(!worldMarkup().includes('m212 473-15 35m200-35 15 35'));
+  assert(!worldMarkup().includes('M1175 460v56m211-56v56'));
+  assert(FLOWERS[7][0] > 1481, 'the moved flower clears the email circle');
   const svg = worldMarkup({}, true);
   const focusable = [...svg.matchAll(/data-paint-target="([^"]+)"[^>]*tabindex="0"/g)].map(match => match[1]);
   assert.deepEqual(focusable.sort(), BUCKET_SURFACES.map(surface => surface.id).sort());

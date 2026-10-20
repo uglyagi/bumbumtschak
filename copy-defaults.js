@@ -1497,9 +1497,10 @@ export const COPY_GROUPS = [
       {
         "key": "paint_carry_hint",
         "label": "Hinweis beim Tragen",
-        "value": "Bäume, Blumen und Hut auf der Ablage: Pfeile bewegen · Enter / Leertaste färben.",
+        "value": "Bäume, Blumen, Hausdetails, Schild und Hut: Pfeile bewegen · Enter / Leertaste färben.",
         "max": 500,
         "previousValues": [
+          "Bäume, Blumen und Hut auf der Ablage: Pfeile bewegen · Enter / Leertaste färben.",
           "Nur Bäume und Blumen: Pfeile bewegen · Enter / Leertaste färben.",
           "Enter / Leertaste: Fläche anmalen",
           "Vorschau · Enter / Leertaste: übernehmen"
@@ -1848,9 +1849,10 @@ export const COPY_GROUPS = [
       {
         "key": "studio_cans",
         "label": "Überschrift bei den Kanistern",
-        "value": "Farben für Bäume, Blumen & Hut",
+        "value": "Deine Farbkübel",
         "max": 180,
         "previousValues": [
+          "Farben für Bäume, Blumen & Hut",
           "Farben für Bäume & Blumen",
           "Farben für draußen"
         ]
@@ -2202,7 +2204,8 @@ COPY_GROUPS.push({ id: 'chocolate', label: 'Schokolabyrinth & Schokoladenlade', 
   {
     "key": "choco_eaten",
     "label": "Temposchub aktiviert",
-    "value": "Mmmh! Du läufst jetzt 20 Sekunden doppelt so schnell!",
+    "value": "Mmmh! 20 Sekunden doppelt so schnell – mit Schokolade-Musik!",
+    "previousValues": ["Mmmh! Du läufst jetzt 20 Sekunden doppelt so schnell!"],
     "max": 400
   },
   {
@@ -2210,6 +2213,74 @@ COPY_GROUPS.push({ id: 'chocolate', label: 'Schokolabyrinth & Schokoladenlade', 
     "label": "Temposchub-Anzeige",
     "value": "Doppeltes Tempo · {sekunden} s",
     "max": 400
+  }
+] });
+COPY_GROUPS.push({ id: 'paint-details', label: 'Farbflächen an Häusern und Schildern', fields: [
+  {
+    "key": "paint_music_lower",
+    "label": "Farbfläche: Musikhaus unten",
+    "value": "Musikhaus unten",
+    "max": 180
+  },
+  {
+    "key": "paint_home_door",
+    "label": "Farbfläche: Haustür",
+    "value": "Haustür",
+    "max": 180
+  },
+  {
+    "key": "paint_home_trim",
+    "label": "Farbfläche: Blaue Fensterleisten",
+    "value": "Blaue Fensterleisten",
+    "max": 180
+  },
+  {
+    "key": "paint_office_door",
+    "label": "Farbfläche: Bürotür",
+    "value": "Bürotür",
+    "max": 180
+  },
+  {
+    "key": "paint_office_window_left",
+    "label": "Farbfläche: Linkes Bürofenster",
+    "value": "Linkes Bürofenster",
+    "max": 180
+  },
+  {
+    "key": "paint_office_window_right",
+    "label": "Farbfläche: Rechtes Bürofenster",
+    "value": "Rechtes Bürofenster",
+    "max": 180
+  },
+  {
+    "key": "paint_concert_door",
+    "label": "Farbfläche: Konzerttür",
+    "value": "Konzerttür",
+    "max": 180
+  },
+  {
+    "key": "paint_concert_poster_left",
+    "label": "Farbfläche: Linkes Konzertplakat",
+    "value": "Linkes Konzertplakat",
+    "max": 180
+  },
+  {
+    "key": "paint_concert_poster_right",
+    "label": "Farbfläche: Rechtes Konzertplakat",
+    "value": "Rechtes Konzertplakat",
+    "max": 180
+  },
+  {
+    "key": "paint_help_sign",
+    "label": "Farbfläche: So geht’s-Schild",
+    "value": "So geht’s-Schild",
+    "max": 180
+  },
+  {
+    "key": "paint_mailbox",
+    "label": "Farbfläche: Briefkasten",
+    "value": "Briefkasten",
+    "max": 180
   }
 ] });
 export const COPY_FIELDS = COPY_GROUPS.flatMap(group => group.fields);

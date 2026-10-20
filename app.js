@@ -10,7 +10,7 @@ import { SPACE, ROCKET_SPEED, GROUND_ROCKET, moveRocket, outsideScene, flightSce
 import { createParty, syncParty, tickParty, guestPose, guestExitPose, dancePartyMarkup, discoLightPoses } from './dance-party.js';
 import { studioMarkup, studioInteraction, studioColors, studioPages, STUDIO_CONTROLS, largeSurfaces } from './painting-studio.js';
 import { createAdventure, startAdventure, resizeAdventure, tickAdventure, FINISH_DISTANCE, landingPose, crashVibration, DIFFICULTIES } from './rocket-adventure.js';
-import { adventureMarkup, adventureShipPose, meteorMarkup } from './adventure-art.js';
+import { adventureMarkup, adventureShipPose, adventureTrailPath, meteorMarkup } from './adventure-art.js';
 import { toolboxMarkup } from './toolbox.js';
 import { wreckageTransforms } from './rocket-wreckage.js';
 import { sunHolidayPose, holidayTransform } from './sun-holiday.js';
@@ -52,7 +52,7 @@ const state = {
   camera: { x: 800, y: 520 },
   viewport: { w: 1480, h: 850 },
   keys: new Set(), pad: new Map(), path: [], destination: null,
-  near: null, modal: null, playing: false, memberMelody: null,
+  near: null, modal: null, playing: false, memberMelody: null, boostMusic: null,
   paint: savedPaint, paintCan: null, paintPage: 0, paintTarget: null,
   studio: null, pictureTouch: false,
   rocket: { position: { ...GROUND_ROCKET }, riding: false, airborne: false, damaged: savedRocketDamage, broken: savedRocketDamage, impact: null },
@@ -106,7 +106,7 @@ function wrap(kicker, title, contents, className = '') {
   return `<div class="modal-wrap ${className}">${closeButton()}<div class="modal-kicker">${kicker}</div><h2 id="modal-title">${escape(title)}</h2>${contents}${exitWay()}</div>`;
 }
 function radioPanel() {
-  const track = TRACKS.find(t => t.id === state.tapes.loaded);
+  const track = playbackTrack();
   return wrap(`${icon('cassette')} ${T('radio_kicker')}`, text('radio_title'), `<p class="modal-intro editable-prose">${T('radio_intro')}</p>
     <div class="radio-layout"><div><div class="boombox ${state.playing ? 'is-playing' : ''}"><div class="radio-handle"></div><div class="radio-topline"><span>${T('radio_name')}</span><span class="radio-lights" aria-hidden="true"><i></i><i></i><i></i></span></div>
     <div class="radio-speakers" aria-hidden="true"><div class="speaker"></div><div class="tape-window"><strong>${track ? escape(track.title) : T('radio_empty')}</strong><div class="reels"><span class="reel"></span><span class="reel"></span></div></div><div class="speaker"></div></div>
@@ -185,7 +185,7 @@ function refreshCassettes() {
   refreshDanceParty();
 }
 function refreshDanceParty() {
-  syncParty(state.party, TRACKS.find(track => track.id === state.tapes.loaded), state.playing, audio.ended || !!audio.error, ANIMALS, state.animal, state.reduced);
+  syncParty(state.party, playbackTrack(), state.playing, audio.ended || !!audio.error, ANIMALS, state.animal, state.reduced);
   const layer = $('#dance-party'), visible = state.scene === 'radio' && (state.party.active || state.party.departing);
   if (!layer || state.scene !== 'radio') return;
   const castKey = state.party.castKey;
@@ -233,9 +233,9 @@ function refreshHatEffects() {
   if (layer) layer.innerHTML = state.adventure || state.landing || state.scene === 'painting' ? '' : hatEffectsMarkup(state.hat, state.scene, state.reduced, text('hat_find'), state.hatActive);
 }
 function refreshHatQuest() {
-  const active = state.playing && !audio.ended && !audio.error && isHatTrack(TRACKS.find(track => track.id === state.tapes.loaded));
+  const active = state.playing && !audio.ended && !audio.error && isHatTrack(playbackTrack());
   const changed = active !== state.hatActive; state.hatActive = active;
-  const started = startHatQuest(state.hat, TRACKS.find(track => track.id === state.tapes.loaded), state.started && active, Math.random, state.hatRestartPending);
+  const started = startHatQuest(state.hat, playbackTrack(), state.started && active, Math.random, state.hatRestartPending);
   if (state.started && active) state.hatRestartPending = false;
   if (started) { saveHat(); toast(text('hat_started')); announce(text('hat_started')); }
   if (started && state.scene === 'wardrobe') renderScene();
@@ -282,10 +282,12 @@ function refreshChocolateItems() {
   if (!progress.hidden && chocolate.run) {
     const run = chocolate.run, label = text(run.phase === 'leaving' ? 'choco_leaving' : run.phase === 'celebrate' ? 'choco_count' : !chocolate.active ? 'choco_paused' : 'choco_count', { anzahl: run.collected.length });
     if (progress.textContent !== label) progress.textContent = label;
+    const counter = $('#chocolate-status'), count = text('choco_count', { anzahl: run.collected.length });
+    if (counter && counter.textContent !== count) counter.textContent = count;
   }
 }
 function refreshChocolatePlayback() {
-  const chocolate = state.chocolate, track = TRACKS.find(track => track.id === state.tapes.loaded), previous = chocolate.active;
+  const chocolate = state.chocolate, track = playbackTrack(), previous = chocolate.active;
   chocolate.active = state.playing && !audio.ended && !audio.error && isChocolateTrack(track);
   if (chocolate.active) chocolate.session = true;
   if (!isChocolateTrack(track) || audio.ended || audio.error) {
@@ -450,18 +452,44 @@ function refreshPlayback() {
     if (btn && !btn.disabled) { btn.innerHTML = icon(state.playing ? 'pause' : 'play'); btn.setAttribute('aria-label', text(state.playing ? 'pause_label' : 'play_label')); }
   }
 }
-function loadRecording() {
-  audio.pause(); state.playing = false;
-  const track = TRACKS.find(t => t.id === state.tapes.loaded);
-  state.hatRestartPending = isHatTrack(track);
-  const recordingURL = track?.src ? new URL(track.src, document.baseURI) : null;
-  if (recordingURL && (safeURL(recordingURL.href) || (previewMode && recordingURL.protocol === 'blob:'))) {
-    audio.src = track.src; audio.play().catch(() => toast(text('audio_start')));
+function playbackTrack() {
+  return TRACKS.find(track => track.id === (state.boostMusic?.id || state.tapes.loaded));
+}
+function validRecording(track) {
+  if (!track?.src) return false;
+  try {
+    const url = new URL(track.src, document.baseURI);
+    return !!safeURL(url.href) || previewMode && url.protocol === 'blob:';
+  } catch { return false; }
+}
+function playRecording(track, time = 0, playing = true) {
+  audio.pause(); state.playing = false; audio.loop = !!state.boostMusic;
+  if (validRecording(track)) {
+    audio.src = track.src; audio.currentTime = Math.max(0, Number.isFinite(time) ? time : 0);
+    if (playing) audio.play().catch(() => toast(text('audio_start')));
   } else { audio.removeAttribute('src'); audio.load(); }
   refreshPlayback();
 }
+function loadRecording() {
+  state.boostMusic = null;
+  const track = playbackTrack();
+  state.hatRestartPending = isHatTrack(track);
+  playRecording(track);
+}
+function startChocolateMusic() {
+  const track = TRACKS.find(track => isChocolateTrack(track) && validRecording(track));
+  if (!track || !state.boostMusic && isChocolateTrack(playbackTrack()) && state.playing) return;
+  const previous = state.boostMusic?.previous || { id: state.tapes.loaded, time: audio.currentTime || 0, playing: state.playing };
+  state.boostMusic = { id: track.id, previous };
+  playRecording(track);
+}
+function finishChocolateMusic() {
+  if (!state.boostMusic) return;
+  const { previous } = state.boostMusic; state.boostMusic = null;
+  playRecording(playbackTrack(), previous.time, previous.playing);
+}
 for (const event of ['play', 'pause', 'ended']) audio.addEventListener(event, () => {
-  if (event === 'ended' && isHatTrack(TRACKS.find(track => track.id === state.tapes.loaded))) state.hatRestartPending = true;
+  if (event === 'ended' && isHatTrack(playbackTrack())) state.hatRestartPending = true;
   refreshPlayback();
 });
 audio.addEventListener('error', () => { refreshPlayback(); toast(text('audio_error')); });
@@ -537,7 +565,7 @@ function enterSpaceAdventure() {
   const r = game.getBoundingClientRect(), matrix = world.getScreenCTM();
   const point = matrix ? new DOMPoint(state.position.x, state.position.y - 86).matrixTransform(matrix) : null;
   const entry = point ? { x: clamp(point.x - (r.left || 0), 0, r.width), y: clamp(point.y - (r.top || 0), 0, r.height), scale: Math.hypot(matrix.a, matrix.b) || .8 } : null;
-  state.adventure = createAdventure(r.width || 1200, r.height || 700, Date.now(), entry);
+  state.adventure = createAdventure(r.width || 1200, r.height || 700, Date.now(), entry, bucketColors(PALETTE).find(color => color.id === state.paintCan)?.color);
   state.adventure.reduced = state.reduced;
   state.adventure.nextDifficulty = state.difficulty;
   state.scene = 'space'; renderScene(); announce(text('space_entered'));
@@ -575,6 +603,7 @@ function updateAdventure() {
   $('#rocket-pilot-upright')?.setAttribute('transform', `rotate(${-angle.toFixed(2)} 0 -86)`);
   $('#adventure-course')?.setAttribute('transform', `translate(${adventure.width * .25 - adventure.progress} 0)`);
   $('#adventure-stars')?.setAttribute('transform', `translate(${-adventure.progress * .18 % adventure.width} 0)`);
+  $('#adventure-paint-trail')?.setAttribute('d', adventureTrailPath(adventure));
   $('#adventure-meteors').innerHTML = adventure.meteors.map(meteorMarkup).join('');
   $('#adventure-progress')?.setAttribute('width', String(Math.max(110, Math.min(adventure.width - 75, 430)) * (adventure.phase === 'won' ? 1 : Math.min(1, adventure.progress / FINISH_DISTANCE))));
 }
@@ -671,7 +700,7 @@ function performInteraction() {
   if (state.scene === 'painting') { studioAction(near); return; }
   stopWalking();
   if (near.kind === 'take-chocolate') { if (takeChocolate(state.chocolate)) { renderScene(); announce(text('choco_taken')); } return; }
-  if (near.kind === 'eat-chocolate') { if (eatChocolate(state.chocolate)) { renderScene(); toast(text('choco_eaten')); announce(text('choco_eaten')); } return; }
+  if (near.kind === 'eat-chocolate') { if (eatChocolate(state.chocolate)) { startChocolateMusic(); renderScene(); toast(text('choco_eaten')); announce(text('choco_eaten')); } return; }
   if (near.kind === 'find-hat') {
     if (findHat(state.hat, state.scene, state.position, state.hatActive)) { saveHat(); renderScene(); toast(text('hat_found')); announce(text('hat_found')); }
     return;
@@ -1023,7 +1052,9 @@ function updateCamera(dt, snap = false) {
 }
 function frame(time) {
   const elapsed = Math.max(0, (time - (lastTime || time)) / 1000), dt = Math.min(.05, elapsed); lastTime = time;
-  tickChocolate(state.chocolate, elapsed); refreshChocolateItems();
+  tickChocolate(state.chocolate, elapsed);
+  if (!state.chocolate.boost && state.boostMusic) finishChocolateMusic();
+  refreshChocolateItems();
   if (state.started && !document.hidden) {
     if (!modal.open && state.homeReturns.length) tickHomeReturns(dt);
     if (!modal.open) { tickHats(dt); updateReception(dt); }

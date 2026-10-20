@@ -30,16 +30,18 @@ export const DIFFICULTIES = {
 const METEOR_DIRECTIONS = [[-1, 0], [1, 0], [0, 1], [0, -1], [-1, 1], [1, -1], [1, 1], [-1, -1]];
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 const random = game => { game.seed = (Math.imul(game.seed, 1664525) + 1013904223) >>> 0; return game.seed / 4294967296; };
-export function createAdventure(width, height, seed = 1, entry = null) {
-  return { phase: 'intro', difficulty: 'profi', nextDifficulty: 'profi', completedDifficulty: null, width, height, seed: seed >>> 0, entry: entry || { x: width * .5, y: height * .5, scale: .8 }, ship: { x: width * .25, y: height * .5 }, introTime: 0, time: 0, progress: 0, nextMeteor: 2, meteors: [], meteorId: 0, angle: 0, sunTime: null, sunFrom: null, sunMeteors: [] };
+export function createAdventure(width, height, seed = 1, entry = null, trailColor = null) {
+  return { phase: 'intro', difficulty: 'profi', nextDifficulty: 'profi', completedDifficulty: null, width, height, seed: seed >>> 0, entry: entry || { x: width * .5, y: height * .5, scale: .8 }, ship: { x: width * .25, y: height * .5 }, introTime: 0, time: 0, progress: 0, nextMeteor: 2, meteors: [], meteorId: 0, trailColor: /^#[a-f0-9]{6}$/i.test(trailColor) ? trailColor : null, paintTrail: [], angle: 0, sunTime: null, sunFrom: null, sunMeteors: [] };
 }
 export function startAdventure(game, difficulty = game.difficulty) {
   game.difficulty = Object.hasOwn(DIFFICULTIES, difficulty) ? difficulty : 'profi'; game.nextDifficulty = game.difficulty; game.completedDifficulty = null;
   game.phase = 'playing'; game.time = 0; game.progress = 0; game.meteors = []; game.nextMeteor = DIFFICULTIES[game.difficulty].first; game.meteorId = 0; game.angle = 90;
   game.ship = { x: game.width * .25, y: game.height * .5 };
+  game.paintTrail = game.trailColor ? [{ x: game.ship.x - 62, y: game.ship.y }] : [];
   game.sunTime = null; game.sunFrom = null; game.sunMeteors = [];
 }
 export function resizeAdventure(game, width, height) {
+  for (const point of game.paintTrail) { point.x = game.progress + (point.x - game.progress) * width / game.width; point.y *= height / game.height; }
   game.ship.x *= width / game.width; game.ship.y *= height / game.height;
   game.entry.x *= width / game.width; game.entry.y *= height / game.height;
   for (const meteor of [...game.meteors, ...(game.sunMeteors || [])]) { meteor.x *= width / game.width; meteor.y *= height / game.height; }
@@ -83,6 +85,12 @@ export function tickAdventure(game, seconds, dx = 0, dy = 0) {
   game.ship.y = clamp(game.ship.y + dy / length * 300 * dt, Math.min(105, game.height * .3), Math.max(game.height - 55, game.height * .7));
   const speed = game.width < 650 ? 115 : 155;
   game.time += dt; game.progress += speed * dt; game.angle = 90;
+  if (game.trailColor) {
+    // Keep the line in the scrolling world, sample by distance and bound its cost.
+    const point = { x: game.ship.x + game.progress - 62, y: game.ship.y }, last = game.paintTrail.at(-1);
+    if (!last || Math.hypot(point.x - last.x, point.y - last.y) >= 6) game.paintTrail.push(point);
+    game.paintTrail = game.paintTrail.filter(point => point.x - game.progress >= -100).slice(-400);
+  }
   if (game.time >= game.nextMeteor) {
     game.meteors.push(spawnMeteor(game, speed));
     const level = DIFFICULTIES[game.difficulty];

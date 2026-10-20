@@ -1,7 +1,7 @@
 export const CHOCOLATE_SPEED_SECONDS = 20;
 export const CHOCOLATE_DOOR = { x: 679, y: 494 };
 export const CHOCOLATE_RETURN = { x: 679, y: 550 };
-export const CHOCOLATE_DRAWER = { id: 'chocolate-drawer', x: 815, y: 620 };
+export const CHOCOLATE_DRAWER = { id: 'chocolate-drawer', x: 815, y: 320 };
 export const MAZE = { x: 128, y: 144, cell: 64, cols: 21, rows: 13 };
 const at = (col, row) => ({ x: MAZE.x + (col + .5) * MAZE.cell, y: MAZE.y + (row + .5) * MAZE.cell });
 export const MAZE_SPAWN = at(1, 11);

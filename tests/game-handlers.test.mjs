@@ -991,6 +991,8 @@ try {
     const deadline = clock + 4000;
     while (!h.state.chocolate.run.collected.includes(bar.id) && clock < deadline) { h.frame(++clock * 16); assert(chocolate.canStandChocolate(h.state.position.x, h.state.position.y)); }
     assert(h.state.chocolate.run.collected.includes(bar.id)); assert(h.get('#maze-' + bar.id).attrs.has('hidden'));
+    assert.equal(h.get('#chocolate-status').textContent, content.text('choco_count', { anzahl: h.state.chocolate.run.collected.length }), 'the visible SVG counter updates for every collected bar');
+    assert.equal(h.get('#chocolate-progress').textContent, h.get('#chocolate-status').textContent, 'both visible counters agree');
   }
   assert.equal(h.state.chocolate.run.phase, 'celebrate'); assert(h.state.chocolate.unlocked); assert(JSON.parse(h.stored.get('bbt-chocolate-world')).unlocked);
   h.frame(++clock * 16); assert(h.get('#chocolate-celebration').innerHTML.includes('chocolate-confetti'));
@@ -1045,3 +1047,94 @@ try {
   paused.press(paused.windowHandlers, paused.event('Escape', 'Escape', paused.game)); assert.equal(paused.state.chocolate.run.phase, 'leaving');
   console.log('PASS: pausing Schokolade freezes exploration without losing the run, resuming restores walking, and Escape still starts a safe automatic return.');
 } finally { content.TRACKS.splice(content.TRACKS.indexOf(chocolateTrack), 1); }
+
+for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space']]) {
+  const h = await harness(false, 'cat'); h.enterRoom('wardrobe');
+  h.state.position = { ...painting.paintSlots(content.PALETTE).find(color => color.id === 'red') }; h.game.focus();
+  h.press(h.windowHandlers, h.event(key, code, h.game)); h.leaveRoom(); let clock = 0;
+  for (const surface of painting.BUCKET_SURFACES.filter(surface => surface.bucket)) {
+    h.state.paintTarget = null; h.state.position = { ...surface.walk }; h.game.focus(); h.frame(++clock * 16);
+    assert.equal(h.currentInteraction()?.id, surface.id, 'nearby keyboard painting selects ' + surface.id);
+    assert.equal(h.currentInteraction()?.kind, 'paint'); assert.equal(h.state.paint[surface.id], undefined, 'approach is only a preview');
+    const nodes = h.game.querySelectorAll('[data-paint-target="' + surface.id + '"]');
+    for (const node of nodes) assert.equal(node.getAttribute(node.dataset.paintProperty), '#ff3935');
+    h.state.position = { x: 1000, y: 600 }; h.frame(++clock * 16);
+    for (const node of nodes) assert.notEqual(node.getAttribute(node.dataset.paintProperty), '#ff3935', 'walking away restores ' + surface.id);
+    h.state.position = { ...surface.walk }; h.frame(++clock * 16); h.press(h.windowHandlers, h.event(key, code, h.game));
+    assert.equal(h.state.paint[surface.id], '#ff3935'); assert.equal(h.state.scene, 'world'); assert(!h.modal.open);
+  }
+  const mailbox = painting.PAINT_SURFACES.find(surface => surface.id === 'mailbox');
+  h.state.paintTarget = null; h.state.position = { ...mailbox.walk }; h.game.focus(); h.frame(++clock * 16);
+  assert.equal(h.currentInteraction(), null); h.press(h.windowHandlers, h.event(key, code, h.game)); assert.equal(h.state.paint.mailbox, undefined);
+  h.enterRoom('wardrobe'); h.state.position = { ...rooms.PICTURE_SPOT }; h.frame(++clock * 16);
+  h.state.position = { ...studio.studioColors(content.PALETTE).find(color => color.id === 'gray') }; h.game.focus();
+  h.press(h.windowHandlers, h.event(key, code, h.game));
+  const point = { x: mailbox.bounds.x + mailbox.bounds.w / 2, y: mailbox.bounds.y + 40 };
+  h.state.position = { x: studio.CANVAS.x + point.x * studio.CANVAS.scale, y: studio.CANVAS.y + (point.y + 380) * studio.CANVAS.scale };
+  assert.equal(h.currentInteraction()?.id, 'mailbox'); h.press(h.windowHandlers, h.event(key, code, h.game));
+  assert.equal(h.state.paint.mailbox, '#969ba5'); assert.equal(h.state.paintCan, 'red');
+  const reload = await harness(false, 'cat', JSON.parse(h.stored.get('bbt-paint-world'))); assert.equal(reload.state.paint.mailbox, '#969ba5');
+}
+console.log('PASS: nearby Enter/Space previews and confirms every requested house detail and sign without opening rooms, walking away restores unconfirmed color, buckets leave the mailbox alone and the brush colors and saves its body, flag and post.');
+
+for (const bucket of [null, ...painting.bucketColors(content.PALETTE)]) {
+  const h = await harness(false, 'dog'); h.state.paintCan = bucket?.id || null; h.game.focus();
+  let clock = flyIntoSky(h); h.state.keys.add('ArrowUp');
+  while (!h.state.adventure && clock < 2000) h.frame(++clock * 16);
+  h.state.keys.clear(); assert(h.state.adventure); assert.equal(h.state.adventure.trailColor, bucket?.color || null);
+  while (h.state.adventure.phase === 'intro') h.frame(++clock * 16);
+  new h.Element('easy flight', 'button', { difficulty: 'leicht' }).click();
+  h.state.adventure.nextMeteor = Infinity; h.state.keys.add('ArrowUp');
+  for (let i = 0; i < 20; i++) h.frame(++clock * 16); h.state.keys.clear();
+  const path = h.get('#adventure-paint-trail').getAttribute('d');
+  if (bucket) {
+    assert(path.startsWith('M')); assert(path.includes('L')); assert(h.game.innerHTML.includes('stroke="' + bucket.color + '" stroke-width="6"'));
+    h.press(h.windowHandlers, h.event('Escape', 'Escape', h.game)); const frozen = JSON.stringify(h.state.adventure.paintTrail);
+    h.frame(++clock * 16); assert.equal(JSON.stringify(h.state.adventure.paintTrail), frozen); assert.equal(h.get('#adventure-paint-trail').getAttribute('d'), path);
+  } else assert.equal(path, '');
+}
+console.log('PASS: flying into space captures each carried bucket color, draws and updates the actual SVG path during play, pauses it with the game, and omits the line when no bucket is carried.');
+
+const boostTrack = { id: 'schokolade', title: 'Schokolade', src: 'uploads/schokolade.mp3', color: '#ff87ce', image: 'assets/hut.png' };
+const originalBoostCassette = content.TRACKS[1].src; content.TRACKS[1].src = 'uploads/tanzen.mp3'; content.TRACKS.push(boostTrack);
+try {
+  for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'NumpadEnter']]) {
+    for (const previousMode of ['empty', 'paused', 'playing']) {
+      const h = await harness(false, 'cat', null, false, null, { unlocked: true });
+      if (previousMode !== 'empty') {
+        h.state.tapes.loaded = 'tanzen'; h.loadRecording(); h.get('#audio').currentTime = 37.5;
+        if (previousMode === 'paused') { h.get('#audio').pause(); for (const cb of h.get('#audio').handlers.get('pause')) cb({}); }
+      }
+      const before = JSON.stringify(h.state.tapes); h.enterRoom('wardrobe'); h.state.position = { ...chocolate.CHOCOLATE_DRAWER }; h.game.focus();
+      h.press(h.windowHandlers, h.event(key, code, h.game)); h.press(h.windowHandlers, h.event(key, code, h.game));
+      assert.equal(h.state.chocolate.boost, 20); assert.equal(h.get('#audio').src, boostTrack.src); assert(h.state.playing);
+      assert.equal(h.state.boostMusic.id, boostTrack.id); assert.equal(JSON.stringify(h.state.tapes), before, 'bonus music does not relocate any cassette');
+      assert(!h.state.party.active); assert(!h.state.hatActive); assert(h.state.chocolate.active);
+      h.frame(16); h.frame(19016); assert(h.state.boostMusic); assert.equal(h.state.chocolate.boost, 1);
+      h.frame(20017); assert.equal(h.state.boostMusic, null); assert.equal(h.state.chocolate.boost, 0); assert.equal(h.get('#audio').loop, false);
+      if (previousMode === 'empty') assert(h.get('#audio').paused);
+      else {
+        assert.equal(h.get('#audio').src, 'uploads/tanzen.mp3'); assert.equal(h.get('#audio').currentTime, 37.5);
+        assert.equal(h.get('#audio').paused, previousMode === 'paused'); assert.equal(h.state.party.active, previousMode === 'playing');
+      }
+    }
+  }
+  const renewed = await harness(false, 'cat', null, false, null, { unlocked: true }); renewed.state.tapes.loaded = 'tanzen'; renewed.loadRecording(); renewed.get('#audio').currentTime = 18;
+  renewed.enterRoom('wardrobe'); renewed.state.position = { ...chocolate.CHOCOLATE_DRAWER }; renewed.game.focus();
+  for (let press = 0; press < 2; press++) renewed.press(renewed.windowHandlers, renewed.event('Enter', 'Enter', renewed.game));
+  renewed.frame(16); renewed.frame(5016);
+  for (let press = 0; press < 2; press++) renewed.press(renewed.windowHandlers, renewed.event('Enter', 'Enter', renewed.game));
+  assert.equal(renewed.state.chocolate.boost, 20); assert.equal(renewed.state.boostMusic.previous.time, 18); assert.equal(renewed.get('#audio').currentTime, 0);
+  renewed.frame(25017); assert.equal(renewed.state.boostMusic, null); assert.equal(renewed.get('#audio').src, 'uploads/tanzen.mp3'); assert.equal(renewed.get('#audio').currentTime, 18);
+  renewed.state.position = { ...chocolate.CHOCOLATE_DRAWER };
+  for (let press = 0; press < 2; press++) renewed.press(renewed.windowHandlers, renewed.event('Enter', 'Enter', renewed.game));
+  renewed.state.tapes.loaded = 'freundschaft'; const chosen = content.TRACKS.find(track => track.id === 'freundschaft'), oldSrc = chosen.src; chosen.src = 'uploads/freunde.mp3'; renewed.loadRecording();
+  assert.equal(renewed.state.boostMusic, null); renewed.frame(45018); assert.equal(renewed.get('#audio').src, chosen.src, 'choosing another cassette cancels automatic music return');
+  chosen.src = oldSrc;
+
+  const alreadyPlaying = await harness(false, 'dog', null, false, null, { unlocked: true }); alreadyPlaying.state.tapes.loaded = boostTrack.id; alreadyPlaying.loadRecording(); alreadyPlaying.get('#audio').currentTime = 43;
+  alreadyPlaying.enterRoom('wardrobe'); alreadyPlaying.state.position = { ...chocolate.CHOCOLATE_DRAWER }; alreadyPlaying.game.focus();
+  alreadyPlaying.press(alreadyPlaying.windowHandlers, alreadyPlaying.event('Enter', 'Enter', alreadyPlaying.game)); alreadyPlaying.press(alreadyPlaying.windowHandlers, alreadyPlaying.event('Enter', 'Enter', alreadyPlaying.game));
+  assert.equal(alreadyPlaying.state.boostMusic, null); assert.equal(alreadyPlaying.get('#audio').currentTime, 43, 'Schokolade already playing continues smoothly');
+} finally { content.TRACKS.splice(content.TRACKS.indexOf(boostTrack), 1); content.TRACKS[1].src = originalBoostCassette; }
+console.log('PASS: eating with Enter, Space or Numpad Enter plays Schokolade for the twenty-second boost, restores an empty, paused or playing radio at its saved position, leaves cassettes in place, supports repeated treats and respects a newly selected cassette.');

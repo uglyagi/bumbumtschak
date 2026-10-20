@@ -1,5 +1,5 @@
 import { landscapeMarkup } from './art.js';
-import { PAINT_SURFACES, onPath } from './painting.js';
+import { PAINT_SURFACES, BUCKET_SURFACES, onPath } from './painting.js';
 import { text } from './content.js';
 import { escapeXML as esc } from './utils.js';
 
@@ -8,7 +8,7 @@ export const STUDIO_PAGE_SIZE = 18;
 export const studioPages = palette => Math.max(1, Math.ceil(palette.length / STUDIO_PAGE_SIZE));
 export const studioColors = (palette, page = 0) => palette.slice(page * STUDIO_PAGE_SIZE, (page + 1) * STUDIO_PAGE_SIZE).map((color, i) => ({ ...color, x: 1240 + i % 3 * 115, y: 275 + Math.floor(i / 3) * 90 }));
 export const STUDIO_CONTROLS = { next: { x: 1355, y: 815 }, reset: { x: 1355, y: 895 }, close: { x: 1355, y: 990 } };
-export const largeSurfaces = PAINT_SURFACES.filter(surface => !/^(tree|flower)-/.test(surface.id));
+export const largeSurfaces = PAINT_SURFACES.filter(surface => !BUCKET_SURFACES.includes(surface));
 export function canvasPoint(position) { return { x: (position.x - CANVAS.x) / CANVAS.scale, y: (position.y - CANVAS.y) / CANVAS.scale - 380 }; }
 export function studioSurfaceAt(position) {
   const point = canvasPoint(position);

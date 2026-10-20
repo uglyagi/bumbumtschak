@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { COURSE, ADVENTURE_PLANETS, SUN_DIAMETER, FINISH_DISTANCE, createAdventure, startAdventure, resizeAdventure, tickAdventure, meteorHits, landingPose, SUN_HOLIDAY_DURATION, INTRO_DURATION } from '../rocket-adventure.js';
 import { CSS_PIXELS_PER_CM } from '../solar-system.js';
 import { GROUND_ROCKET } from '../sky-world.js';
-import { adventureMarkup, adventureShipPose, meteorMarkup } from '../adventure-art.js';
+import { adventureMarkup, adventureShipPose, adventureTrailPath, meteorMarkup } from '../adventure-art.js';
 
 test('the journey visits every planet from Neptune to Mercury at an Earth 1 cm body scale', () => {
   assert.deepEqual(ADVENTURE_PLANETS.map(p => p.id), ['neptune', 'uranus', 'saturn', 'jupiter', 'mars', 'earth', 'venus', 'mercury']);
@@ -149,4 +149,38 @@ test('reduced motion skips the departure flight and safely opens the same diffic
   const game = createAdventure(390, 580); game.reduced = true;
   assert.equal(tickAdventure(game, .016), 'ready'); assert.equal(game.angle, 0);
   const pose = adventureShipPose(game); assert.equal(pose.scale, game.entry.scale); assert(pose.y < 0); assert.equal(game.meteors.length, 0);
+});
+
+test('every bucket color draws a scrolling line along the flown path, while unladen rockets leave none', () => {
+  for (const color of ['#fff20b', '#ff3935', '#4acb59', '#1d55ff', '#ff87ce', '#ffffff']) {
+    const game = createAdventure(1200, 700, 5, null, color); startAdventure(game);
+    game.nextMeteor = Infinity;
+    for (let i = 0; i < 20; i++) tickAdventure(game, .05, 0, i < 10 ? -1 : 1);
+    assert(game.paintTrail.length > 10); const first = game.paintTrail[0];
+    const path = adventureTrailPath(game);
+    assert(path.startsWith('M' + (first.x - game.progress).toFixed(1) + ' ' + first.y.toFixed(1)));
+    assert(path.endsWith('L' + (game.ship.x - 62).toFixed(1) + ' ' + game.ship.y.toFixed(1)));
+    assert(adventureMarkup(game, 'cat').includes('stroke="' + color + '" stroke-width="6"'));
+    const frozen = adventureTrailPath(game); game.phase = 'ready'; tickAdventure(game, .05, 1, 1);
+    assert.equal(adventureTrailPath(game), frozen, 'a paused flight does not extend its line');
+    startAdventure(game); assert.equal(game.paintTrail.length, 1); assert.equal(game.trailColor, color);
+  }
+  for (const color of [null, 'url(https://example.com/paint)', '#fff']) {
+    const game = createAdventure(1200, 700, 1, null, color); startAdventure(game); tickAdventure(game, .05);
+    assert.equal(game.trailColor, null); assert.equal(game.paintTrail.length, 0); assert.equal(adventureTrailPath(game), '');
+  }
+});
+
+test('the colored line stays bounded and survives resizing without affecting collisions', () => {
+  const game = createAdventure(5000, 700, 5, null, '#ff3935'); startAdventure(game); game.nextMeteor = Infinity;
+  for (let i = 0; i < 700; i++) tickAdventure(game, .05, 0, i % 100 < 50 ? -1 : 1);
+  assert.equal(game.phase, 'playing'); assert(game.paintTrail.length <= 400);
+  assert(game.paintTrail.every(point => point.x - game.progress >= -100));
+  const before = game.paintTrail.map(point => ({ ...point })); resizeAdventure(game, 2500, 350);
+  for (const [i, point] of game.paintTrail.entries()) {
+    assert.equal(point.x - game.progress, (before[i].x - game.progress) / 2);
+    assert.equal(point.y, before[i].y / 2);
+  }
+  game.meteors = [{ id: 1, x: game.ship.x, y: game.ship.y, radius: 20, vx: 0, vy: 0, angle: 0, spin: 0 }];
+  assert.equal(tickAdventure(game, .016), 'crash', 'a bucket trail does not change meteor collisions');
 });

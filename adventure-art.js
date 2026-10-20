@@ -16,6 +16,13 @@ export function adventureShipPose(game) {
   // Retain the actual rocket size and horizontal position until it has left the screen.
   return { x: game.entry.x, y: game.entry.y + (endY - game.entry.y) * amount, scale: game.entry.scale };
 }
+
+export function adventureTrailPath(game) {
+  if (!/^#[a-f0-9]{6}$/i.test(game.trailColor) || !game.paintTrail.length) return '';
+  const points = [...game.paintTrail, { x: game.ship.x + game.progress - 62, y: game.ship.y }];
+  return points.map((point, i) => (i ? 'L' : 'M') + (point.x - game.progress).toFixed(1) + ' ' + point.y.toFixed(1)).join(' ');
+}
+
 function adventureBackdropMarkup(game, paint = {}) {
   const w = game.width, h = game.height;
   let seed = 553311; const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
@@ -23,6 +30,7 @@ function adventureBackdropMarkup(game, paint = {}) {
   const sunRadius = SUN_DIAMETER / 2;
   return `<rect width="${w}" height="${h}" fill="#10152d"/><ellipse cx="${w * .75}" cy="${h * .48}" rx="${w * .55}" ry="${h * .3}" fill="#9563db" opacity=".12"/>
     <g id="adventure-stars" aria-hidden="true" transform="translate(${-game.progress * .18 % w} 0)">${stars}</g>
+    <path id="adventure-paint-trail" d="${adventureTrailPath(game)}" fill="none" stroke="${/^#[a-f0-9]{6}$/i.test(game.trailColor) ? game.trailColor : 'none'}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" pointer-events="none" aria-hidden="true"/>
     <g id="adventure-course" ${['playing', 'sun-finale', 'won'].includes(game.phase) ? '' : 'hidden=""'} transform="translate(${w * .25 - game.progress} 0)">
       <g transform="translate(-160 ${h * .57})"><circle r="124" fill="#1d55ff" stroke="#101014" stroke-width="5"/><defs><clipPath id="bum-planet-clip"><circle r="120"/></clipPath></defs><g clip-path="url(#bum-planet-clip)">${landscapeMarkup(paint,'bum-planet',-124,-124,248)}</g><circle r="124" fill="none" stroke="#101014" stroke-width="5"/><text y="156" text-anchor="middle" fill="#fffcee" font-weight="900" font-size="22">${esc(text('adventure_home_planet'))}</text></g>
       ${COURSE.map(planet => planetMarkup({ ...planet, y: planetY(planet, h) })).join('')}

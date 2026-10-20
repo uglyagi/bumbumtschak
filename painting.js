@@ -25,10 +25,12 @@ export const BUCKET_COLOR_IDS = ['yellow', 'red', 'green', 'blue', 'pink', 'whit
 export const WORLD_COLOR_IDS = {
   sky: 'blue-light', water: 'blue-dark', grass: 'green', path: 'yellow-light', sun: 'yellow',
   'cloud-0': 'white', 'cloud-1': 'white',
-  'radio-wall': 'pink-light', 'radio-roof': 'red-dark',
+  'radio-wall': 'pink-light', 'radio-roof': 'red-dark', 'radio-lower': 'blue',
   'concert-wall': 'blue-light', 'concert-roof': 'red-light',
-  'home-wall': 'yellow-light', 'home-roof': 'red',
-  'office-wall': 'white', 'office-roof': 'red-dark',
+  'concert-door': 'white', 'concert-poster-left': 'pink', 'concert-poster-right': 'green',
+  'home-wall': 'yellow-light', 'home-roof': 'red', 'home-door': 'blue', 'home-trim': 'blue',
+  'office-wall': 'white', 'office-roof': 'red-dark', 'office-door': 'pink',
+  'office-window-left': 'green', 'office-window-right': 'green', 'help-sign': 'yellow',
   'stage-wall': 'white', 'stage-roof': 'red-light',
 };
 export const PALETTE_LIMIT = 30;
@@ -50,7 +52,7 @@ export const paintPages = palette => Math.max(1, Math.ceil(bucketColors(palette)
 export const FLOWERS = [
   [445, 560, '#ff87ce', 35], [105, 610, '#fff20b', 43], [1090, 595, '#ff87ce', 40],
   [1385, 600, '#fff20b', 33], [1030, 920, '#fff20b', 44], [710, 915, '#ff87ce', 36],
-  [400, 940, '#ff87ce', 36], [1410, 960, '#ff87ce', 50], [450, 255, '#fff20b', 38],
+  [400, 940, '#ff87ce', 36], [1500, 960, '#ff87ce', 50], [450, 255, '#fff20b', 38],
   [1200, 150, '#ff87ce', 40], [120, 350, '#ff87ce', 32],
   [245, 165, '#fff20b', 30], [430, 100, '#ff87ce', 28], [505, 390, '#fff20b', 28],
   [665, 540, '#ff87ce', 32], [1115, 735, '#fff20b', 32], [880, 870, '#ff87ce', 30],
@@ -72,8 +74,20 @@ export const PAINT_SURFACES = [
   { id: 'home-roof', key: 'paint_home_roof', bounds: rect(712, 578, 176, 32), walk: { x: 800, y: 550 } },
   { id: 'office-wall', key: 'paint_office_wall', bounds: rect(196, 690, 208, 112), walk: { x: 300, y: 840 } },
   { id: 'office-roof', key: 'paint_office_roof', bounds: rect(183, 650, 234, 40), walk: { x: 300, y: 615 } },
-  { id: 'stage-wall', key: 'paint_stage_wall', bounds: rect(530, 150, 555, 193), walk: { x: 640, y: 382 } },
+  { id: 'stage-wall', key: 'paint_stage_wall', bounds: rect(530, 150, 555, 155), walk: { x: 640, y: 382 } },
   { id: 'stage-roof', key: 'paint_stage_roof', bounds: rect(530, 96, 555, 57), walk: { x: 800, y: 70 } },
+  // Small details are painted with a carried bucket; the mailbox belongs to the picture.
+  { id: 'radio-lower', key: 'paint_music_lower', bucket: true, bounds: rect(169, 419, 272, 70), walk: { x: 235, y: 535 } },
+  { id: 'home-door', key: 'paint_home_door', bucket: true, bounds: rect(781, 668, 38, 50), walk: { x: 800, y: 785 } },
+  { id: 'home-trim', key: 'paint_home_trim', bucket: true, bounds: rect(729, 651, 142, 36), walk: { x: 700, y: 679 } },
+  { id: 'office-door', key: 'paint_office_door', bucket: true, bounds: rect(280, 749, 40, 53), walk: { x: 300, y: 840 } },
+  { id: 'office-window-left', key: 'paint_office_window_left', bucket: true, bounds: rect(213, 747, 39, 32), walk: { x: 170, y: 773 } },
+  { id: 'office-window-right', key: 'paint_office_window_right', bucket: true, bounds: rect(348, 747, 39, 32), walk: { x: 430, y: 773 } },
+  { id: 'concert-door', key: 'paint_concert_door', bucket: true, bounds: rect(1258, 409, 48, 65), walk: { x: 1280, y: 555 } },
+  { id: 'concert-poster-left', key: 'paint_concert_poster_left', bucket: true, bounds: rect(1186, 399, 58, 51), walk: { x: 1197, y: 512 } },
+  { id: 'concert-poster-right', key: 'paint_concert_poster_right', bucket: true, bounds: rect(1324, 401, 56, 44), walk: { x: 1365, y: 510 } },
+  { id: 'help-sign', key: 'paint_help_sign', bucket: true, reach: 42, bounds: rect(955, 671, 90, 56), walk: { x: 950, y: 705 } },
+  { id: 'mailbox', key: 'paint_mailbox', bounds: rect(1324, 703, 120, 140), walk: { x: 1465, y: 835 } },
   { id: 'sun', key: 'paint_sun', bounds: rect(190, -300, 102, 106), walk: { x: 241, y: -159 }, reach: 55, sky: true },
   ...CLOUDS.map(([x, y, w, h], i) => ({ id: `cloud-${i}`, key: 'paint_cloud', bounds: rect(x, y, w, h), walk: { x: x + w / 2, y: y + h + 38 }, reach: 60, sky: true })),
   ...TREES.map(([x, y, w, h], i) => ({ id: `tree-${i}`, key: 'paint_tree', bounds: rect(x, y, w, h * .71), walk: [{ x: 215, y: 200 }, { x: 1350, y: 160 }, { x: 1390, y: 610 }, { x: 205, y: 950 }, { x: 470, y: 875 }][i], reach: 65 })),
@@ -83,7 +97,7 @@ export const PAINT_SURFACES = [
   { id: 'grass', key: 'paint_grass', walk: { x: 1000, y: 600 }, ground: true },
   { id: 'sky', key: 'paint_sky', walk: { x: 800, y: SKY.top + 230 }, ground: true, sky: true },
 ];
-export const BUCKET_SURFACES = PAINT_SURFACES.filter(surface => /^(tree|flower)-/.test(surface.id));
+export const BUCKET_SURFACES = PAINT_SURFACES.filter(surface => surface.bucket || /^(tree|flower)-/.test(surface.id));
 export function cleanPaint(saved, palette = DEFAULT_PALETTE) {
   if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return {};
   const allowed = new Set(bucketColors(palette).map(color => color.color.toLowerCase()));
@@ -115,10 +129,10 @@ export function nearbyPaintSurface(position) {
   return BUCKET_SURFACES.filter(surface => canPaintSurface(position, surface)).sort((a, b) => surfaceDistance(position, a) - surfaceDistance(position, b))[0] || null;
 }
 export function paintColor(id, original, paint = {}, palette = DEFAULT_PALETTE) {
-  const buckets = bucketColors(palette), plant = /^(tree|flower)-/.test(id);
+  const buckets = bucketColors(palette), plant = /^(tree|flower)-/.test(id), bucket = BUCKET_SURFACES.some(surface => surface.id === id);
   const originalId = WORLD_COLOR_IDS[id] || (plant ? DEFAULT_PALETTE.find(color => BUCKET_COLOR_IDS.includes(color.id) && color.color === original)?.id : null);
   const fallback = palette.find(color => color.id === originalId)?.color || DEFAULT_PALETTE.find(color => color.id === originalId)?.color || (plant ? buckets[0].color : original);
-  return /^#[a-f0-9]{6}$/i.test(paint[id]) && (!plant || buckets.some(color => color.color.toLowerCase() === paint[id].toLowerCase())) ? paint[id] : fallback;
+  return /^#[a-f0-9]{6}$/i.test(paint[id]) && (!bucket || buckets.some(color => color.color.toLowerCase() === paint[id].toLowerCase())) ? paint[id] : fallback;
 }
 export function paintAttributes(id, original, paint = {}, interactive = false, property = 'fill', label = '', palette = DEFAULT_PALETTE) {
   const color = paintColor(id, original, paint, palette);
@@ -130,7 +144,7 @@ export function readableInk(color) {
 }
 export function createPaintPreview(root, id, color, palette = DEFAULT_PALETTE) {
   const undo = [];
-  if (!PAINT_SURFACES.some(surface => surface.id === id) || !/^#[a-f0-9]{6}$/i.test(color) || /^(tree|flower)-/.test(id) && !bucketColors(palette).some(bucket => bucket.color.toLowerCase() === color.toLowerCase())) return () => {};
+  if (!PAINT_SURFACES.some(surface => surface.id === id) || !/^#[a-f0-9]{6}$/i.test(color) || BUCKET_SURFACES.some(surface => surface.id === id) && !bucketColors(palette).some(bucket => bucket.color.toLowerCase() === color.toLowerCase())) return () => {};
   const change = (node, property, value) => {
     if (property === 'color') {
       const previous = node.style.color; node.style.color = value; undo.push(() => { node.style.color = previous; });
