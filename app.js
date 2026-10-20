@@ -15,7 +15,7 @@ import { toolboxMarkup } from './toolbox.js';
 import { wreckageTransforms } from './rocket-wreckage.js';
 import { sunHolidayPose, holidayTransform } from './sun-holiday.js';
 import { createHatQuest, savedHatQuest, startHatQuest, tickHatQuest, hatInteraction, findHat, toggleHat, paintHat, returnHat, wearsHat, animalHref, colorHatMarkup, hatEffectsMarkup, isHatTrack, hatSpot, HAT_STAND, HAT_HEADS } from './hat-quest.js';
-import { createReception, landReception, tickReception, receptionMarkup, receptionAway, swapReceptionPilot } from './reception.js';
+import { createReception, landReception, stopReceptionFireworks, tickReception, receptionMarkup, receptionAway, swapReceptionPilot } from './reception.js';
 
 const previewMode = new URLSearchParams(location.search).get('preview') === '1';
 const contentStatus = await loadContent(previewMode);
@@ -420,6 +420,7 @@ function boardRocket() {
 function exitRocket() {
   if (!state.rocket.riding || state.rocket.airborne) return;
   const exit = rocketExitPosition(state.rocket.position); if (!exit) return;
+  stopReceptionFireworks(state.reception);
   stopWalking(); state.rocket.riding = false; state.scene = 'world'; state.position = exit; state.paintTarget = null;
   renderScene(); game.focus({ preventScroll: true }); announce(text('rocket_exited'));
 }
@@ -956,7 +957,7 @@ function frame(time) {
       if (pose.done) {
         const crashed = state.landing.crashed, success = state.landing.success; state.landing = null;
         if (crashed) { state.rocket.broken = true; state.rocket.impact = state.reduced ? .8 : 0; }
-        landRocket(); exitRocket();
+        landRocket(); if (!success) exitRocket();
         if (success) { landReception(state.reception); refreshReceptionEffects(); toast(text('reception_cheer')); announce(text('reception_cheer')); }
         if (crashed) { toast(text('rocket_wrecked')); announce(text('rocket_wrecked')); }
       }

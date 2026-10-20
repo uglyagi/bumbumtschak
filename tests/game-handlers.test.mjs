@@ -942,14 +942,26 @@ for(const level of ['leicht','mittel','profi']) {
  while(h.state.landing&&clock<500)h.frame(++clock*16);
  assert(!h.state.landing);assert.equal(h.state.scene,'world');
  if(level==='profi'){
-  assert(h.state.reception);assert.equal(h.state.reception.phase,'celebrating');assert(h.game.classList.contains('is-reception'));assert(h.get('#reception-effects').innerHTML.includes('reception-fireworks'));
-  for(let i=0;i<100;i++)h.frame(++clock*16);assert.equal(reception.receptionAway(h.state.reception).length,3);
-  h.game.focus();h.state.keys.add('ArrowDown');while(h.state.reception.phase==='celebrating'&&clock<800)h.frame(++clock*16);h.state.keys.clear();assert.equal(h.state.reception.phase,'leaving');
+  assert(h.state.reception);assert.equal(h.state.reception.phase,'celebrating');assert(h.state.rocket.riding);assert(!h.state.rocket.airborne);assert(!h.game.classList.contains('is-reception'));assert(h.get('#player').attrs.has('hidden'));assert(h.game.innerHTML.includes('id="rocket-pilot" href="#animal-cat"'));assert(h.get('#reception-effects').innerHTML.includes('reception-fireworks'));
+  for(let i=0;i<700;i++)h.frame(++clock*16);assert.equal(reception.receptionAway(h.state.reception).length,3);assert(h.state.rocket.riding);assert(h.get('#reception-effects').innerHTML.includes('reception-fireworks'),'fireworks last beyond several original bursts while seated');
+  h.game.focus();h.press(h.windowHandlers,h.event('Enter','Enter',h.game));assert(!h.state.rocket.riding);assert(!h.get('#player').attrs.has('hidden'));assert(!h.get('#reception-effects').innerHTML.includes('reception-fireworks'));assert.equal(h.state.reception.phase,'celebrating');
+  const departureDeadline=clock+200;h.state.keys.add('ArrowDown');while(h.state.reception.phase==='celebrating'&&clock<departureDeadline)h.frame(++clock*16);h.state.keys.clear();assert.equal(h.state.reception.phase,'leaving');
   h.enterRoom('wardrobe');assert.equal((h.game.innerHTML.match(/id="home-animal-/g)||[]).length,0);
-  while(h.state.reception&&clock<1800)h.frame(++clock*16);assert.equal(h.state.reception,null);assert.equal((h.game.innerHTML.match(/id="home-animal-/g)||[]).length,3);
- }else assert.equal(h.state.reception,null,'only the actually completed pro level earns the reception');
+  const homeDeadline=clock+1200;while(h.state.reception&&clock<homeDeadline)h.frame(++clock*16);assert.equal(h.state.reception,null);assert.equal((h.game.innerHTML.match(/id="home-animal-/g)||[]).length,3);
+ }else {assert.equal(h.state.reception,null,'only the actually completed pro level earns the reception');assert(!h.state.rocket.riding,'other returns retain automatic exit');}
 }
-console.log('PASS: all three levels are keyboard selectable, preserve their completed result even if the next level is changed, and only pro success triggers a landing reception; walking away sends every guest back through the home entrance without duplicated figures.');
+console.log('PASS: all three levels are keyboard selectable, preserve their completed result and only pro success leaves the pilot aboard with repeating fireworks until Enter exits; walking away still sends every guest home without duplicate figures.');
+
+for (const [key, code] of [[' ', 'Space'], ['Enter', 'NumpadEnter']]) {
+  const h = await harness(false, 'dog'); h.state.scene = 'space'; h.state.position = { x: 365, y: sky.SPACE.bottom - 50 }; h.state.rocket.position = { ...h.state.position }; h.state.rocket.riding = true; h.state.rocket.airborne = true;
+  h.state.adventure = adventure.createAdventure(1200, 700); h.state.adventure.phase = 'won'; h.state.adventure.completedDifficulty = 'profi';
+  new h.Element('land', 'button', { action: 'space-land' }).click(); let clock = 0;
+  while (h.state.landing && clock < 500) h.frame(++clock * 16);
+  assert(h.state.rocket.riding); assert(!h.state.rocket.airborne); assert(h.state.reception.fireworks);
+  h.game.focus(); h.press(h.windowHandlers, h.event(key, code, h.game, true)); assert(h.state.rocket.riding);
+  h.press(h.windowHandlers, h.event(key, code, h.game)); assert(!h.state.rocket.riding); assert(!h.get('#reception-effects').innerHTML.includes('reception-fireworks')); assert.equal(h.state.reception.phase, 'celebrating');
+}
+console.log('PASS: Space and Numpad Enter also leave the parked pro rocket and end fireworks, while held confirmation does not cause an automatic exit.');
 
 try {
  dancingTrack.src='uploads/tanzen.mp3';const h=await harness(false,'cat');h.enterRoom('radio');h.state.tapes.loaded='tanzen';h.loadRecording();

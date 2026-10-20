@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ANIMALS } from '../content.js';
-import { createReception, landReception, tickReception, receptionAway, receptionMarkup, swapReceptionPilot } from '../reception.js';
+import { createReception, landReception, stopReceptionFireworks, tickReception, receptionAway, receptionMarkup, swapReceptionPilot } from '../reception.js';
 import { GROUND_ROCKET } from '../sky-world.js';
 import { canStand } from '../game-core.js';
 import { roomMarkup } from '../room-art.js';
@@ -53,4 +53,21 @@ test('all three other animals walk to the rocket, cheer with fireworks after lan
     const returned=roomMarkup('wardrobe',0,undefined,pilot.id,{away:receptionAway(r)});
     assert.equal((returned.match(/id="home-animal-/g)||[]).length,3);
   }
+});
+
+test('pro fireworks keep bursting while the pilot stays aboard and stop permanently upon exit', () => {
+  const r = createReception(ANIMALS, 'cat', GROUND_ROCKET); landReception(r);
+  for (let second = 0; second < 30; second++) {
+    for (let i = 0; i < 20; i++) tickReception(r, .05, 'world', GROUND_ROCKET, true, false);
+    const svg = receptionMarkup(r, 'world');
+    assert(svg.includes('id="reception-fireworks"'), 'fireworks continue after ' + (second + 1) + ' seconds');
+    assert.equal(r.phase, 'celebrating'); assert.equal(receptionAway(r).length, 3);
+  }
+  assert(!receptionMarkup(r, 'world').includes('is-cheering'), 'the animals retain their brief dance');
+  stopReceptionFireworks(r);
+  assert(!receptionMarkup(r, 'world').includes('reception-fireworks'), 'exit ends fireworks immediately');
+  tickReception(r, .05, 'world', GROUND_ROCKET, true, false);
+  assert(!receptionMarkup(r, 'world').includes('reception-fireworks'), 'reboarding does not restart fireworks');
+  assert.equal(r.phase, 'celebrating', 'the guests stay until the pilot walks away');
+  tickReception(r, .05, 'world', { x: 900, y: 800 }); assert.equal(r.phase, 'leaving');
 });
