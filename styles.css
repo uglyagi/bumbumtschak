@@ -50,3 +50,5 @@ dialog.space-choice{width:min(640px,calc(100% - 28px));margin:auto auto 6vh;max-
 .game.is-reception #player-body{animation:party-dance 1.05s ease-in-out infinite alternate;transform-origin:0 0}
 
 .chocolate-progress,.chocolate-boost{position:absolute;left:20px;top:20px;max-width:calc(100% - 220px);border:3px solid #101014;border-radius:12px;background:#fff20b;padding:9px 13px;font-size:13px;font-weight:900;box-shadow:3px 3px 0 #101014;pointer-events:none}.chocolate-boost{top:67px;background:#ffd0e8}.chocolate-progress[hidden],.chocolate-boost[hidden]{display:none}@media(max-width:600px){.chocolate-progress,.chocolate-boost{left:12px;max-width:calc(100% - 160px);font-size:10px;padding:7px 9px}.chocolate-boost{top:62px}}
+
+.friend-guest.is-walking .friend-body{animation:walk .35s ease-in-out infinite alternate;transform-origin:0 0}.game.paused .friend-body{animation-play-state:paused}@media(prefers-reduced-motion:reduce){.friend-body{animation:none!important}}

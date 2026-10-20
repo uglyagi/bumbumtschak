@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { MAZE, CHOCOLATE_ROWS, MAZE_SPAWN, MAZE_EXIT, MAZE_CHOCOLATES, canStandChocolate, chocolatePath, createChocolate, savedChocolate, chocolateSpeed, tickChocolate, takeChocolate, eatChocolate, newChocolateRun, collectChocolate, beginChocolateExit, advanceChocolateExit, isChocolateTrack, touchingChocolateDoor, CHOCOLATE_DOOR } from '../chocolate.js';
+import { MAZE, CHOCOLATE_ROWS, MAZE_SPAWN, MAZE_EXIT, MAZE_CHOCOLATES, canStandChocolate, chocolatePath, createChocolate, savedChocolate, chocolateSpeed, chocolateMusicGain, tickChocolate, takeChocolate, eatChocolate, newChocolateRun, collectChocolate, beginChocolateExit, advanceChocolateExit, isChocolateTrack, touchingChocolateDoor, CHOCOLATE_DOOR } from '../chocolate.js';
 import { move, canStand, planPath, WORLD } from '../game-core.js';
 import { chocolateMazeMarkup } from '../chocolate-art.js';
 import { roomMarkup } from '../room-art.js';
@@ -51,11 +51,11 @@ test('automatic returns follow a clear maze path to the exit even when the music
   }
 });
 
-test('the drawer reward persists, one confirmation takes a bar, the next eats it and refreshes exactly twenty seconds at double speed', () => {
+test('the drawer reward persists, one confirmation takes a bar, the next eats it and refreshes a twenty-second boost', () => {
   const locked = createChocolate(); assert(!takeChocolate(locked)); assert(!eatChocolate(locked));
   const chocolate = createChocolate({ unlocked: true }); assert(takeChocolate(chocolate)); assert(!takeChocolate(chocolate)); assert.equal(chocolateSpeed(chocolate), 1);
   assert(eatChocolate(chocolate)); assert(!eatChocolate(chocolate)); assert.equal(chocolate.boost, 20); assert.equal(chocolateSpeed(chocolate), 2);
-  tickChocolate(chocolate, 19.9); assert.equal(chocolateSpeed(chocolate), 2); assert(takeChocolate(chocolate)); assert(eatChocolate(chocolate)); assert.equal(chocolate.boost, 20);
+  tickChocolate(chocolate, 19.9); assert(Math.abs(chocolateSpeed(chocolate) - 1.02) < 1e-10); assert(takeChocolate(chocolate)); assert(eatChocolate(chocolate)); assert.equal(chocolate.boost, 20);
   tickChocolate(chocolate, 20); assert.equal(chocolateSpeed(chocolate), 1); assert.equal(chocolate.boost, 0);
   assert.deepEqual(savedChocolate(chocolate), { unlocked: true });
   const reload = createChocolate(savedChocolate(chocolate)); assert(reload.unlocked); assert(!reload.carrying); assert.equal(reload.boost, 0);
@@ -83,4 +83,13 @@ test('revisiting keeps a collection without repeating rewards and a fresh casset
   for (const treat of MAZE_CHOCOLATES) assert.equal(collectChocolate(finished, treat), null);
   assert.equal(newChocolateRun().collected.length, 0);
   assert.equal(createChocolate({ unlocked: true }).collected.length, 0, 'a new visit does not persist a half-played cassette');
+});
+
+test('the final five boost seconds fade from double to ordinary speed and from full volume to silence', () => {
+  const chocolate = createChocolate({ unlocked: true }); takeChocolate(chocolate); eatChocolate(chocolate);
+  assert.equal(chocolateSpeed(chocolate), 2); assert.equal(chocolateMusicGain(chocolate), 1);
+  tickChocolate(chocolate, 15); assert.equal(chocolate.boost, 5); assert.equal(chocolateSpeed(chocolate), 2); assert.equal(chocolateMusicGain(chocolate), 1);
+  tickChocolate(chocolate, 2.5); assert.equal(chocolateSpeed(chocolate), 1.5); assert.equal(chocolateMusicGain(chocolate), .5);
+  tickChocolate(chocolate, 2.5); assert.equal(chocolate.boost, 0); assert.equal(chocolateSpeed(chocolate), 1); assert.equal(chocolateMusicGain(chocolate), 0);
+  tickChocolate(chocolate, 100); assert.equal(chocolateSpeed(chocolate), 1);
 });

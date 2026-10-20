@@ -94,6 +94,7 @@ export function worldMarkup(paint = {}, painting = false, scene = 'world', rocke
     <g fill="none" stroke="#101014" stroke-width="3" stroke-linecap="round" opacity=".7">${grass.map(([x, y]) => `<path d="m${x} ${y} -7-14 13 9 3-18 6 15 8-7"/>`).join('')}</g>
     <g transform="translate(195 -295)"><g stroke="#101014" stroke-width="4" ${P('sun', '#fff20b')}><path d="m20 53-26-11 24-10-3-27 22 15 23-22 7 27 28 1-16 21 18 22-29 2-2 28-24-18-25 11Z"/><circle cx="46" cy="49" r="33"/></g><path d="M38 41v10m21-10v10M35 60q12 13 26-1" fill="none" stroke="#101014" stroke-width="4" stroke-linecap="round"/></g>
     ${CLOUDS.map(([x, y, w, h], i) => `<use href="#cloud" x="${x}" y="${y}" width="${w}" height="${h}" overflow="visible" ${P(`cloud-${i}`, '#ffffff', 'color')}/>`).join('')}
+    ${snapshot ? '' : '<g id="friends-hidden"></g>'}
     ${TREES.map(([x, y, w, h, color], i) => `<use href="#tree" x="${x}" y="${y}" width="${w}" height="${h}" overflow="visible" ${P(`tree-${i}`, color, 'color')}/>`).join('')}
     <g stroke="#101014" stroke-linejoin="round" stroke-linecap="round">
       <path d="M533 320V150q270-100 552 0v170Z" ${P('stage-wall', '#ffffff')} stroke-width="5"/>
@@ -116,6 +117,7 @@ export function worldMarkup(paint = {}, painting = false, scene = 'world', rocke
     ${socialPadsMarkup('world', activeGround)}
     ${snapshot ? '' : rocketMarkup(rocket, animal)}
     ${snapshot ? '' : `
+    <g id="friends-world"></g>
     <g id="destination-marker" hidden=""><ellipse rx="17" ry="8" fill="none" stroke="#101014" stroke-width="3" stroke-dasharray="4 4"/></g>
     <g id="player" transform="translate(${WORLD_SPAWN.x} ${WORLD_SPAWN.y})"><ellipse cx="0" cy="0" rx="25" ry="9" fill="#101014" opacity=".18"/><g id="player-body"><use id="player-use" href="#animal-cat" x="-34" y="-77" width="68" height="82"/><g id="carried-tape" transform="translate(-29 -39) scale(.44)" hidden=""></g><g id="carried-toolbox" transform="translate(-43 -63) scale(.4)" hidden=""></g><g id="carried-paint" transform="translate(12 -44) scale(.38)" hidden=""></g></g><path d="m-5-91 5 6 5-6" fill="none" stroke="#101014" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></g>`}
   </svg>`;

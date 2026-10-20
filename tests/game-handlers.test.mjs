@@ -18,17 +18,20 @@ const hats = await import(new URL(`hat-quest.${extension}`, root));
 const reception = await import(new URL(`reception.${extension}`, root));
 const chocolate = await import(new URL(`chocolate.${extension}`, root));
 const chocolateArt = await import(new URL(`chocolate-art.${extension}`, root));
+const friends = await import(new URL(`friends-game.${extension}`, root));
+const friendsArt = await import(new URL(`friends-art.${extension}`, root));
 
 // Exercise the application's real registered handlers with DOM test doubles.
 // This checks app behavior, not browser rendering or native default actions.
 const source = await fs.readFile(new URL(`app.${extension}`, root), 'utf8');
-async function harness(preview = false, savedAnimal = '', savedDrawing = null, damaged = false, savedHat = null, savedChocolates = null) {
+async function harness(preview = false, savedAnimal = '', savedDrawing = null, damaged = false, savedHat = null, savedChocolates = null, savedFriendCamp = null) {
   const opened = [];
   const stored = new Map(savedAnimal ? [['bbt-animal', savedAnimal]] : []);
   if (savedDrawing) stored.set(preview ? 'bbt-paint-preview' : 'bbt-paint-world', JSON.stringify(savedDrawing));
   if (savedHat) stored.set(preview ? 'bbt-hat-preview' : 'bbt-hat-world', JSON.stringify(savedHat));
   if (damaged) stored.set(preview ? 'bbt-rocket-preview-damaged' : 'bbt-rocket-damaged', '1');
   if (savedChocolates) stored.set(preview ? 'bbt-chocolate-preview' : 'bbt-chocolate-world', JSON.stringify(savedChocolates));
+  if (savedFriendCamp) stored.set(preview ? 'bbt-friends-preview' : 'bbt-friends-world', JSON.stringify(savedFriendCamp));
   const nodes = new Map(), windowHandlers = new Map(), documentHandlers = new Map();
   const add = (map, name, callback) => map.set(name, [...(map.get(name) || []), callback]);
   const doc = { activeElement: null, hidden: false, baseURI: 'https://uglyagi.github.io/bumbumtschak/' };
@@ -83,6 +86,7 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null, d
         if (part === '[data-room-target]' && this.dataset.roomTarget) return this;
         if (part === '[data-social]' && this.dataset.social) return this;
         if (part === '[data-paint-target]' && this.dataset.paintTarget) return this;
+        if (part === '[data-friends-tent]' && Object.hasOwn(this.dataset, 'friendsTent')) return this;
         if (part === '[data-hat-target]' && this.dataset.hatTarget) return this;
         if (part === '[data-studio-color]' && this.dataset.studioColor) return this;
         if (part === '[data-studio-control]' && this.dataset.studioControl) return this;
@@ -100,7 +104,7 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null, d
   const game = get('#game'), modal = get('#modal'), modalContent = get('#modal-content'), audio = get('#audio');
   for (const node of [audio, get('#member-audio')]) Object.assign(node, { paused: true, ended: false, currentTime: 0, pause() { this.paused = true; }, play() { this.paused = false; this.ended = false; return Promise.resolve(); }, load() {} });
   const context = vm.createContext({
-    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky, ...dance, ...studio, ...adventure, ...adventureArt, ...toolbox, ...wreckage, ...holiday, ...hats, ...reception, ...chocolate, ...chocolateArt,
+    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky, ...dance, ...studio, ...adventure, ...adventureArt, ...toolbox, ...wreckage, ...holiday, ...hats, ...reception, ...chocolate, ...chocolateArt, ...friends, ...friendsArt,
     loadContent: async () => ({ ok: true }), document: doc,
     window: { innerWidth: 1200, matchMedia: () => ({ matches: false }), addEventListener: (n, cb) => add(windowHandlers, n, cb), open(...args) { opened.push(args); } },
     location: { search: preview ? '?preview=1' : '' }, localStorage: { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value) },
@@ -1135,7 +1139,7 @@ try {
   const alreadyPlaying = await harness(false, 'dog', null, false, null, { unlocked: true }); alreadyPlaying.state.tapes.loaded = boostTrack.id; alreadyPlaying.loadRecording(); alreadyPlaying.get('#audio').currentTime = 43;
   alreadyPlaying.enterRoom('wardrobe'); alreadyPlaying.state.position = { ...chocolate.CHOCOLATE_DRAWER }; alreadyPlaying.game.focus();
   alreadyPlaying.press(alreadyPlaying.windowHandlers, alreadyPlaying.event('Enter', 'Enter', alreadyPlaying.game)); alreadyPlaying.press(alreadyPlaying.windowHandlers, alreadyPlaying.event('Enter', 'Enter', alreadyPlaying.game));
-  assert.equal(alreadyPlaying.state.boostMusic, null); assert.equal(alreadyPlaying.get('#audio').currentTime, 43, 'Schokolade already playing continues smoothly');
+  assert.equal(alreadyPlaying.state.boostMusic.continuing, true); assert.equal(alreadyPlaying.get('#audio').currentTime, 43, 'Schokolade already playing continues smoothly until it fades out');
 } finally { content.TRACKS.splice(content.TRACKS.indexOf(boostTrack), 1); content.TRACKS[1].src = originalBoostCassette; }
 console.log('PASS: eating with Enter, Space or Numpad Enter plays Schokolade for the twenty-second boost, restores an empty, paused or playing radio at its saved position, leaves cassettes in place, supports repeated treats and respects a newly selected cassette.');
 
@@ -1171,3 +1175,84 @@ try {
   assert(h.game.innerHTML.includes('data-room-target="choco-door"')); enter(); assert.equal(visibleBars(), 5); assert.equal(h.state.chocolate.run.collected.length, 0);
 } finally { content.TRACKS.splice(content.TRACKS.indexOf(returnTrack), 1); }
 console.log('PASS: returning from the maze keeps the speaker doorway open, collected bars and 0/5–5/5 counts persist across visits and replay, pause preserves the doorway, song end closes it, and physically ejecting/reinserting the cassette alone restores all five bars.');
+
+const friendsTrack = content.TRACKS.find(track => track.id === 'freundschaft'), previousFriendsSrc = friendsTrack.src;
+try {
+  friendsTrack.src = 'uploads/beste-freunde.mp3';
+  const h = await harness(false, 'cat'); h.enterRoom('radio'); h.state.tapes.loaded = friendsTrack.id; h.loadRecording(); h.game.focus(); let clock = 0;
+  const step = () => h.frame(++clock * 16);
+  assert.equal(h.state.friends.phase, 'chasing'); assert(h.state.friendsExit); assert(h.get('#toast').textContent.includes('Fangenspielen'));
+  assert.equal(h.state.friends.actors.length, 3); assert(!h.state.friends.actors.some(actor => actor.id === h.state.animal));
+  const exitLimit = clock + 700;
+  while (h.state.scene === 'radio' && clock < exitLimit) step();
+  assert.equal(h.state.scene, 'world'); assert.equal(h.state.friendsExit, null); assert(!h.modal.open);
+  assert(h.get('#friends-hidden').innerHTML.includes('href="#animal-dog"'));
+  h.enterRoom('wardrobe'); assert.equal((h.game.innerHTML.match(/id="home-animal-/g) || []).length, 0, 'friends hiding outside have no home duplicates'); h.leaveRoom();
+  const first = h.state.friends.actors[0]; h.state.position = { x: first.position.x, y: first.position.y + 100 }; step();
+  assert.equal(first.status, 'running'); const before = { ...first.position }; step(); assert(Math.hypot(first.position.x - before.x, first.position.y - before.y) > 0);
+  h.state.position = { ...first.position }; step(); assert.equal(first.status, 'following'); assert.equal(h.state.friends.caught.length, 1);
+  h.get('#audio').pause(); for (const cb of h.get('#audio').handlers.get('pause')) cb({});
+  await h.get('#audio').play(); for (const cb of h.get('#audio').handlers.get('play')) cb({});
+  assert.equal(h.state.friends.caught.length, 1, 'pause/resume does not start a new chase');
+  for (const actor of h.state.friends.actors.slice(1)) { h.state.position = { ...actor.position }; step(); }
+  assert.equal(h.state.friends.phase, 'celebrate'); step(); assert(h.get('#friends-confetti').innerHTML.includes('<rect'));
+  const campLimit = clock + 2500;
+  while (h.state.friends.phase !== 'camping' && clock < campLimit) step();
+  assert.equal(h.state.friends.phase, 'camping'); assert(h.state.friends.unlocked); assert(JSON.parse(h.stored.get('bbt-friends-world')).tent);
+  assert(h.get('#friends-world').innerHTML.includes('id="friend-tent"')); assert(!h.get('#friend-fire-flame').attrs.has('hidden'));
+  assert(Math.hypot(h.state.position.x - friends.FRIEND_CAMP_PLAYER.x, h.state.position.y - friends.FRIEND_CAMP_PLAYER.y) < 10, 'the player walks to the water with the friends');
+  h.state.keys.add('ArrowRight'); const leaveLimit = clock + 160;
+  while (h.state.friends.phase === 'camping' && clock < leaveLimit) step(); h.state.keys.clear();
+  assert.equal(h.state.friends.phase, 'returning'); assert(h.get('#friend-fire-flame').attrs.has('hidden'));
+  const homeLimit = clock + 2000; while (h.state.friends.phase !== 'idle' && clock < homeLimit) step();
+  assert.equal(h.state.friends.phase, 'idle'); assert(h.state.friends.unlocked); assert.equal(friends.friendsAway(h.state.friends).length, 0);
+  h.enterRoom('wardrobe'); assert.equal((h.game.innerHTML.match(/id="home-animal-/g) || []).length, 3); h.leaveRoom();
+  h.get('#audio').ended = true; h.get('#audio').paused = true; for (const cb of h.get('#audio').handlers.get('ended')) cb({});
+  await h.get('#audio').play(); for (const cb of h.get('#audio').handlers.get('play')) cb({});
+  assert.equal(h.state.friends.phase, 'chasing'); assert.equal(h.state.friends.caught.length, 0); assert(h.state.friends.unlocked);
+} finally { friendsTrack.src = previousFriendsSrc; }
+console.log('PASS: Beste Freunde shows the invitation, walks the player out through the Music House exit, hides the three other animals behind trees, reveals and catches by touch, preserves a paused chase, shows confetti, walks everyone to the water, builds and saves the tent, lights the fire, sends friends home when walking away and starts a new chase on replay.');
+
+for (const [key, code, preview] of [['Enter', 'Enter', false], [' ', 'Space', false], ['Enter', 'NumpadEnter', true]]) {
+  const h = await harness(preview, 'dog', null, false, null, null, { tent: true }); h.game.focus(); let clock = 0;
+  assert(h.state.friends.unlocked); assert.equal(h.state.friends.phase, 'idle'); assert(h.get('#friends-world').innerHTML.includes('data-friends-tent'));
+  h.state.position = { x: friends.FRIEND_TENT.x, y: friends.FRIEND_TENT.y - 75 };
+  assert.equal(h.currentInteraction()?.kind, 'friends-camp');
+  h.press(h.windowHandlers, h.event(key, code, h.game, true)); assert.equal(h.state.friends.phase, 'idle');
+  h.press(h.windowHandlers, h.event(key, code, h.game)); assert.equal(h.state.friends.phase, 'gathering');
+  for (const actor of h.state.friends.actors) assert.deepEqual({ ...actor.position }, { ...core.HOUSE_DOORS.find(door => door.id === 'wardrobe').outside });
+  const deadline = clock + 1800; while (h.state.friends.phase !== 'camping' && clock < deadline) h.frame(++clock * 16);
+  assert.equal(h.state.friends.phase, 'camping'); assert(!h.get('#friend-fire-flame').attrs.has('hidden'));
+  h.press(h.windowHandlers, h.event(key, code, h.game)); assert.equal(h.state.friends.phase, 'camping', 'confirmation at a burning camp does not duplicate or reset guests');
+  h.enterRoom('wardrobe'); h.frame(++clock * 16); assert.equal(h.state.friends.phase, 'returning');
+  assert.equal((h.game.innerHTML.match(/id="home-animal-/g) || []).length, 0);
+  const homeLimit = clock + 1800; while (h.state.friends.phase !== 'idle' && clock < homeLimit) h.frame(++clock * 16);
+  assert.equal(h.state.friends.phase, 'idle'); assert.equal((h.game.innerHTML.match(/id="home-animal-/g) || []).length, 3);
+  assert(h.state.friends.unlocked); h.leaveRoom(); assert(h.get('#friends-world').innerHTML.includes('id="friend-tent"'));
+}
+console.log('PASS: a saved tent works with Enter, Space and Numpad Enter, calls exactly three friends out of Home sweet Home, lights a shared fire after their walk, ignores held or repeated invitations, and restores the home animals after the player leaves.');
+
+const fadingTrack = { id: 'schokolade', title: 'Schokolade', src: 'uploads/schokolade.mp3', color: '#ff87ce', image: 'assets/hut.png' };
+const preFadeTanzen = content.TRACKS[1].src; content.TRACKS[1].src = 'uploads/tanzen.mp3'; content.TRACKS.push(fadingTrack);
+try {
+  for (const mode of ['empty', 'other', 'schokolade']) {
+    const h = await harness(false, 'cat', null, false, null, { unlocked: true });
+    if (mode !== 'empty') { h.state.tapes.loaded = mode === 'other' ? 'tanzen' : fadingTrack.id; h.loadRecording(); }
+    h.enterRoom('wardrobe'); h.state.position = { ...chocolate.CHOCOLATE_DRAWER }; h.game.focus();
+    h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game)); h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game));
+    h.leaveRoom(); h.state.position = { x: 650, y: 650 }; h.frame(16);
+    assert.equal(h.get('#audio').volume, .6); assert.equal(chocolate.chocolateSpeed(h.state.chocolate), 2);
+    h.frame(15016); assert.equal(h.state.chocolate.boost, 5); assert.equal(h.get('#audio').volume, .6);
+    h.frame(17516); assert.equal(h.state.chocolate.boost, 2.5); assert.equal(h.get('#audio').volume, .3); assert.equal(chocolate.chocolateSpeed(h.state.chocolate), 1.5);
+    const volume = new h.Element('volume', 'input'); volume.id = 'volume'; volume.value = '.8';
+    for (const cb of h.documentHandlers.get('input') || []) cb({ target: volume });
+    assert.equal(h.get('#audio').volume, .4, 'the fade follows the selected master volume');
+    h.showPanel('panda'); assert.equal(h.get('#audio').volume, .4, 'closing or opening a biography does not reset the fade'); h.closePanel(); h.game.focus();
+    h.state.keys.add('ArrowRight'); const x = h.state.position.x; h.frame(17532); h.state.keys.clear();
+    const travelled = h.state.position.x - x; assert(travelled > core.WORLD.speed * .016 && travelled < core.WORLD.speed * .016 * 2);
+    h.frame(20017); assert.equal(h.state.chocolate.boost, 0); assert.equal(chocolate.chocolateSpeed(h.state.chocolate), 1);
+    if (mode === 'other') { assert.equal(h.get('#audio').src, 'uploads/tanzen.mp3'); assert(!h.get('#audio').paused); assert.equal(h.get('#audio').volume, .8); }
+    else assert(h.get('#audio').paused, 'Schokolade ends quietly after the boost, including when its cassette was already playing');
+  }
+} finally { content.TRACKS.splice(content.TRACKS.indexOf(fadingTrack), 1); content.TRACKS[1].src = preFadeTanzen; }
+console.log('PASS: the boost keeps full speed and volume for fifteen seconds, fades volume and walking smoothly for the final five seconds, follows volume controls, ends at normal speed and silence, and restores a different previously playing cassette.');

@@ -2204,14 +2204,15 @@ COPY_GROUPS.push({ id: 'chocolate', label: 'Schokolabyrinth & Schokoladenlade', 
   {
     "key": "choco_eaten",
     "label": "Temposchub aktiviert",
-    "value": "Mmmh! 20 Sekunden doppelt so schnell – mit Schokolade-Musik!",
-    "previousValues": ["Mmmh! Du läufst jetzt 20 Sekunden doppelt so schnell!"],
+    "value": "Mmmh! Ein Temposchub mit Schokolade-Musik!",
+    "previousValues": ["Mmmh! Du läufst jetzt 20 Sekunden doppelt so schnell!", "Mmmh! 20 Sekunden doppelt so schnell – mit Schokolade-Musik!"],
     "max": 400
   },
   {
     "key": "choco_boost",
     "label": "Temposchub-Anzeige",
-    "value": "Doppeltes Tempo · {sekunden} s",
+    "value": "Schoko-Tempo · {sekunden} s",
+    "previousValues": ["Doppeltes Tempo · {sekunden} s"],
     "max": 400
   }
 ] });
@@ -2281,6 +2282,62 @@ COPY_GROUPS.push({ id: 'paint-details', label: 'Farbflächen an Häusern und Sch
     "label": "Farbfläche: Briefkasten",
     "value": "Briefkasten",
     "max": 180
+  }
+] });
+COPY_GROUPS.push({ id: 'friends', label: 'Beste Freunde: Fangenspiel und Lagerfeuer', fields: [
+  {
+    "key": "friends_start",
+    "label": "Beginn des Fangenspiels",
+    "value": "Fangenspielen … suche deine Freunde und fange sie!",
+    "max": 500
+  },
+  {
+    "key": "friends_progress",
+    "label": "Gefangene Freunde",
+    "value": "Freunde: {anzahl} / 3",
+    "max": 500
+  },
+  {
+    "key": "friends_caught",
+    "label": "Freund gefangen",
+    "value": "Du hast {name} gefangen!",
+    "max": 500
+  },
+  {
+    "key": "friends_complete",
+    "label": "Alle Freunde gefangen",
+    "value": "Alle drei gefangen! Auf zum Wasser!",
+    "max": 500
+  },
+  {
+    "key": "friends_to_water",
+    "label": "Weg zum Lagerplatz",
+    "value": "Gemeinsam zum Wasser – wir bauen ein Zelt!",
+    "max": 500
+  },
+  {
+    "key": "friends_tent",
+    "label": "Name des Zelts",
+    "value": "Unser Freundezelt",
+    "max": 500
+  },
+  {
+    "key": "friends_meet",
+    "label": "Aktion am Zelt",
+    "value": "Lagerfeuer mit Freunden",
+    "max": 500
+  },
+  {
+    "key": "friends_invited",
+    "label": "Freunde eingeladen",
+    "value": "Deine Freunde kommen zum Lagerfeuer!",
+    "max": 500
+  },
+  {
+    "key": "friends_camp_ready",
+    "label": "Lagerfeuer bereit",
+    "value": "Zelt aufgebaut, Freunde da: Zeit fürs Lagerfeuer!",
+    "max": 500
   }
 ] });
 export const COPY_FIELDS = COPY_GROUPS.flatMap(group => group.fields);

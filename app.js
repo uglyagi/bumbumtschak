@@ -16,8 +16,10 @@ import { wreckageTransforms } from './rocket-wreckage.js';
 import { sunHolidayPose, holidayTransform } from './sun-holiday.js';
 import { createHatQuest, savedHatQuest, startHatQuest, tickHatQuest, hatInteraction, findHat, toggleHat, paintHat, returnHat, wearsHat, animalHref, colorHatMarkup, hatEffectsMarkup, isHatTrack, hatSpot, HAT_STAND, HAT_HEADS } from './hat-quest.js';
 import { createReception, landReception, stopReceptionFireworks, tickReception, receptionMarkup, receptionAway, swapReceptionPilot } from './reception.js';
-import { createChocolate, savedChocolate, chocolateSpeed, tickChocolate, takeChocolate, eatChocolate, newChocolateRun, collectChocolate, beginChocolateExit, advanceChocolateExit, isChocolateTrack, touchingChocolateDoor, CHOCOLATE_DOOR, CHOCOLATE_RETURN, CHOCOLATE_DRAWER, MAZE_SPAWN, MAZE_EXIT, MAZE_CHOCOLATES, chocolateBarMarkup, chocolateConfetti } from './chocolate.js';
+import { createChocolate, savedChocolate, chocolateSpeed, chocolateMusicGain, tickChocolate, takeChocolate, eatChocolate, newChocolateRun, collectChocolate, beginChocolateExit, advanceChocolateExit, isChocolateTrack, touchingChocolateDoor, CHOCOLATE_DOOR, CHOCOLATE_RETURN, CHOCOLATE_DRAWER, MAZE_SPAWN, MAZE_EXIT, MAZE_CHOCOLATES, chocolateBarMarkup, chocolateConfetti } from './chocolate.js';
 import { chocolateMazeMarkup } from './chocolate-art.js';
+import { createFriends, savedFriends, isFriendsTrack, startFriends, releaseFriends, swapFriendsPlayer, friendsAway, friendsTentNear, gatherFriends, tickFriends, FRIEND_CAMP_PLAYER, FRIEND_TENT } from './friends-game.js';
+import { friendsHiddenMarkup, friendsWorldMarkup, friendsConfettiMarkup } from './friends-art.js';
 
 const previewMode = new URLSearchParams(location.search).get('preview') === '1';
 const contentStatus = await loadContent(previewMode);
@@ -38,6 +40,9 @@ const savedRocketDamage = storage.get(rocketStorageKey, '0') === '1';
 const savedDifficulty = storage.get('adventure-difficulty', 'leicht');
 const hatStorageKey = previewMode ? 'hat-preview' : 'hat-world';
 const chocolateStorageKey = previewMode ? 'chocolate-preview' : 'chocolate-world';
+const friendsStorageKey = previewMode ? 'friends-preview' : 'friends-world';
+let savedFriendCamp = null;
+try { savedFriendCamp = JSON.parse(storage.get(friendsStorageKey, 'null')); } catch { /* A missing or damaged local campsite starts locked. */ }
 let savedChocolates = null;
 try { savedChocolates = JSON.parse(storage.get(chocolateStorageKey, 'null')); } catch { /* A damaged local reward starts locked. */ }
 let savedHat = null;
@@ -58,6 +63,7 @@ const state = {
   rocket: { position: { ...GROUND_ROCKET }, riding: false, airborne: false, damaged: savedRocketDamage, broken: savedRocketDamage, impact: null },
   adventure: null, landing: null, toolbox: false, homeReturns: [],
   party: createParty(), chocolate: createChocolate(savedChocolates),
+  friends: createFriends(savedFriendCamp), friendsRestartPending: false, friendsExit: null,
   hat: createHatQuest(savedHat), hatActive: false, hatRestartPending: false,
   difficulty: Object.hasOwn(DIFFICULTIES, savedDifficulty) ? savedDifficulty : 'leicht', reception: null,
   volume: clamp(Number(storage.get('volume', '.6')) || 0, 0, 1),
@@ -75,7 +81,7 @@ for (const node of document.querySelectorAll('[data-copy-aria]')) node.setAttrib
 document.title = text('page_title');
 document.querySelector('meta[name=description]')?.setAttribute('content', text('page_description'));
 audio.volume = state.volume;
-let previousFocus = null, toastTimer, lastTime = 0, stuckTime = 0, paintPreview = null, memberRequest = 0, discoFrame = null;
+let previousFocus = null, toastTimer, lastTime = 0, stuckTime = 0, paintPreview = null, memberRequest = 0, discoFrame = null, friendsRenderKey = '', friendsEffectFrame = -1;
 
 function announce(message) { $('#announcement').textContent = message; }
 function toast(message) { clearTimeout(toastTimer); const el = $('#toast'); el.textContent = message; el.hidden = false; toastTimer = setTimeout(() => { el.hidden = true; }, 3500); }
@@ -255,6 +261,7 @@ function tickHats(dt) {
   }
   if (event || state.hat.phase === 'flying' || state.hat.returning || state.hat.celebration || before) refreshHatEffects();
 }
+function awayAnimals() { return [...new Set([...receptionAway(state.reception), ...friendsAway(state.friends)])]; }
 function refreshReceptionEffects() {
   const layer = $('#reception-effects');
   game.classList.toggle('is-reception', state.scene === 'world' && state.reception?.phase === 'celebrating' && state.reception.partyTime < 4.5 && !state.reduced && !state.rocket.riding && !state.keys.size && !state.path.length);
@@ -262,12 +269,101 @@ function refreshReceptionEffects() {
 }
 function updateReception(dt) {
   if (!state.reception) return;
-  const away = receptionAway(state.reception).join(',');
+  const away = awayAnimals().join(',');
   tickReception(state.reception, dt, state.scene, state.position, state.rocket.riding, state.rocket.airborne);
   if (state.reception.phase === 'done') state.reception = null;
-  if (state.scene === 'wardrobe' && away !== receptionAway(state.reception).join(',')) renderScene();
+  if (state.scene === 'wardrobe' && away !== awayAnimals().join(',')) renderScene();
   else refreshReceptionEffects();
 }
+function refreshFriendsPlayback() {
+  if (!state.started || !state.friendsRestartPending || !state.playing || audio.ended || audio.error || !isFriendsTrack(playbackTrack())) return;
+  state.friendsRestartPending = false;
+  const start = state.scene === 'world' ? state.position : HOUSE_DOORS.find(door => door.id === 'radio').outside;
+  startFriends(state.friends, ANIMALS, state.animal, start);
+  state.reception = null; state.homeReturns = [];
+  stopWalking(); closePanel();
+  if (state.scene === 'radio') state.friendsExit = { path: planPath(state.position, { x: EXIT.x, y: 1025 }, 'radio') };
+  renderScene(); game.focus({ preventScroll: true });
+  toast(text('friends_start')); announce(text('friends_start'));
+}
+function frameFriendsExit(dt) {
+  if (!state.friendsExit) return false;
+  if (state.scene !== 'radio') { state.friendsExit = null; return false; }
+  if (!state.started || modal.open || document.hidden) return true;
+  const path = state.friendsExit.path; let amount = WORLD.speed * dt;
+  while (path.length && amount > .01) {
+    const point = path[0], distance = Math.hypot(point.x - state.position.x, point.y - state.position.y);
+    if (distance < 2) { path.shift(); continue; }
+    const step = Math.min(amount, distance, WORLD.speed * .025), previous = state.position;
+    state.position = move(previous, point.x - previous.x, point.y - previous.y, step / WORLD.speed, 'radio');
+    if (Math.hypot(previous.x - state.position.x, previous.y - state.position.y) < .01) break;
+    amount -= step;
+  }
+  player.classList.toggle('is-moving', true);
+  player.setAttribute('transform', 'translate(' + state.position.x.toFixed(2) + ' ' + state.position.y.toFixed(2) + ')');
+  updateCamera(dt);
+  if (throughExit('radio', state.position) || !path.length) {
+    state.friendsExit = null; leaveRoom(); announce(text('friends_start')); toast(text('friends_start'));
+  }
+  return true;
+}
+function refreshFriendsWorld(force = false) {
+  const friends = state.friends, badge = $('#friends-progress');
+  const showing = state.scene === 'world' && !state.rocket.riding;
+  const active = ['chasing', 'celebrate', 'to-camp', 'building'].includes(friends.phase);
+  badge.hidden = !showing || !active;
+  const count = text('friends_progress', { anzahl: friends.caught.length });
+  if (badge.textContent !== count) badge.textContent = count;
+  if (state.scene !== 'world') return;
+  const key = friends.phase + ':' + friends.unlocked + ':' + friends.actors.map(actor => actor.id + '-' + actor.status).join(',');
+  if (force || key !== friendsRenderKey) {
+    $('#friends-hidden').innerHTML = friendsHiddenMarkup(friends);
+    $('#friends-world').innerHTML = friendsWorldMarkup(friends);
+    friendsRenderKey = key; friendsEffectFrame = -1;
+  }
+  for (const actor of friends.actors) {
+    if (actor.status === 'home') continue;
+    const node = $('#friend-' + actor.id), transform = 'translate(' + actor.position.x.toFixed(2) + ' ' + actor.position.y.toFixed(2) + ')';
+    if (node?.getAttribute('transform') !== transform) node?.setAttribute('transform', transform);
+    node?.classList.toggle('is-walking', actor.walking && !state.reduced);
+  }
+  $('#friend-tent-fabric')?.setAttribute('transform', 'scale(1 ' + (friends.phase === 'building' ? Math.max(.03, friends.campBuild) : 1).toFixed(3) + ')');
+  const fire = friends.phase === 'camping' || friends.phase === 'building' && friends.campBuild > .65;
+  $('#friend-fire-flame')?.toggleAttribute('hidden', !fire);
+  const effectFrame = Math.floor(friends.elapsed * 20);
+  if (force || effectFrame !== friendsEffectFrame) {
+    friendsEffectFrame = effectFrame;
+    if (fire) $('#friend-fire-flame')?.setAttribute('transform', state.reduced ? 'scale(1 1)' : 'scale(' + (1 + Math.sin(friends.elapsed * 8) * .05).toFixed(3) + ' ' + (1 + Math.sin(friends.elapsed * 11) * .08).toFixed(3) + ')');
+    $('#friends-confetti').innerHTML = friends.phase === 'celebrate' ? friendsConfettiMarkup(friends.elapsed, friends.celebration, state.reduced) : '';
+  }
+}
+function updateFriends(dt) {
+  const previousAway = awayAnimals().join(',');
+  const events = tickFriends(state.friends, dt, state.scene, state.position, state.rocket.riding, state.rocket.position, state.reduced);
+  for (const event of events) {
+    if (event.type === 'caught') {
+      const name = ANIMALS.find(animal => animal.id === event.id)?.name || '';
+      toast(text('friends_caught', { name })); announce(text('friends_caught', { name }));
+    }
+    if (event.type === 'complete') { stopWalking(); toast(text('friends_complete')); announce(text('friends_complete')); }
+    if (event.type === 'camp-walk') {
+      stopWalking(); navigateTo(FRIEND_CAMP_PLAYER.x, FRIEND_CAMP_PLAYER.y);
+      announce(text('friends_to_water'));
+    }
+    if (event.type === 'tent-unlocked') storage.set(friendsStorageKey, JSON.stringify(savedFriends(state.friends)));
+    if (event.type === 'camp-ready') { toast(text('friends_camp_ready')); announce(text('friends_camp_ready')); }
+  }
+  if (state.scene === 'wardrobe' && previousAway !== awayAnimals().join(',')) renderScene();
+  else refreshFriendsWorld();
+}
+function inviteFriends() {
+  if (state.scene !== 'world' || state.rocket.riding) return;
+  if (gatherFriends(state.friends, ANIMALS, state.animal, state.position, state.rocket.position)) {
+    state.reception = null; state.homeReturns = [];
+    renderScene(); announce(text('friends_invited')); toast(text('friends_invited'));
+  }
+}
+
 function refreshChocolateItems() {
   const chocolate = state.chocolate, carry = $('#chocolate-carry');
   if (carry) {
@@ -359,7 +455,7 @@ function frameChocolate(dt) {
 function renderScene() {
   clearPaintPreview();
   const hat = wearsHat(state.hat, state.hatActive);
-  const artwork = state.adventure ? adventureMarkup(state.adventure, state.animal, state.paint, hat) : state.scene === 'chocolate' ? chocolateMazeMarkup(state.chocolate.run) : state.scene === 'painting' ? studioMarkup(state.paint, PALETTE, state.studio) : outsideScene(state.scene) ? worldMarkup(state.paint, !!state.paintCan, state.scene, { ...state.rocket, hat }, state.animal) : roomMarkup(state.scene, state.shelfPage, state.tapes, state.animal, { can: state.paintCan, page: state.paintPage, world: state.paint, toolbox: state.toolbox, returns: state.homeReturns, hat: state.hat, away: receptionAway(state.reception), chocolate: state.chocolate });
+  const artwork = state.adventure ? adventureMarkup(state.adventure, state.animal, state.paint, hat) : state.scene === 'chocolate' ? chocolateMazeMarkup(state.chocolate.run) : state.scene === 'painting' ? studioMarkup(state.paint, PALETTE, state.studio) : outsideScene(state.scene) ? worldMarkup(state.paint, !!state.paintCan, state.scene, { ...state.rocket, hat }, state.animal) : roomMarkup(state.scene, state.shelfPage, state.tapes, state.animal, { can: state.paintCan, page: state.paintPage, world: state.paint, toolbox: state.toolbox, returns: state.homeReturns, hat: state.hat, away: awayAnimals(), chocolate: state.chocolate });
   const markup = colorHatMarkup(artwork, state.hat.color);
   const end = markup.lastIndexOf('</svg>');
   game.innerHTML = markup.slice(0, end) + '<g id="hat-effects"></g><g id="reception-effects"></g><g id="chocolate-carry" pointer-events="none" hidden="">' + chocolateBarMarkup() + '</g>' + markup.slice(end);
@@ -372,7 +468,7 @@ function renderScene() {
   player.toggleAttribute('hidden', state.rocket.riding);
   state.near = null; updateAnimal(); refreshCassettes(); refreshHatEffects(); refreshReceptionEffects(); resize(); updateNear(true);
   player.setAttribute('transform', `translate(${state.position.x} ${state.position.y})`);
-  refreshChocolateItems();
+  refreshChocolateItems(); refreshFriendsWorld(true);
 }
 function showPanel(id, focusSelector = '') {
   if (state.scene === 'chocolate') { requestChocolateExit(); return; }
@@ -439,11 +535,18 @@ function checkWorldTouch() {
   const touch = worldTouch(state.position);
   if (touch) enterRoom(touch.id);
 }
+function refreshAudioVolume() {
+  const fading = state.chocolate.boost > 0 && isChocolateTrack(playbackTrack());
+  const volume = state.volume * (state.memberMelody ? .2 : 1) * (fading ? chocolateMusicGain(state.chocolate) : 1);
+  if (audio.volume !== volume) audio.volume = volume;
+}
 function refreshPlayback() {
+  refreshAudioVolume();
   state.playing = !audio.paused && !audio.ended;
   refreshDanceParty();
   refreshHatQuest();
   refreshChocolatePlayback();
+  refreshFriendsPlayback();
   $('#radio-shortcut').setAttribute('aria-label', text('room_radio'));
   $('#radio-shortcut').style.background = state.playing ? 'var(--yellow)' : '';
   $('#radio-tape')?.classList.toggle('is-playing', state.playing);
@@ -477,27 +580,31 @@ function loadRecording() {
   state.boostMusic = null;
   const track = playbackTrack();
   state.hatRestartPending = isHatTrack(track);
+  state.friendsRestartPending = isFriendsTrack(track);
   playRecording(track);
 }
 function startChocolateMusic() {
   const track = TRACKS.find(track => isChocolateTrack(track) && validRecording(track));
-  if (!track || !state.boostMusic && isChocolateTrack(playbackTrack()) && state.playing) return;
+  if (!track) return;
   const previous = state.boostMusic?.previous || { id: state.tapes.loaded, time: audio.currentTime || 0, playing: state.playing };
-  state.boostMusic = { id: track.id, previous };
-  playRecording(track);
+  const continuing = !state.boostMusic && isChocolateTrack(playbackTrack()) && state.playing;
+  state.boostMusic = { id: track.id, previous, continuing };
+  if (!continuing) playRecording(track); else { audio.loop = true; refreshAudioVolume(); }
 }
 function finishChocolateMusic() {
   if (!state.boostMusic) return;
-  const { previous } = state.boostMusic; state.boostMusic = null;
-  playRecording(playbackTrack(), previous.time, previous.playing);
+  const { previous, continuing } = state.boostMusic; state.boostMusic = null;
+  if (continuing) { audio.pause(); audio.loop = false; refreshPlayback(); }
+  else playRecording(playbackTrack(), previous.time, previous.playing && !isChocolateTrack(playbackTrack()));
 }
 for (const event of ['play', 'pause', 'ended']) audio.addEventListener(event, () => {
   if (event === 'ended' && isHatTrack(playbackTrack())) state.hatRestartPending = true;
+  if (event === 'ended' && isFriendsTrack(playbackTrack())) state.friendsRestartPending = true;
   refreshPlayback();
 });
 audio.addEventListener('error', () => { refreshPlayback(); toast(text('audio_error')); });
 function stopMemberMelody() {
-  memberRequest++; state.memberMelody = null; memberAudio.pause(); memberAudio.removeAttribute('src'); memberAudio.load(); audio.volume = state.volume;
+  memberRequest++; state.memberMelody = null; memberAudio.pause(); memberAudio.removeAttribute('src'); memberAudio.load(); refreshAudioVolume();
 }
 function playMemberMelody(id) {
   stopMemberMelody();
@@ -505,11 +612,11 @@ function playMemberMelody(id) {
   if (!url || !(safeURL(url.href) || previewMode && url.protocol === 'blob:')) return;
   const request = ++memberRequest;
   state.memberMelody = id; memberAudio.src = member.audio; memberAudio.volume = state.volume;
-  audio.volume = state.volume * .2;
+  refreshAudioVolume();
   memberAudio.play().catch(() => { if (memberRequest === request) { stopMemberMelody(); toast(text('member_audio_error')); } });
 }
 for (const event of ['ended', 'error']) memberAudio.addEventListener(event, () => { if (state.memberMelody) stopMemberMelody(); });
-document.addEventListener('input', e => { if (e.target.id === 'volume') { state.volume = Number(e.target.value); memberAudio.volume = state.volume; audio.volume = state.volume * (state.memberMelody ? .2 : 1); storage.set('volume', state.volume); } });
+document.addEventListener('input', e => { if (e.target.id === 'volume') { state.volume = Number(e.target.value); memberAudio.volume = state.volume; refreshAudioVolume(); storage.set('volume', state.volume); } });
 function currentInteraction() {
   if (state.adventure || state.landing) return null;
   if (state.chocolate.carrying && state.scene !== 'painting' && !state.rocket.riding && state.chocolate.run?.phase !== 'leaving') return { id: 'eat-chocolate', kind: 'eat-chocolate', label: text('choco_eat') };
@@ -529,7 +636,7 @@ function currentInteraction() {
   }
   if (state.rocket.riding && !state.rocket.airborne) return { id: 'rocket', kind: 'rocket-exit', label: text('rocket_exit') };
   if (state.rocket.riding && state.scene !== 'sky') return null;
-  const interaction = nearbyInteraction(state.scene, state.position, state.tapes, state.shelfPage, { can: state.paintCan, page: state.paintPage, toolbox: state.toolbox, animal: state.animal, returns: state.homeReturns, away: receptionAway(state.reception) }, state.rocket.position);
+  const interaction = nearbyInteraction(state.scene, state.position, state.tapes, state.shelfPage, { can: state.paintCan, page: state.paintPage, toolbox: state.toolbox, animal: state.animal, returns: state.homeReturns, away: awayAnimals() }, state.rocket.position);
   if (interaction?.kind === 'rocket-board') return state.rocket.damaged ? { ...interaction, kind: state.toolbox ? 'rocket-repair' : 'rocket-damaged', label: text(state.toolbox ? 'rocket_repair' : 'rocket_needs_tools') } : interaction;
   const color = bucketColors(PALETTE).find(color => color.id === state.paintCan);
   if (outsideScene(state.scene) && color) {
@@ -537,6 +644,7 @@ function currentInteraction() {
     const surface = canPaintSurface(state.position, selected) ? selected : nearbyPaintSurface(state.position);
     if (surface) return { ...surface, kind: 'paint', label: text('paint_action', { flaeche: text(surface.key), farbe: color.name }) };
   }
+  if (state.scene === 'world' && !state.rocket.riding && friendsTentNear(state.friends, state.position)) return { id: 'friends-tent', kind: 'friends-camp', label: text('friends_meet') };
   return interaction;
 }
 function boardRocket() {
@@ -580,7 +688,7 @@ function playAdventure() {
 function landFromAdventure(crashed = false) {
   if (!state.adventure) return;
   const success = !crashed && state.adventure.phase === 'won' && state.adventure.completedDifficulty === 'profi';
-  if (success) state.reception = createReception(ANIMALS, state.animal, GROUND_ROCKET);
+  if (success) { releaseFriends(state.friends); state.reception = createReception(ANIMALS, state.animal, GROUND_ROCKET); }
   state.adventure = null;
   if (crashed) { state.rocket.damaged = true; state.rocket.broken = false; storage.set(rocketStorageKey, '1'); toast(text('rocket_crashed')); }
   stopWalking(); closePanel();
@@ -703,6 +811,7 @@ function performInteraction() {
   if (state.scene === 'painting') { studioAction(near); return; }
   stopWalking();
   if (near.kind === 'take-chocolate') { if (takeChocolate(state.chocolate)) { renderScene(); announce(text('choco_taken')); } return; }
+  if (near.kind === 'friends-camp') { inviteFriends(); return; }
   if (near.kind === 'eat-chocolate') { if (eatChocolate(state.chocolate)) { startChocolateMusic(); renderScene(); toast(text('choco_eaten')); announce(text('choco_eaten')); } return; }
   if (near.kind === 'find-hat') {
     if (findHat(state.hat, state.scene, state.position, state.hatActive)) { saveHat(); renderScene(); toast(text('hat_found')); announce(text('hat_found')); }
@@ -836,11 +945,12 @@ document.addEventListener('click', e => {
 });
 function chooseAnimal(id) {
   if (!ANIMALS.some(animal => animal.id === id)) return;
-  if (state.scene === 'wardrobe' && (receptionAway(state.reception).includes(id) || state.homeReturns.some(animal => animal.id === id))) return;
+  if (state.scene === 'wardrobe' && (awayAnimals().includes(id) || state.homeReturns.some(animal => animal.id === id))) return;
   const previous = state.animal;
   const destination = state.scene === 'wardrobe' ? undefined : outsideScene(state.scene) ? HOUSE_DOORS.find(door => door.id === 'wardrobe') : EXIT;
   if (id !== previous && returnHat(state.hat, state.scene, hatOrigin(), destination)) { saveHat(); announce(text('hat_returning')); }
   swapReceptionPilot(state.reception, previous, id, state.position, state.scene);
+  swapFriendsPlayer(state.friends, previous, id);
   if (state.scene === 'wardrobe' && id !== previous) {
     const nextSpot = ANIMAL_SPOTS.find(spot => spot.id === id), oldSpot = ANIMAL_SPOTS.find(spot => spot.id === previous);
     const position = { ...state.position }, path = planPath(position, oldSpot, 'wardrobe');
@@ -948,6 +1058,8 @@ game.addEventListener('click', e => {
     state.path = [{ x: clamp(point.x, 30, 1570), y: clamp(point.y, 110, 1055) }]; game.focus({ preventScroll: true }); return;
   }
   if (state.paintCan && outsideScene(state.scene)) { state.paintTarget = null; walkToPointer(e); return; }
+  const tent = e.target.closest('[data-friends-tent]');
+  if (tent && state.scene === 'world') { navigateTo(FRIEND_TENT.x, FRIEND_TENT.y - 75); return; }
   const hat = e.target.closest('[data-hat-target]');
   if (hat) { activateHatTarget(hat.dataset.hatTarget, true); return; }
   const social = e.target.closest('[data-social]');
@@ -972,6 +1084,8 @@ game.addEventListener('keydown', e => {
     if (point) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) { state.position = { x: point.x, y: point.y }; studioAction(currentInteraction()); } }
     return;
   }
+  const tent = e.target.closest('[data-friends-tent]');
+  if (tent && state.scene === 'world') { e.preventDefault(); e.stopPropagation(); if (!e.repeat) { if (currentInteraction()?.kind === 'friends-camp') inviteFriends(); else navigateTo(FRIEND_TENT.x, FRIEND_TENT.y - 75); } return; }
   const hat = e.target.closest('[data-hat-target]');
   if (hat) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) activateHatTarget(hat.dataset.hatTarget); return; }
   const surface = e.target.closest('[data-paint-target]');
@@ -1057,15 +1171,16 @@ function frame(time) {
   const elapsed = Math.max(0, (time - (lastTime || time)) / 1000), dt = Math.min(.05, elapsed); lastTime = time;
   tickChocolate(state.chocolate, elapsed);
   if (!state.chocolate.boost && state.boostMusic) finishChocolateMusic();
-  refreshChocolateItems();
+  refreshAudioVolume(); refreshChocolateItems();
   if (state.started && !document.hidden) {
     if (!modal.open && state.homeReturns.length) tickHomeReturns(dt);
-    if (!modal.open) { tickHats(dt); updateReception(dt); }
+    if (!modal.open) { tickHats(dt); updateReception(dt); updateFriends(dt); }
     const departing = state.party.departing;
     tickParty(state.party, dt, state.playing, state.reduced);
     updateDanceGuests();
     if (departing && !state.party.departing) refreshDanceParty();
   }
+  if (frameFriendsExit(dt)) { requestAnimationFrame(frame); return; }
   if (state.scene === 'chocolate') { frameChocolate(dt); requestAnimationFrame(frame); return; }
   if (state.rocket.broken && state.rocket.impact !== null && state.rocket.impact < .8 && !document.hidden) {
     state.rocket.impact += dt;
