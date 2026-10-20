@@ -198,9 +198,10 @@ export function friendsCameraView(friends, player, viewport) {
     left = Math.min(left, FRIEND_TENT.x - 108); right = Math.max(right, FRIEND_TENT.x + 132);
     top = Math.min(top, FRIEND_TENT.y - 124, FRIEND_CAMP.y - 72); bottom = Math.max(bottom, FRIEND_TENT.y + 28);
   }
-  const aspect = viewport.w / viewport.h, w = Math.max(viewport.w, right - left, (bottom - top) * aspect), h = w / aspect;
+  const focusY = player.y - WORLD.cameraOffsetY, aspect = viewport.w / viewport.h;
+  const w = Math.max(viewport.w, right - left, Math.max(focusY - top, bottom - focusY) * 2 * aspect), h = w / aspect;
   // Fit the full bodies immediately; easing must never leave a walker outside the view.
   const x = Math.max(Math.min(0, WORLD.width - w), Math.min(Math.max(0, WORLD.width - w), (left + right - w) / 2));
-  const y = Math.max(Math.min(WORLD.top, WORLD.height - h), Math.min(WORLD.height - h, (top + bottom - h) / 2));
+  const y = Math.max(WORLD.top, Math.min(WORLD.height - h / 2, focusY - h / 2));
   return { x, y, w, h };
 }

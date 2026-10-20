@@ -1268,6 +1268,18 @@ try {
 } finally { friendsTrack.src = beforeCampSrc; }
 console.log('PASS: Enter, Space and Numpad Enter invite camp friends with Beste Freunde without restarting tag; the whole group stays on screen, leaving fades the music over five seconds and a chosen cassette stops camp music.');
 
+{
+  const h = await harness(false, 'cat'); let clock = 16;
+  for (const position of [core.WORLD_SPAWN, { x: 960, y: 1020 }]) {
+    h.state.position = { ...position };
+    for (let frame = 0; frame < 180; frame++) h.frame(clock += 16);
+    const [, y, , height] = h.get('#world-svg').getAttribute('viewBox').split(' ').map(Number);
+    assert(Math.abs(y + height / 2 - (h.state.position.y - core.WORLD.cameraOffsetY)) < .02, 'the animal body is centered even beside the lower shoreline');
+  }
+  assert(h.game.innerHTML.includes('V11100H0Z'), 'the water continues beneath the camera without an empty edge');
+}
+console.log('PASS: the outdoor camera centers the controlled animal at the start and beside the lower shoreline.');
+
 const fadingTrack = { id: 'schokolade', title: 'Schokolade', src: 'uploads/schokolade.mp3', color: '#ff87ce', image: 'assets/hut.png' };
 const preFadeTanzen = content.TRACKS[1].src; content.TRACKS[1].src = 'uploads/tanzen.mp3'; content.TRACKS.push(fadingTrack);
 try {

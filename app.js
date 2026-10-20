@@ -1200,11 +1200,12 @@ function updateCamera(dt, snap = false) {
     return;
   }
   const { w, h } = state.viewport;
-  const top = outsideScene(state.scene) ? WORLD.top : 0;
-  const tx = clamp(state.position.x, w / 2, WORLD.width - w / 2), ty = clamp(state.position.y - (outsideScene(state.scene) ? 240 : 130), top + h / 2, WORLD.height - h / 2);
+  const outside = outsideScene(state.scene), top = outside ? WORLD.top : 0;
+  const bottom = WORLD.height - h + (outside ? h / 2 : 0);
+  const tx = clamp(state.position.x, w / 2, WORLD.width - w / 2), ty = clamp(state.position.y - (outside ? WORLD.cameraOffsetY : 130), top + h / 2, bottom + h / 2);
   const amount = snap || state.reduced ? 1 : Math.min(1, dt * 9);
   state.camera.x += (tx - state.camera.x) * amount; state.camera.y += (ty - state.camera.y) * amount;
-  const viewBox = `${clamp(state.camera.x - w / 2, 0, WORLD.width - w).toFixed(2)} ${clamp(state.camera.y - h / 2, top, WORLD.height - h).toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)}`;
+  const viewBox = `${clamp(state.camera.x - w / 2, 0, WORLD.width - w).toFixed(2)} ${clamp(state.camera.y - h / 2, top, bottom).toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)}`;
   if (world.getAttribute('viewBox') !== viewBox) world.setAttribute('viewBox', viewBox);
 }
 function frame(time) {

@@ -1,7 +1,7 @@
 import { SPACE, SKY, GROUND_ROCKET, rocketBody } from './sky-world.js';
 import { canStandChocolate, chocolatePath } from './chocolate.js';
 
-export const WORLD = { width: 1600, height: 1100, top: SPACE.top, radius: 18, speed: 205 };
+export const WORLD = { width: 1600, height: 1100, top: SPACE.top, radius: 18, speed: 205, cameraOffsetY: 38 };
 export const WORLD_SPAWN = { x: 650, y: 650 };
 export const HOME_PICTURE = { x: 1010, y: 270, w: 200, h: 190 };
 export function touchingHomePicture(position) {

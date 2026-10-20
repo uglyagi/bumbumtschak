@@ -125,6 +125,7 @@ test('the camping camera immediately fits the complete group on wide and narrow 
     for (const [w, h] of [[1480, 850], [390, 700], [1400, 360]]) {
       const view = friendsCameraView(friends, player, { w, h });
       assert(Math.abs(view.w / view.h - w / h) < 1e-9);
+      assert(Math.abs(view.y + view.h / 2 - (player.y - WORLD.cameraOffsetY)) < 1e-9, 'the controlled animal stays centered while its friends remain visible');
       for (const point of [player, ...friends.actors.map(actor => actor.position)]) {
         assert(point.x - 34 >= view.x && point.x + 34 <= view.x + view.w);
         assert(point.y - 77 >= view.y && point.y + 12 <= view.y + view.h);
