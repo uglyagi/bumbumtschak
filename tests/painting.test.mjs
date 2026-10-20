@@ -102,7 +102,7 @@ test('the picture has eighteen shades, buckets have five base colors plus white,
   assert.equal(DEFAULT_PALETTE.length, 18); assert.equal(new Set(DEFAULT_PALETTE.map(color => color.color)).size, 18);
   assert.deepEqual(bucketColors().map(color => color.id), ['yellow', 'red', 'green', 'blue', 'pink', 'white']);
   assert.equal(paintSlots(DEFAULT_PALETTE).length, 6);
-  const originals = { sky: 'blue-light', water: 'blue-dark', grass: 'green', path: 'yellow-light', sun: 'yellow' };
+  const originals = { sky: 'blue-light', water: 'blue-dark', grass: 'green-light', path: 'yellow-light', sun: 'yellow' };
   for (const [surface, color] of Object.entries(originals)) assert.equal(WORLD_COLOR_IDS[surface], color);
   for (const [surface, color] of Object.entries(WORLD_COLOR_IDS)) {
     const hex = DEFAULT_PALETTE.find(item => item.id === color).color;

@@ -23,7 +23,7 @@ export const DEFAULT_PALETTE = [
 ];
 export const BUCKET_COLOR_IDS = ['yellow', 'red', 'green', 'blue', 'pink', 'white'];
 export const WORLD_COLOR_IDS = {
-  sky: 'blue-light', water: 'blue-dark', grass: 'green', path: 'yellow-light', sun: 'yellow',
+  sky: 'blue-light', water: 'blue-dark', grass: 'green-light', path: 'yellow-light', sun: 'yellow',
   'cloud-0': 'white', 'cloud-1': 'white',
   'radio-wall': 'pink-light', 'radio-roof': 'red-dark', 'radio-lower': 'blue',
   'concert-wall': 'blue-light', 'concert-roof': 'red-light',
@@ -62,7 +62,7 @@ export const FLOWERS = [
   const larger = Math.round(size * 1.25), extra = larger - size;
   return [x - extra / 2, y - extra * 1.2, color, larger];
 });
-export const TREES = [[35, 85, 150, 210, '#ff87ce'], [1390, 50, 170, 225, '#fff20b'], [1440, 500, 130, 210, '#ff87ce'], [-100, 620, 145, 210, '#1d55ff'], [500, 805, 110, 155, '#ff87ce']];
+export const TREES = [[35, 85, 150, 210, '#4acb59'], [1390, 50, 170, 225, '#4acb59'], [1440, 500, 130, 210, '#4acb59'], [-100, 620, 145, 210, '#4acb59'], [500, 805, 110, 155, '#4acb59']];
 export const CLOUDS = [[356, -310, 140, 60], [1155, -285, 145, 60]];
 export const WORLD_PATH = 'M300 1020Q255 900 300 750T315 560Q280 466 440 475L1110 475Q1320 440 1280 610L1265 850Q1150 945 910 810T670 670Q560 610 570 500M815 500V320M800 665Q840 660 895 695';
 const rect = (x, y, w, h) => ({ x, y, w, h });
