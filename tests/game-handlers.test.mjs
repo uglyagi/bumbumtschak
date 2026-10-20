@@ -15,6 +15,7 @@ const toolbox = await import(new URL(`toolbox.${extension}`, root));
 const wreckage = await import(new URL(`rocket-wreckage.${extension}`, root));
 const holiday = await import(new URL(`sun-holiday.${extension}`, root));
 const hats = await import(new URL(`hat-quest.${extension}`, root));
+const reception = await import(new URL(`reception.${extension}`, root));
 
 // Exercise the application's real registered handlers with DOM test doubles.
 // This checks app behavior, not browser rendering or native default actions.
@@ -31,7 +32,7 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null, d
   class Element {
     constructor(name = '', tag = 'div', dataset = {}) {
       this.name = name; this.tag = tag; this.dataset = dataset;
-      this.handlers = new Map(); this.attrs = new Map(); this.style = {};
+      this.handlers = new Map(); this.attrs = new Map(); this.writes = new Map(); this.style = {};
       this.hidden = false; this.open = false; this.innerHTML = ''; this.clicks = 0;
       this.parentElement = { setAttribute() {} };
       const classes = new Set();
@@ -40,7 +41,7 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null, d
     addEventListener(name, cb) { add(this.handlers, name, cb); }
     append() {}
     scrollBy() {}
-    setAttribute(name, value) { this.attrs.set(name, value); }
+    setAttribute(name, value) { this.attrs.set(name, value); this.writes.set(name,(this.writes.get(name)||0)+1); }
     getAttribute(name) { return this.attrs.get(name) ?? null; }
     removeAttribute(name) { this.attrs.delete(name); }
     toggleAttribute(name, value) { value ? this.attrs.set(name, '') : this.attrs.delete(name); }
@@ -96,7 +97,7 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null, d
   const game = get('#game'), modal = get('#modal'), modalContent = get('#modal-content'), audio = get('#audio');
   for (const node of [audio, get('#member-audio')]) Object.assign(node, { paused: true, ended: false, currentTime: 0, pause() { this.paused = true; }, play() { this.paused = false; this.ended = false; return Promise.resolve(); }, load() {} });
   const context = vm.createContext({
-    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky, ...dance, ...studio, ...adventure, ...adventureArt, ...toolbox, ...wreckage, ...holiday, ...hats,
+    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky, ...dance, ...studio, ...adventure, ...adventureArt, ...toolbox, ...wreckage, ...holiday, ...hats, ...reception,
     loadContent: async () => ({ ok: true }), document: doc,
     window: { innerWidth: 1200, matchMedia: () => ({ matches: false }), addEventListener: (n, cb) => add(windowHandlers, n, cb), open(...args) { opened.push(args); } },
     location: { search: preview ? '?preview=1' : '' }, localStorage: { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value) },
@@ -550,21 +551,19 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
   new h.Element('premature replay', 'button', { action: 'space-replay' }).click(); assert.equal(h.state.adventure.phase, 'sun-finale');
   const flightProgress = h.state.adventure.progress;
   assert(h.game.innerHTML.includes('id="sun-flight-background" opacity="1"'));
-  while (h.state.adventure.sunTime < adventure.SUN_ZOOM_IN) h.frame(++clock * 16);
-  assert(h.get('#sun-shuttle').getAttribute('transform').includes('scale('));
-  assert(h.get('#sun-actor').attrs.has('hidden')); assert(!h.get('#rocket-pilot').attrs.has('hidden'));
-  assert.equal(h.get('#sun-surface-background').getAttribute('opacity'), '0.000');
-  while (h.state.adventure.sunTime < adventure.SUN_ZOOM_OUT_START) h.frame(++clock * 16);
-  assert.equal(h.get('#sun-surface-background').getAttribute('opacity'), '1.000');
-  assert.equal(h.get('#sun-flight-background').getAttribute('opacity'), '0.000');
-  assert(h.get('#sun-story').attrs.has('hidden'), 'the surface story starts after zooming back out');
-  while (h.state.adventure.sunTime < adventure.SUN_TRANSITION_DURATION + 3.2) h.frame(++clock * 16);
+  while (h.state.adventure.sunTime < adventure.SUN_EXIT_DURATION) h.frame(++clock * 16);
+  const departed = holiday.sunHolidayPose(h.state.adventure);assert(departed.shuttle.x>h.state.adventure.width&&departed.shuttle.y<0);
+  assert(h.get('#sun-actor').attrs.has('hidden'));assert(!h.get('#rocket-pilot').attrs.has('hidden'));
+  assert.equal(h.get('#sun-surface-background').getAttribute('opacity'),'0.000');
+  while(h.state.adventure.sunTime<adventure.SUN_TRANSITION_DURATION)h.frame(++clock*16);
+  assert.equal(h.get('#sun-surface-background').getAttribute('opacity'),'1.000');
+  while (h.state.adventure.sunTime < adventure.SUN_TRANSITION_DURATION + 3.2 - adventure.SUN_STORY_START) h.frame(++clock * 16);
   assert(h.get('#rocket-pilot').attrs.has('hidden')); assert(!h.get('#sun-actor').attrs.has('hidden')); assert(!h.get('#sun-folded-chair').attrs.has('hidden'));
-  while (h.state.adventure.sunTime < adventure.SUN_TRANSITION_DURATION + 5.3) h.frame(++clock * 16);
+  while (h.state.adventure.sunTime < adventure.SUN_TRANSITION_DURATION + 5.3 - adventure.SUN_STORY_START) h.frame(++clock * 16);
   assert(h.get('#sun-folded-chair').attrs.has('hidden')); assert(!h.get('#sun-lounger').attrs.has('hidden'));
-  while (h.state.adventure.sunTime < adventure.SUN_TRANSITION_DURATION + 6.2) h.frame(++clock * 16);
+  while (h.state.adventure.sunTime < adventure.SUN_TRANSITION_DURATION + 6.2 - adventure.SUN_STORY_START) h.frame(++clock * 16);
   assert(!h.get('#sun-sunglasses').attrs.has('hidden')); assert(!h.modal.open);
-  while (h.state.adventure.sunTime < adventure.SUN_TRANSITION_DURATION + 8) h.frame(++clock * 16);
+  while (h.state.adventure.sunTime < adventure.SUN_TRANSITION_DURATION + 8 - adventure.SUN_STORY_START) h.frame(++clock * 16);
   assert(h.get('#sun-actor').getAttribute('transform').includes('rotate(-62.00)')); assert(!h.modal.open, 'the player sunbathes before being congratulated');
   assert.equal(h.state.adventure.progress, flightProgress);
   h.doc.hidden = true; const sunPaused = h.state.adventure.sunTime; h.frame(++clock * 16); assert.equal(h.state.adventure.sunTime, sunPaused); h.doc.hidden = false;
@@ -841,9 +840,9 @@ try {
     new h.Element('start','button',{action:'space-start'}).click();
     h.state.adventure.progress=adventure.FINISH_DISTANCE;h.state.adventure.meteors=[];h.state.adventure.nextMeteor=Infinity;
     h.frame(++clock*16);assert.equal(h.state.adventure.phase,'sun-finale');
-    h.state.adventure.sunTime=adventure.SUN_TRANSITION_DURATION+8;h.frame(++clock*16);
+    h.state.adventure.sunTime=adventure.SUN_TRANSITION_DURATION+8-adventure.SUN_STORY_START;h.frame(++clock*16);
     assert.equal(h.get('#sun-actor-use').getAttribute('href'),'#dressed-dog');
-    assert(h.state.hat.wearing && h.state.hat.phase==='unlocked', 'replaying Hut never steals an unlocked hat');
+    assert(h.state.hat.wearing && h.state.hat.phase==='unlocked', 'continuing the same recording keeps the found hat');
   }
   for (const spot of hats.HAT_HIDEOUTS.filter(spot=>['sky','world','wardrobe'].includes(spot.scene))) {
     const h=await harness(false,'horse',null,false,{phase:'lost',spot:spot.id});
@@ -855,3 +854,55 @@ try {
   preview.press(preview.windowHandlers,preview.event(' ','Space',preview.game));assert(JSON.parse(preview.stored.get('bbt-hat-preview')).wearing);assert(!preview.stored.has('bbt-hat-world'));
 } finally {hutTrack.src=previousHutAudio;}
 console.log('PASS: Hut starts only during playback, flies off, pauses and hides on pause/switch/end, resumes its search, is found using Enter/Space/NumpadEnter outdoors, in houses and in the sky, celebrates once, persists as clothing, can be returned, follows character changes and stays on through rocket zoom and the Sun holiday; preview progress is separate.');
+
+try {
+ hutTrack.src='uploads/hut.mp3';
+ for(const wearing of [false,true]) {
+  const h=await harness(false,'cat',null,false,{phase:'unlocked',wearing,spot:'flowers'});h.enterRoom('wardrobe');h.state.tapes.loaded='hut';h.loadRecording();
+  assert.equal(h.state.hat.phase,'perched');assert.equal(h.get('#player-use').getAttribute('href'),'#dressed-cat');
+  const rack=()=>h.game.innerHTML.slice(h.game.innerHTML.indexOf('id="home-hat-stand"'),h.game.innerHTML.indexOf('data-home-slot='));
+  assert(rack().includes('Noch unterwegs'));assert(!rack().includes('scale(.8)'));assert(!rack().includes('data-hat-target='));
+  h.state.position={...hats.HAT_STAND};h.game.focus();h.press(h.windowHandlers,h.event('Enter','Enter',h.game));assert.equal(h.state.hat.phase,'perched');
+  let clock=0;for(let i=0;i<50;i++)h.frame(++clock*16);const elapsed=h.state.hat.elapsed;
+  h.get('#audio').pause();for(const cb of h.get('#audio').handlers.get('pause'))cb({});
+  await h.get('#audio').play();for(const cb of h.get('#audio').handlers.get('play'))cb({});assert.equal(h.state.hat.elapsed,elapsed);
+  while(h.state.hat.phase!=='lost'&&clock<700)h.frame(++clock*16);
+  const spot=hats.hatSpot(h.state.hat);if(['radio','concerts','wardrobe'].includes(spot.scene))h.enterRoom(spot.scene);else {h.leaveRoom();h.state.scene=spot.scene;}
+  h.state.position={...spot};if(spot.scene==='sky'){h.state.rocket.riding=true;h.state.rocket.airborne=true;}h.game.focus();h.press(h.windowHandlers,h.event(' ','Space',h.game));assert.equal(h.state.hat.phase,'unlocked');
+  h.get('#audio').pause();for(const cb of h.get('#audio').handlers.get('pause'))cb({});await h.get('#audio').play();for(const cb of h.get('#audio').handlers.get('play'))cb({});assert.equal(h.state.hat.phase,'unlocked','pause/resume after finding does not start a new run');
+  h.get('#audio').ended=true;h.get('#audio').paused=true;for(const cb of h.get('#audio').handlers.get('ended'))cb({});
+  await h.get('#audio').play();for(const cb of h.get('#audio').handlers.get('play'))cb({});assert.equal(h.state.hat.phase,'perched','replaying a finished song starts the next search');assert.notEqual(h.state.hat.spot,spot.id);
+ }
+} finally {hutTrack.src=previousHutAudio;}
+console.log('PASS: restarting Hut retrieves a stored or worn hat, keeps its stand empty and unusable until the next find, pauses without resetting and starts another search when the ended song is played again.');
+
+for(const level of ['leicht','mittel','profi']) {
+ const h=await harness(false,'cat');h.state.scene='space';h.state.position={x:365,y:sky.SPACE.bottom-50};h.state.rocket.position={...h.state.position};h.state.rocket.riding=true;h.state.rocket.airborne=true;
+ h.state.adventure=adventure.createAdventure(1200,700);h.state.adventure.phase='ready';h.state.adventure.nextDifficulty=h.state.difficulty;h.showPanel('space-launch');
+ assert(h.modalContent.innerHTML.includes('Raumfahrprofi'));assert(h.modalContent.innerHTML.includes('data-difficulty="leicht"'));
+ const choice=new h.Element('difficulty','button',{difficulty:level});h.press(h.documentHandlers,h.event('Enter','Enter',choice));assert.equal(h.state.adventure.nextDifficulty,level);assert.equal(h.stored.get('bbt-adventure-difficulty'),level);
+ new h.Element('start','button',{action:'space-start'}).click();assert.equal(h.state.adventure.difficulty,level);
+ new h.Element('cannot change during flight','button',{difficulty:'profi'}).click();assert.equal(h.state.adventure.difficulty,level);
+ let clock=1;h.frame(clock*16);h.state.adventure.progress=adventure.FINISH_DISTANCE;h.state.adventure.meteors=[];h.state.adventure.nextMeteor=Infinity;h.frame(++clock*16);
+ h.state.adventure.sunTime=adventure.sunHolidayDuration(h.state.adventure)-.01;h.frame(++clock*16);assert.equal(h.state.adventure.phase,'won');assert.equal(h.state.adventure.completedDifficulty,level);
+ new h.Element('next level','button',{difficulty:level==='profi'?'leicht':'profi'}).click();
+ new h.Element('land','button',{action:'space-land'}).click();assert.equal(h.state.landing.success,level==='profi');
+ while(h.state.landing&&clock<500)h.frame(++clock*16);
+ assert(!h.state.landing);assert.equal(h.state.scene,'world');
+ if(level==='profi'){
+  assert(h.state.reception);assert.equal(h.state.reception.phase,'celebrating');assert(h.game.classList.contains('is-reception'));assert(h.get('#reception-effects').innerHTML.includes('reception-fireworks'));
+  for(let i=0;i<100;i++)h.frame(++clock*16);assert.equal(reception.receptionAway(h.state.reception).length,3);
+  h.game.focus();h.state.keys.add('ArrowDown');while(h.state.reception.phase==='celebrating'&&clock<800)h.frame(++clock*16);h.state.keys.clear();assert.equal(h.state.reception.phase,'leaving');
+  h.enterRoom('wardrobe');assert.equal((h.game.innerHTML.match(/id="home-animal-/g)||[]).length,0);
+  while(h.state.reception&&clock<1800)h.frame(++clock*16);assert.equal(h.state.reception,null);assert.equal((h.game.innerHTML.match(/id="home-animal-/g)||[]).length,3);
+ }else assert.equal(h.state.reception,null,'only the actually completed pro level earns the reception');
+}
+console.log('PASS: all three levels are keyboard selectable, preserve their completed result even if the next level is changed, and only pro success triggers a landing reception; walking away sends every guest back through the home entrance without duplicated figures.');
+
+try {
+ dancingTrack.src='uploads/tanzen.mp3';const h=await harness(false,'cat');h.enterRoom('radio');h.state.tapes.loaded='tanzen';h.loadRecording();
+ const before=h.get('#party-beam-0').writes.get('transform')||0;for(let i=1;i<=100;i++)h.frame(i*16);
+ const updates=(h.get('#party-beam-0').writes.get('transform')||0)-before;assert(updates<=34&&updates>=25,'lights update at about twenty frames per second');
+ const x=h.state.position.x;h.state.keys.add('ArrowRight');for(let i=101;i<=111;i++)h.frame(i*16);h.state.keys.clear();assert(h.state.position.x>x+25,'player movement remains independent of the slower light updates');
+}finally{dancingTrack.src=originalDanceAudio;}
+console.log('PASS: disco spotlights use about twenty updates per second while player movement retains its normal frame rate.');

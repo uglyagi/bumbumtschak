@@ -65,12 +65,12 @@ function infoArt(scene) {
 
 function wardrobeArt(selectedAnimal, paint) {
   return `${fitted(390, 295, text('wardrobe_board'), 420, 26)}${fitted(390, 327, text('wardrobe_hint'), 440, 14)}
-    ${paint.hat?.phase === 'unlocked' ? `<g data-hat-target="hat-stand" role="button" tabindex="0" aria-label="${escape(text(paint.hat.wearing ? 'hat_return' : 'hat_wear'))}" transform="translate(${HAT_STAND.x} ${HAT_STAND.y})"><g stroke="#101014" stroke-width="4" stroke-linecap="round"><path d="M0-35V20m-20 0h40" fill="none"/><ellipse cy="-35" rx="23" ry="7" fill="#d69c5b"/></g>${paint.hat.wearing ? '' : `<g transform="translate(0 -43) scale(.8)">${hatMarkup()}</g>`}${fitted(0, 55, text('hat_stand'), 190, 17)}${fitted(0, 79, text(paint.hat.wearing ? 'hat_return' : 'hat_wear'), 210, 13)}</g>` : ''}
+    ${paint.hat?.phase === 'unlocked' || paint.hat?.discovered ? `<g id="home-hat-stand" ${paint.hat.phase === 'unlocked' ? `data-hat-target="hat-stand" role="button" tabindex="0" aria-label="${escape(text(paint.hat.wearing ? 'hat_return' : 'hat_wear'))}"` : ''} transform="translate(${HAT_STAND.x} ${HAT_STAND.y})"><g stroke="#101014" stroke-width="4" stroke-linecap="round"><path d="M0-35V20m-20 0h40" fill="none"/><ellipse cy="-35" rx="23" ry="7" fill="#d69c5b"/></g>${paint.hat.phase !== 'unlocked' || paint.hat.wearing ? '' : `<g transform="translate(0 -43) scale(.8)">${hatMarkup()}</g>`}${fitted(0, 55, text('hat_stand'), 190, 17)}${fitted(0, 79, text(paint.hat.phase !== 'unlocked' ? 'hat_missing' : paint.hat.wearing ? 'hat_return' : 'hat_wear'), 210, 13)}</g>` : ''}
     ${ANIMAL_SPOTS.map(spot => {
       const animal = ANIMALS.find(animal => animal.id === spot.id);
       return `<g data-home-slot="${animal.id}" transform="translate(${spot.x} ${spot.y})"><ellipse rx="40" ry="15" fill="${animal.color}" stroke="#101014" stroke-width="2"/>${mapLabel(0, 43, animal.name, 130, '#fffcee')}</g>`;
     }).join('')}
-    ${ANIMAL_SPOTS.filter(spot => spot.id !== selectedAnimal).map(spot => {
+    ${ANIMAL_SPOTS.filter(spot => spot.id !== selectedAnimal && !paint.away?.includes(spot.id)).map(spot => {
       const animal = ANIMALS.find(animal => animal.id === spot.id), returning = paint.returns?.find(animal => animal.id === spot.id);
       const position = returning?.position || spot;
       const markup = `<g id="home-animal-${animal.id}" class="${returning ? 'home-returning' : ''}" transform="translate(${position.x} ${position.y})">

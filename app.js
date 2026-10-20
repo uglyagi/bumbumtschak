@@ -9,12 +9,13 @@ import { adminURL } from './connection.js';
 import { SPACE, ROCKET_SPEED, GROUND_ROCKET, moveRocket, outsideScene, flightScene } from './sky-world.js';
 import { createParty, syncParty, tickParty, guestPose, guestExitPose, dancePartyMarkup, discoLightPoses } from './dance-party.js';
 import { studioMarkup, studioInteraction, studioColors, studioPages, STUDIO_CONTROLS, largeSurfaces } from './painting-studio.js';
-import { createAdventure, startAdventure, resizeAdventure, tickAdventure, FINISH_DISTANCE, landingPose, crashVibration } from './rocket-adventure.js';
+import { createAdventure, startAdventure, resizeAdventure, tickAdventure, FINISH_DISTANCE, landingPose, crashVibration, DIFFICULTIES } from './rocket-adventure.js';
 import { adventureMarkup, adventureShipPose, meteorMarkup } from './adventure-art.js';
 import { toolboxMarkup } from './toolbox.js';
 import { wreckageTransforms } from './rocket-wreckage.js';
 import { sunHolidayPose, holidayTransform } from './sun-holiday.js';
 import { createHatQuest, savedHatQuest, startHatQuest, tickHatQuest, hatInteraction, findHat, toggleHat, wearsHat, animalHref, hatEffectsMarkup, isHatTrack, hatSpot, HAT_STAND, HAT_HEADS } from './hat-quest.js';
+import { createReception, landReception, tickReception, receptionMarkup, receptionAway, swapReceptionPilot } from './reception.js';
 
 const previewMode = new URLSearchParams(location.search).get('preview') === '1';
 const contentStatus = await loadContent(previewMode);
@@ -32,6 +33,7 @@ const savedAnimal = storage.get('animal', '');
 const paintStorageKey = previewMode ? 'paint-preview' : 'paint-world';
 const rocketStorageKey = previewMode ? 'rocket-preview-damaged' : 'rocket-damaged';
 const savedRocketDamage = storage.get(rocketStorageKey, '0') === '1';
+const savedDifficulty = storage.get('adventure-difficulty', 'leicht');
 const hatStorageKey = previewMode ? 'hat-preview' : 'hat-world';
 let savedHat = null;
 try { savedHat = JSON.parse(storage.get(hatStorageKey, 'null')); } catch { /* An invalid local quest starts afresh. */ }
@@ -51,7 +53,8 @@ const state = {
   rocket: { position: { ...GROUND_ROCKET }, riding: false, airborne: false, damaged: savedRocketDamage, broken: savedRocketDamage, impact: null },
   adventure: null, landing: null, toolbox: false, homeReturns: [],
   party: createParty(),
-  hat: createHatQuest(savedHat), hatActive: false,
+  hat: createHatQuest(savedHat), hatActive: false, hatRestartPending: false,
+  difficulty: Object.hasOwn(DIFFICULTIES, savedDifficulty) ? savedDifficulty : 'leicht', reception: null,
   volume: clamp(Number(storage.get('volume', '.6')) || 0, 0, 1),
   reduced: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
 };
@@ -67,7 +70,7 @@ for (const node of document.querySelectorAll('[data-copy-aria]')) node.setAttrib
 document.title = text('page_title');
 document.querySelector('meta[name=description]')?.setAttribute('content', text('page_description'));
 audio.volume = state.volume;
-let previousFocus = null, toastTimer, lastTime = 0, stuckTime = 0, paintPreview = null, memberRequest = 0;
+let previousFocus = null, toastTimer, lastTime = 0, stuckTime = 0, paintPreview = null, memberRequest = 0, discoFrame = null;
 
 function announce(message) { $('#announcement').textContent = message; }
 function toast(message) { clearTimeout(toastTimer); const el = $('#toast'); el.textContent = message; el.hidden = false; toastTimer = setTimeout(() => { el.hidden = true; }, 3500); }
@@ -152,7 +155,8 @@ function renderPanel(id) {
 function adventurePanel(id) {
   const win = id === 'space-win', pause = id === 'space-pause';
   const primary = pause ? 'space-continue' : win ? 'space-replay' : 'space-start';
-  return `<div class="modal-wrap adventure-dialog"><div class="modal-kicker">✦ ${T('adventure_title')}</div><h2 id="modal-title">${T(win ? 'adventure_win' : pause ? 'adventure_pause' : 'adventure_ready')}</h2><p class="modal-intro editable-prose">${T(win ? 'adventure_win_body' : 'adventure_keys')}</p><div class="modal-actions"><button class="primary-button" data-action="${primary}">${T(pause ? 'adventure_continue' : win ? 'adventure_replay' : 'adventure_start')} ${icon('arrow')}</button><button class="secondary-button" data-action="space-land">${T(win ? 'adventure_back' : 'adventure_land')}</button></div></div>`;
+  const difficulty = pause ? '' : `<div class="difficulty-picker"><p>${T('adventure_difficulty')}</p><div class="difficulty-options" role="group" aria-label="${T('adventure_difficulty')}">${Object.keys(DIFFICULTIES).map(level => `<button data-difficulty="${level}" aria-pressed="${state.adventure?.nextDifficulty === level}"><strong>${T('difficulty_' + level)}</strong><small>${T('difficulty_' + level + '_hint')}</small></button>`).join('')}</div></div>`;
+  return `<div class="modal-wrap adventure-dialog"><div class="modal-kicker">✦ ${T('adventure_title')}</div><h2 id="modal-title">${T(win ? 'adventure_win' : pause ? 'adventure_pause' : 'adventure_ready')}</h2><p class="modal-intro editable-prose">${T(win ? 'adventure_win_body' : 'adventure_keys')}</p>${difficulty}<div class="modal-actions"><button class="primary-button" data-action="${primary}">${T(pause ? 'adventure_continue' : win ? 'adventure_replay' : 'adventure_start')} ${icon('arrow')}</button><button class="secondary-button" data-action="space-land">${T(win ? 'adventure_back' : 'adventure_land')}</button></div></div>`;
 }
 function pausePanel() {
   const options = [['map', 'map_open'], ['characters', 'pause_character'], ['radio', 'pause_radio'], ['concerts', 'pause_concerts'], ['panda', 'pause_band'], ['social', 'pause_social'], ['grownups', 'nav_grownups'], ['help', 'help_open']];
@@ -186,11 +190,13 @@ function refreshDanceParty() {
   $('#party-effects')?.toggleAttribute('hidden', !state.party.active);
   layer.classList.toggle('is-dancing', state.party.active && state.playing && !document.hidden);
   layer.classList.toggle('is-departing', state.party.departing);
-  updateDanceGuests();
+  updateDanceGuests(true);
 }
-function updateDanceGuests() {
+function updateDanceGuests(force = false) {
   if (state.scene !== 'radio') return;
-  if (state.party.active) {
+  const lightFrame = Math.floor(state.party.elapsed * 20);
+  if (state.party.active && (force || lightFrame !== discoFrame)) {
+    discoFrame = lightFrame;
     const lights = discoLightPoses(state.party.elapsed, state.reduced);
     lights.beams.forEach((light, i) => {
       for (const id of ['beam', 'head']) $(`#party-${id}-${i}`)?.setAttribute('transform', `rotate(${light.angle.toFixed(2)})`);
@@ -200,7 +206,8 @@ function updateDanceGuests() {
   state.party.cast.forEach((id, i) => {
     const node = $(`#party-dancer-${id}`); if (!node) return;
     const pose = state.party.active ? guestPose(i, state.party.elapsed, state.reduced) : guestExitPose(state.party.exits[i], i, state.party.exitElapsed, state.reduced);
-    node.setAttribute('transform', `translate(${pose.x.toFixed(2)} ${pose.y.toFixed(2)})`);
+    const transform = `translate(${pose.x.toFixed(2)} ${pose.y.toFixed(2)})`;
+    if (node.getAttribute('transform') !== transform) node.setAttribute('transform', transform);
     node.toggleAttribute('hidden', !pose.visible); node.classList.toggle('has-arrived', pose.arrived);
   });
 }
@@ -224,9 +231,11 @@ function refreshHatEffects() {
 function refreshHatQuest() {
   const active = state.playing && !audio.ended && !audio.error && isHatTrack(TRACKS.find(track => track.id === state.tapes.loaded));
   const changed = active !== state.hatActive; state.hatActive = active;
-  const started = startHatQuest(state.hat, TRACKS.find(track => track.id === state.tapes.loaded), state.started && active);
+  const started = startHatQuest(state.hat, TRACKS.find(track => track.id === state.tapes.loaded), state.started && active, Math.random, state.hatRestartPending);
+  if (state.started && active) state.hatRestartPending = false;
   if (started) { saveHat(); toast(text('hat_started')); announce(text('hat_started')); }
-  if (changed || started) { updateAnimal(); refreshHatEffects(); state.near = null; updateNear(true); }
+  if (started && state.scene === 'wardrobe') renderScene();
+  else if (changed || started) { updateAnimal(); refreshHatEffects(); state.near = null; updateNear(true); }
 }
 function tickHats(dt) {
   const head = HAT_HEADS[state.animal], before = !!state.hat.celebration;
@@ -238,12 +247,25 @@ function tickHats(dt) {
   }
   if (event || state.hat.phase === 'flying' || state.hat.celebration || before) refreshHatEffects();
 }
+function refreshReceptionEffects() {
+  const layer = $('#reception-effects');
+  game.classList.toggle('is-reception', state.scene === 'world' && state.reception?.phase === 'celebrating' && state.reception.partyTime < 4.5 && !state.reduced && !state.rocket.riding && !state.keys.size && !state.path.length);
+  if (layer) layer.innerHTML = state.adventure ? '' : receptionMarkup(state.reception, state.scene, state.reduced);
+}
+function updateReception(dt) {
+  if (!state.reception) return;
+  const away = receptionAway(state.reception).join(',');
+  tickReception(state.reception, dt, state.scene, state.position, state.rocket.riding, state.rocket.airborne);
+  if (state.reception.phase === 'done') state.reception = null;
+  if (state.scene === 'wardrobe' && away !== receptionAway(state.reception).join(',')) renderScene();
+  else refreshReceptionEffects();
+}
 function renderScene() {
   clearPaintPreview();
   const hat = wearsHat(state.hat, state.hatActive);
-  const markup = state.adventure ? adventureMarkup(state.adventure, state.animal, state.paint, hat) : state.scene === 'painting' ? studioMarkup(state.paint, PALETTE, state.studio) : outsideScene(state.scene) ? worldMarkup(state.paint, !!state.paintCan, state.scene, { ...state.rocket, hat }, state.animal) : roomMarkup(state.scene, state.shelfPage, state.tapes, state.animal, { can: state.paintCan, page: state.paintPage, world: state.paint, toolbox: state.toolbox, returns: state.homeReturns, hat: state.hat });
+  const markup = state.adventure ? adventureMarkup(state.adventure, state.animal, state.paint, hat) : state.scene === 'painting' ? studioMarkup(state.paint, PALETTE, state.studio) : outsideScene(state.scene) ? worldMarkup(state.paint, !!state.paintCan, state.scene, { ...state.rocket, hat }, state.animal) : roomMarkup(state.scene, state.shelfPage, state.tapes, state.animal, { can: state.paintCan, page: state.paintPage, world: state.paint, toolbox: state.toolbox, returns: state.homeReturns, hat: state.hat, away: receptionAway(state.reception) });
   const end = markup.lastIndexOf('</svg>');
-  game.innerHTML = markup.slice(0, end) + '<g id="hat-effects"></g>' + markup.slice(end);
+  game.innerHTML = markup.slice(0, end) + '<g id="hat-effects"></g><g id="reception-effects"></g>' + markup.slice(end);
   world = $('#world-svg'); player = $('#player'); playerUse = $('#player-use'); marker = $('#destination-marker');
   game.setAttribute('aria-label', state.adventure?.sunTime != null ? text('sun_holiday_title') : state.scene === 'painting' ? text('studio_title') : state.scene === 'space' ? text('space_title') : state.scene === 'sky' ? text('sky_title') : state.scene === 'world' ? text('world_title') : ROOMS[state.scene].title);
   $('.wayfinder').hidden = state.scene !== 'world' || state.rocket.riding;
@@ -251,7 +273,7 @@ function renderScene() {
   $('.exit-room').textContent = text(state.adventure?.sunTime != null ? 'adventure_back' : state.scene === 'painting' ? 'studio_close' : state.rocket.riding ? state.rocket.airborne ? 'rocket_land_button' : 'rocket_exit' : 'exit_button');
   game.classList.toggle('in-room', !outsideScene(state.scene));
   player.toggleAttribute('hidden', state.rocket.riding);
-  state.near = null; updateAnimal(); refreshCassettes(); refreshHatEffects(); resize(); updateNear(true);
+  state.near = null; updateAnimal(); refreshCassettes(); refreshHatEffects(); refreshReceptionEffects(); resize(); updateNear(true);
   player.setAttribute('transform', `translate(${state.position.x} ${state.position.y})`);
 }
 function showPanel(id, focusSelector = '') {
@@ -332,13 +354,17 @@ function refreshPlayback() {
 function loadRecording() {
   audio.pause(); state.playing = false;
   const track = TRACKS.find(t => t.id === state.tapes.loaded);
+  state.hatRestartPending = isHatTrack(track);
   const recordingURL = track?.src ? new URL(track.src, document.baseURI) : null;
   if (recordingURL && (safeURL(recordingURL.href) || (previewMode && recordingURL.protocol === 'blob:'))) {
     audio.src = track.src; audio.play().catch(() => toast(text('audio_start')));
   } else { audio.removeAttribute('src'); audio.load(); }
   refreshPlayback();
 }
-for (const event of ['play', 'pause', 'ended']) audio.addEventListener(event, refreshPlayback);
+for (const event of ['play', 'pause', 'ended']) audio.addEventListener(event, () => {
+  if (event === 'ended' && isHatTrack(TRACKS.find(track => track.id === state.tapes.loaded))) state.hatRestartPending = true;
+  refreshPlayback();
+});
 audio.addEventListener('error', () => { refreshPlayback(); toast(text('audio_error')); });
 function stopMemberMelody() {
   memberRequest++; state.memberMelody = null; memberAudio.pause(); memberAudio.removeAttribute('src'); memberAudio.load(); audio.volume = state.volume;
@@ -367,7 +393,7 @@ function currentInteraction() {
   if (hat) return { ...hat, label: text(hat.kind === 'find-hat' ? 'hat_find' : hat.kind === 'wear-hat' ? 'hat_wear' : 'hat_return') };
   if (state.rocket.riding && !state.rocket.airborne) return { id: 'rocket', kind: 'rocket-exit', label: text('rocket_exit') };
   if (state.rocket.riding && state.scene !== 'sky') return null;
-  const interaction = nearbyInteraction(state.scene, state.position, state.tapes, state.shelfPage, { can: state.paintCan, page: state.paintPage, toolbox: state.toolbox, animal: state.animal, returns: state.homeReturns }, state.rocket.position);
+  const interaction = nearbyInteraction(state.scene, state.position, state.tapes, state.shelfPage, { can: state.paintCan, page: state.paintPage, toolbox: state.toolbox, animal: state.animal, returns: state.homeReturns, away: receptionAway(state.reception) }, state.rocket.position);
   if (interaction?.kind === 'rocket-board') return state.rocket.damaged ? { ...interaction, kind: state.toolbox ? 'rocket-repair' : 'rocket-damaged', label: text(state.toolbox ? 'rocket_repair' : 'rocket_needs_tools') } : interaction;
   const color = bucketColors(PALETTE).find(color => color.id === state.paintCan);
   if (outsideScene(state.scene) && color) {
@@ -407,18 +433,21 @@ function enterSpaceAdventure() {
   const entry = point ? { x: clamp(point.x - (r.left || 0), 0, r.width), y: clamp(point.y - (r.top || 0), 0, r.height), scale: Math.hypot(matrix.a, matrix.b) || .8 } : null;
   state.adventure = createAdventure(r.width || 1200, r.height || 700, Date.now(), entry);
   state.adventure.reduced = state.reduced;
+  state.adventure.nextDifficulty = state.difficulty;
   state.scene = 'space'; renderScene(); announce(text('space_entered'));
 }
 function playAdventure() {
   if (!state.adventure || !['ready', 'won'].includes(state.adventure.phase)) return;
-  startAdventure(state.adventure); closePanel(); renderScene(); game.focus({ preventScroll: true }); announce(text('adventure_keys'));
+  startAdventure(state.adventure, state.adventure.nextDifficulty); closePanel(); renderScene(); game.focus({ preventScroll: true }); announce(text('adventure_keys'));
 }
 function landFromAdventure(crashed = false) {
   if (!state.adventure) return;
+  const success = !crashed && state.adventure.phase === 'won' && state.adventure.completedDifficulty === 'profi';
+  if (success) state.reception = createReception(ANIMALS, state.animal, GROUND_ROCKET);
   state.adventure = null;
   if (crashed) { state.rocket.damaged = true; state.rocket.broken = false; storage.set(rocketStorageKey, '1'); toast(text('rocket_crashed')); }
   stopWalking(); closePanel();
-  state.landing = { from: { ...state.position }, elapsed: 0, crashed };
+  state.landing = { from: { ...state.position }, elapsed: 0, crashed, success };
   state.rocket.angle = crashed ? 180 : 0; renderScene(); announce(text(crashed ? 'rocket_crashed' : 'rocket_returning'));
 }
 function finishAdventureTick(event) {
@@ -449,6 +478,7 @@ function updateSunHoliday() {
   $('#sun-flight-background')?.setAttribute('opacity', (1 - p.surfaceOpacity).toFixed(3));
   $('#sun-surface-background')?.setAttribute('opacity', p.surfaceOpacity.toFixed(3));
   $('#sun-story')?.toggleAttribute('hidden', !p.storyVisible);
+  $('#sun-shuttle')?.setAttribute('opacity', p.shipOpacity.toFixed(3));
   $('#sun-shuttle')?.setAttribute('transform', holidayTransform({ ...p.shuttle, angle: 0 }));
   $('#rocket-hull')?.setAttribute('transform', `rotate(${p.shuttle.angle.toFixed(2)} 0 -86)`);
   $('#rocket-pilot-upright')?.setAttribute('transform', `rotate(${-p.shuttle.angle.toFixed(2)} 0 -86)`);
@@ -636,6 +666,10 @@ document.addEventListener('click', e => {
   const btn = e.target.closest('button'); if (!btn) return;
   const action = btn.dataset.action;
   if (state.landing) return;
+  if (btn.dataset.difficulty && state.adventure && ['ready', 'won'].includes(state.adventure.phase) && Object.hasOwn(DIFFICULTIES, btn.dataset.difficulty)) {
+    state.difficulty = btn.dataset.difficulty; state.adventure.nextDifficulty = state.difficulty; storage.set('adventure-difficulty', state.difficulty);
+    modalContent.innerHTML = renderPanel(state.modal); modalContent.querySelector(`[data-difficulty="${state.difficulty}"]`)?.focus(); return;
+  }
   if (action === 'space-start' || action === 'space-replay') { playAdventure(); return; }
   if (action === 'space-continue') { closePanel(); return; }
   if (action === 'space-land') { landFromAdventure(); return; }
@@ -657,7 +691,9 @@ document.addEventListener('click', e => {
 });
 function chooseAnimal(id) {
   if (!ANIMALS.some(animal => animal.id === id)) return;
+  if (state.scene === 'wardrobe' && receptionAway(state.reception).includes(id)) return;
   const previous = state.animal;
+  swapReceptionPilot(state.reception, previous, id, state.position, state.scene);
   if (state.scene === 'wardrobe' && id !== previous) {
     const nextSpot = ANIMAL_SPOTS.find(spot => spot.id === id), oldSpot = ANIMAL_SPOTS.find(spot => spot.id === previous);
     if (state.homeReturns.some(animal => animal.id === id)) return;
@@ -865,13 +901,14 @@ function updateCamera(dt, snap = false) {
   const tx = clamp(state.position.x, w / 2, WORLD.width - w / 2), ty = clamp(state.position.y - (outsideScene(state.scene) ? 240 : 130), top + h / 2, WORLD.height - h / 2);
   const amount = snap || state.reduced ? 1 : Math.min(1, dt * 9);
   state.camera.x += (tx - state.camera.x) * amount; state.camera.y += (ty - state.camera.y) * amount;
-  world.setAttribute('viewBox', `${clamp(state.camera.x - w / 2, 0, WORLD.width - w).toFixed(2)} ${clamp(state.camera.y - h / 2, top, WORLD.height - h).toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)}`);
+  const viewBox = `${clamp(state.camera.x - w / 2, 0, WORLD.width - w).toFixed(2)} ${clamp(state.camera.y - h / 2, top, WORLD.height - h).toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)}`;
+  if (world.getAttribute('viewBox') !== viewBox) world.setAttribute('viewBox', viewBox);
 }
 function frame(time) {
   const dt = Math.min(.05, Math.max(0, (time - (lastTime || time)) / 1000)); lastTime = time;
   if (state.started && !document.hidden) {
     if (!modal.open && state.homeReturns.length) tickHomeReturns(dt);
-    if (!modal.open) tickHats(dt);
+    if (!modal.open) { tickHats(dt); updateReception(dt); }
     const departing = state.party.departing;
     tickParty(state.party, dt, state.playing, state.reduced);
     updateDanceGuests();
@@ -903,9 +940,10 @@ function frame(time) {
       if (state.landing.crashed) $('#rocket-vibration')?.setAttribute('transform', crashVibration(state.landing.elapsed, state.reduced));
       updateCamera(dt);
       if (pose.done) {
-        const crashed = state.landing.crashed; state.landing = null;
+        const crashed = state.landing.crashed, success = state.landing.success; state.landing = null;
         if (crashed) { state.rocket.broken = true; state.rocket.impact = state.reduced ? .8 : 0; }
         landRocket(); exitRocket();
+        if (success) { landReception(state.reception); refreshReceptionEffects(); toast(text('reception_cheer')); announce(text('reception_cheer')); }
         if (crashed) { toast(text('rocket_wrecked')); announce(text('rocket_wrecked')); }
       }
     }

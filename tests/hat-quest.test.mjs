@@ -8,9 +8,9 @@ import { animalSymbols } from '../cover-art.js';
 import { worldMarkup } from '../art.js';
 import { roomMarkup } from '../room-art.js';
 import { adventureMarkup } from '../adventure-art.js';
-import { createAdventure, startAdventure, tickAdventure, FINISH_DISTANCE, SUN_TRANSITION_DURATION } from '../rocket-adventure.js';
+import { createAdventure, startAdventure, tickAdventure, FINISH_DISTANCE, SUN_TRANSITION_DURATION, SUN_STORY_START } from '../rocket-adventure.js';
 
-test('only playing Hut starts the one-time quest; wind removes the worn hat and hides it', () => {
+test('only playing Hut starts the quest; wind removes the worn hat and hides it', () => {
   assert(isHatTrack({ id: 'hut', title: 'Unser Lied' })); assert(isHatTrack({ id: 'new', title: ' HUT ' })); assert(!isHatTrack(null));
   const q = createHatQuest();
   assert(!startHatQuest(q, { id: 'hut' }, false)); assert(!startHatQuest(q, { id: 'tanzen' }, true));
@@ -24,6 +24,25 @@ test('only playing Hut starts the one-time quest; wind removes the worn hat and 
   for (let i = 0; i < 100 && q.phase === 'flying'; i++) tickHatQuest(q, .05, 'radio', origin);
   assert.equal(q.phase, 'lost'); assert(hatSpot(q)); assert.equal(q.flight, null);
   assert(HAT_WEAR_SECONDS >= 3 && HAT_FLIGHT_SECONDS >= 1);
+});
+
+test('a fresh Hut playback puts a found hat back on, removes wardrobe access and starts another search', () => {
+  for (const wearing of [false, true]) {
+    const q = createHatQuest({ phase: 'unlocked', wearing, spot: 'flowers' });
+    assert(q.discovered);
+    assert(!startHatQuest(q, { id: 'hut' }, true, () => 0), 'resuming the current playback keeps the found hat');
+    assert(!startHatQuest(q, { id: 'hut' }, false, () => 0, true));
+    assert(startHatQuest(q, { id: 'hut' }, true, () => 0, true));
+    assert.equal(q.phase, 'perched'); assert(wearsHat(q)); assert(!q.wearing); assert(q.discovered);
+    assert.notEqual(q.spot, 'flowers'); assert.equal(hatInteraction(q, 'wardrobe', HAT_STAND), null);
+    const room = roomMarkup('wardrobe', 0, undefined, 'cat', { hat: q });
+    const rack = room.slice(room.indexOf('id="home-hat-stand"'), room.indexOf('data-home-slot='));
+    assert(rack); assert(!rack.includes('scale(.8)')); assert(!rack.includes('data-hat-target='));
+    const reload = createHatQuest(savedHatQuest(q)); assert(reload.discovered); assert.equal(reload.phase, 'perched');
+    while (q.phase !== 'lost') tickHatQuest(q, .05, 'radio', { x: 800, y: 700 });
+    assert(!toggleHat(q)); assert(findHat(q, hatSpot(q).scene, hatSpot(q)));
+    assert.equal(hatInteraction(q, 'wardrobe', HAT_STAND).kind, 'wear-hat');
+  }
 });
 
 test('every small hiding spot is reachable outdoors, inside a house or by rocket in the sky, never in space', () => {
@@ -81,7 +100,7 @@ test('the hat follows every animal into the rocket, space zoom and Sun holiday w
     assert(world.includes(`id="rocket-pilot" href="#dressed-${animal.id}"`));
     const game = createAdventure(1200, 700);
     assert(adventureMarkup(game, animal.id, {}, true).includes(`id="rocket-pilot" href="#dressed-${animal.id}"`));
-    startAdventure(game); game.progress = FINISH_DISTANCE; tickAdventure(game, 0); game.sunTime = SUN_TRANSITION_DURATION + 8;
+    startAdventure(game); game.progress = FINISH_DISTANCE; tickAdventure(game, 0); game.sunTime = SUN_TRANSITION_DURATION + 8 - SUN_STORY_START;
     const holiday = adventureMarkup(game, animal.id, {}, true);
     assert(holiday.includes(`<use href="#dressed-${animal.id}" x="-34" y="-77" width="68" height="82" id="sun-actor-use"`));
     assert(!roomMarkup('wardrobe', 0, undefined, animal.id, { hat: { phase: 'unlocked', wearing: true } }).includes('href="#dressed-'));

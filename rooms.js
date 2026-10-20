@@ -77,7 +77,7 @@ export function nearbyInteraction(scene, position, tapes, shelfPage = 0, paint =
   const candidates = [...links];
   if (distance(position, EXIT) < 95) candidates.push({ kind: 'exit', id: 'exit', label: text('back_world'), distance: distance(position, EXIT) });
   if (scene === 'wardrobe') for (const spot of ANIMAL_SPOTS) {
-    if (spot.id === paint.animal || paint.returns?.some(animal => animal.id === spot.id)) continue;
+    if (spot.id === paint.animal || paint.away?.includes(spot.id) || paint.returns?.some(animal => animal.id === spot.id)) continue;
     const d = distance(position, spot), animal = ANIMALS.find(animal => animal.id === spot.id);
     if (d < 85) candidates.push({ ...spot, kind: 'change-character', label: text('action_change_character', { tier: animal.name }), distance: d });
   }

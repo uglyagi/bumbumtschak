@@ -17,22 +17,28 @@ export const INTRO_ZOOM_IN = 1.5;
 export const INTRO_HOLD_END = 1.85;
 export const INTRO_ZOOM_OUT_END = 3.55;
 export const INTRO_DURATION = 4.2;
-export const SUN_ZOOM_IN = 1.5;
-export const SUN_BACKGROUND_SWAP = 1.7;
-export const SUN_ZOOM_OUT_START = 1.9;
-export const SUN_TRANSITION_DURATION = 3.6;
-export const SUN_STORY_DURATION = 10.2;
+export const SUN_EXIT_DURATION = 2.1;
+export const SUN_SCENE_CHANGE_START = 2.25;
+export const SUN_TRANSITION_DURATION = 2.75;
+export const SUN_STORY_START = 2.2;
+export const SUN_STORY_DURATION = 10.2 - SUN_STORY_START;
 export const SUN_HOLIDAY_DURATION = SUN_TRANSITION_DURATION + SUN_STORY_DURATION;
-export const sunTransitionDuration = game => game.reduced ? .35 : SUN_TRANSITION_DURATION;
+export const sunTransitionDuration = game => game.reduced ? .6 : SUN_TRANSITION_DURATION;
 export const sunHolidayDuration = game => sunTransitionDuration(game) + SUN_STORY_DURATION;
+export const DIFFICULTIES = {
+  leicht: { size: .55, speed: .65, wait: 1.65, spread: 1.1, first: 3.5 },
+  mittel: { size: .78, speed: .82, wait: 1.05, spread: .8, first: 2.5 },
+  profi: { size: 1, speed: 1, wait: .675, spread: .525, first: 2 },
+};
 const METEOR_DIRECTIONS = [[-1, 0], [1, 0], [0, 1], [0, -1], [-1, 1], [1, -1], [1, 1], [-1, -1]];
 const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 const random = game => { game.seed = (Math.imul(game.seed, 1664525) + 1013904223) >>> 0; return game.seed / 4294967296; };
 export function createAdventure(width, height, seed = 1, entry = null) {
-  return { phase: 'intro', width, height, seed: seed >>> 0, entry: entry || { x: width * .5, y: height * .5, scale: .8 }, ship: { x: width * .25, y: height * .5 }, introTime: 0, time: 0, progress: 0, nextMeteor: 2, meteors: [], meteorId: 0, angle: 0, sunTime: null, sunFrom: null, sunMeteors: [] };
+  return { phase: 'intro', difficulty: 'profi', nextDifficulty: 'profi', completedDifficulty: null, width, height, seed: seed >>> 0, entry: entry || { x: width * .5, y: height * .5, scale: .8 }, ship: { x: width * .25, y: height * .5 }, introTime: 0, time: 0, progress: 0, nextMeteor: 2, meteors: [], meteorId: 0, angle: 0, sunTime: null, sunFrom: null, sunMeteors: [] };
 }
-export function startAdventure(game) {
-  game.phase = 'playing'; game.time = 0; game.progress = 0; game.meteors = []; game.nextMeteor = 2; game.meteorId = 0; game.angle = 90;
+export function startAdventure(game, difficulty = game.difficulty) {
+  game.difficulty = Object.hasOwn(DIFFICULTIES, difficulty) ? difficulty : 'profi'; game.nextDifficulty = game.difficulty; game.completedDifficulty = null;
+  game.phase = 'playing'; game.time = 0; game.progress = 0; game.meteors = []; game.nextMeteor = DIFFICULTIES[game.difficulty].first; game.meteorId = 0; game.angle = 90;
   game.ship = { x: game.width * .25, y: game.height * .5 };
   game.sunTime = null; game.sunFrom = null; game.sunMeteors = [];
 }
@@ -48,9 +54,10 @@ export function meteorHits(from, to, radius) {
   return Math.hypot(from.x + t * dx, from.y + t * dy) <= radius;
 }
 function spawnMeteor(game, scrollSpeed) {
-  const radius = 20 + random(game) * 50;
+  const level = DIFFICULTIES[game.difficulty];
+  const radius = (20 + random(game) * 50) * level.size;
   const [dx, dy] = METEOR_DIRECTIONS[game.meteorId % METEOR_DIRECTIONS.length], length = Math.hypot(dx, dy);
-  const velocity = scrollSpeed + 55 + random(game) * 85, vx = dx / length * velocity, vy = dy / length * velocity;
+  const velocity = (scrollSpeed + 55 + random(game) * 85) * level.speed, vx = dx / length * velocity, vy = dy / length * velocity;
   // Trace backwards from an interior point to an incoming screen edge.
   // Every horizontal, vertical and diagonal trajectory crosses visible space.
   const target = { x: game.width * (.2 + random(game) * .6), y: game.height * (.2 + random(game) * .6) }, margin = radius + 25;
@@ -70,7 +77,7 @@ export function tickAdventure(game, seconds, dx = 0, dy = 0) {
   if (game.phase === 'sun-finale') {
     const duration = sunHolidayDuration(game);
     game.sunTime = Math.min(duration, game.sunTime + dt);
-    if (game.sunTime >= duration) { game.phase = 'won'; return 'win'; }
+    if (game.sunTime >= duration) { game.phase = 'won'; game.completedDifficulty = game.difficulty; return 'win'; }
     return null;
   }
   if (game.phase !== 'playing') return null;
@@ -81,7 +88,8 @@ export function tickAdventure(game, seconds, dx = 0, dy = 0) {
   game.time += dt; game.progress += speed * dt; game.angle = 90;
   if (game.time >= game.nextMeteor) {
     game.meteors.push(spawnMeteor(game, speed));
-    game.nextMeteor = game.time + .675 + random(game) * .525;
+    const level = DIFFICULTIES[game.difficulty];
+    game.nextMeteor = game.time + level.wait + random(game) * level.spread;
   }
   for (const meteor of game.meteors) {
     const before = { x: meteor.x - oldShip.x, y: meteor.y - oldShip.y };

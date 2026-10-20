@@ -1,4 +1,5 @@
 import { escapeXML } from './utils.js';
+import { fireworksMarkup, FIREWORK_SECONDS } from './fireworks.js';
 
 export const HAT_STAND = { id: 'hat-stand', scene: 'wardrobe', x: 700, y: 435 };
 export const HAT_HIDEOUTS = [
@@ -18,7 +19,7 @@ export const HAT_HIDEOUTS = [
 ];
 export const HAT_WEAR_SECONDS = 4.5;
 export const HAT_FLIGHT_SECONDS = 2.4;
-export const HAT_FIREWORK_SECONDS = 2.8;
+export const HAT_FIREWORK_SECONDS = FIREWORK_SECONDS;
 export const isHatTrack = track => !!track && (track.id === 'hut' || track.title?.trim().toLocaleLowerCase('de') === 'hut');
 export const hatSpot = quest => HAT_HIDEOUTS.find(spot => spot.id === quest.spot) || null;
 export const wearsHat = (quest, searchActive = true) => quest?.phase === 'perched' && searchActive || quest?.phase === 'unlocked' && quest.wearing;
@@ -26,12 +27,14 @@ export const animalHref = (animal, wearing = false) => `#${wearing ? 'dressed' :
 export function createHatQuest(saved) {
   const spot = HAT_HIDEOUTS.find(spot => spot.id === saved?.spot);
   const phase = saved?.phase === 'unlocked' ? 'unlocked' : spot && ['perched', 'flying', 'lost'].includes(saved?.phase) ? saved.phase === 'flying' ? 'lost' : saved.phase : 'idle';
-  return { phase, wearing: phase === 'unlocked' && saved.wearing === true, spot: spot?.id || null, elapsed: 0, flight: null, celebration: null };
+  return { phase, wearing: phase === 'unlocked' && saved.wearing === true, discovered: phase === 'unlocked' || saved?.discovered === true, spot: spot?.id || null, elapsed: 0, flight: null, celebration: null };
 }
-export const savedHatQuest = quest => ({ phase: quest.phase === 'flying' ? 'lost' : quest.phase, wearing: quest.phase === 'unlocked' && quest.wearing, spot: quest.spot });
-export function startHatQuest(quest, track, playing, random = Math.random) {
-  if (quest.phase !== 'idle' || !playing || !isHatTrack(track)) return false;
-  quest.phase = 'perched'; quest.elapsed = 0; quest.spot = HAT_HIDEOUTS[Math.min(HAT_HIDEOUTS.length - 1, Math.max(0, Math.floor(random() * HAT_HIDEOUTS.length)))].id;
+export const savedHatQuest = quest => ({ phase: quest.phase === 'flying' ? 'lost' : quest.phase, wearing: quest.phase === 'unlocked' && quest.wearing, discovered: quest.discovered, spot: quest.spot });
+export function startHatQuest(quest, track, playing, random = Math.random, restart = false) {
+  if (!(quest.phase === 'idle' || quest.phase === 'unlocked' && restart) || !playing || !isHatTrack(track)) return false;
+  const choices = quest.phase === 'unlocked' ? HAT_HIDEOUTS.filter(spot => spot.id !== quest.spot) : HAT_HIDEOUTS;
+  quest.phase = 'perched'; quest.elapsed = 0; quest.wearing = false; quest.flight = null; quest.celebration = null;
+  quest.spot = choices[Math.min(choices.length - 1, Math.max(0, Math.floor(random() * choices.length)))].id;
   return true;
 }
 export function tickHatQuest(quest, seconds, scene, origin, searchActive = true) {
@@ -55,7 +58,7 @@ export function hatInteraction(quest, scene, position, searchActive = true) {
 }
 export function findHat(quest, scene, position, searchActive = true) {
   if (hatInteraction(quest, scene, position, searchActive)?.kind !== 'find-hat') return false;
-  quest.phase = 'unlocked'; quest.wearing = false; quest.flight = null;
+  quest.phase = 'unlocked'; quest.wearing = false; quest.discovered = true; quest.flight = null;
   quest.celebration = { scene, x: position.x, y: position.y - 75, time: 0 }; return true;
 }
 export function toggleHat(quest) { if (quest.phase !== 'unlocked') return false; quest.wearing = !quest.wearing; return true; }
@@ -80,12 +83,7 @@ export function hatEffectsMarkup(quest, scene, reduced = false, findLabel = 'Hut
   if (searchActive && flying && sameView(quest.flight.scene, scene)) result += `<g id="flying-hat" pointer-events="none" transform="translate(${flying.x.toFixed(2)} ${flying.y.toFixed(2)}) rotate(${flying.angle.toFixed(2)}) scale(${flying.scale.toFixed(3)})">${hatMarkup()}</g>`;
   const celebration = quest.celebration;
   if (celebration && sameView(celebration.scene, scene)) {
-    const sparks = Array.from({ length: 36 }, (_, i) => {
-      const burst = i % 3, t = Math.max(0, celebration.time - burst * .35), angle = Math.floor(i / 3) / 12 * Math.PI * 2 + burst * .2, distance = reduced ? 42 : Math.min(105, t * 85);
-      const x = (burst - 1) * 70 + Math.cos(angle) * distance, y = -25 - burst % 2 * 35 + Math.sin(angle) * distance + (reduced ? 0 : t * t * 12);
-      return `<path d="M-3 0h6M0-3v6" transform="translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${i * 31})" stroke="${['#fff20b', '#ff87ce', '#1d55ff', '#ffffff', '#ff3935'][i % 5]}" stroke-width="3.5" stroke-linecap="round" opacity="${t <= 0 || t > 1.9 ? 0 : Math.max(0, 1 - t / 1.9).toFixed(2)}"/>`;
-    }).join('');
-    result += `<g id="hat-fireworks" pointer-events="none" aria-hidden="true" transform="translate(${celebration.x} ${celebration.y})">${sparks}</g>`;
+    result += fireworksMarkup(celebration, reduced, 'hat-fireworks');
   }
   return result;
 }

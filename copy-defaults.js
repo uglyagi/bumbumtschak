@@ -2083,12 +2083,23 @@ export const COPY_GROUPS = [
     ]
   }
 ];
+COPY_GROUPS.push({ id: 'difficulty', label: 'Schwierigkeitsstufen & Raumfahrerfeier', fields: [
+  { key: 'adventure_difficulty', label: 'Auswahl der Schwierigkeit', value: 'Wie möchtest du fliegen?', max: 180 },
+  { key: 'difficulty_leicht', label: 'Leichte Stufe', value: 'leicht', max: 40 },
+  { key: 'difficulty_leicht_hint', label: 'Beschreibung leicht', value: 'Wenige, kleine und langsame Meteoriten', max: 180 },
+  { key: 'difficulty_mittel', label: 'Mittlere Stufe', value: 'mittel', max: 40 },
+  { key: 'difficulty_mittel_hint', label: 'Beschreibung mittel', value: 'Mehr Meteoriten, etwas schneller', max: 180 },
+  { key: 'difficulty_profi', label: 'Profi-Stufe', value: 'Raumfahrprofi', max: 40 },
+  { key: 'difficulty_profi_hint', label: 'Beschreibung Raumfahrprofi', value: 'Die große Herausforderung!', max: 180 },
+  { key: 'reception_cheer', label: 'Begrüßung nach erfolgreichem Profi-Flug', value: 'Juhu! Unser Raumfahrprofi ist wieder da!', max: 300 },
+] });
 COPY_GROUPS.push({ id: 'hat', label: 'Hut-Suche & Kleidung', fields: [
   { key: 'hat_started', label: 'Beginn der Hut-Suche', value: 'Du hast einen Hut auf! Pass gut auf ihn auf …', max: 300 },
   { key: 'hat_flew', label: 'Der Hut fliegt weg', value: 'Hui, der Hut ist weggeflogen! Such ihn draußen, in den Häusern oder im Himmel. Du kannst ihn nur finden, solange „Hut“ läuft.', max: 600 },
   { key: 'hat_find', label: 'Hut aufheben', value: 'Hut aufheben', max: 120 },
   { key: 'hat_found', label: 'Hut gefunden', value: 'Gefunden! Dein Hut wartet jetzt im Home sweet Home auf dich.', max: 300 },
   { key: 'hat_stand', label: 'Schild am Hutplatz', value: 'Dein Hut', max: 120 },
+  { key: 'hat_missing', label: 'Leerer Hutplatz während der Suche', value: 'Noch unterwegs', max: 120 },
   { key: 'hat_wear', label: 'Hut aufsetzen', value: 'Hut aufsetzen', max: 120 },
   { key: 'hat_return', label: 'Hut zurücklegen', value: 'Hut zurücklegen', max: 120 },
   { key: 'hat_worn', label: 'Hut aufgesetzt', value: 'Hut auf! Er begleitet dich auch im Weltraum.', max: 300 },

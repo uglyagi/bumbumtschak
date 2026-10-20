@@ -2,44 +2,34 @@ import { defs, rocketMarkup } from './art.js';
 import { text } from './content.js';
 import { animalHref } from './hat-quest.js';
 import { escapeXML as esc } from './utils.js';
-import { SUN_ZOOM_IN, SUN_BACKGROUND_SWAP, SUN_ZOOM_OUT_START, sunTransitionDuration } from './rocket-adventure.js';
+import { SUN_EXIT_DURATION, SUN_SCENE_CHANGE_START, SUN_STORY_START, sunTransitionDuration } from './rocket-adventure.js';
 
 const clamp = (n, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, n));
 const smooth = n => { const t = clamp(n); return t * t * (3 - 2 * t); };
 const blend = (a, b, t) => a + (b - a) * t;
-const zoom = (a, b, t) => Math.exp(blend(Math.log(a), Math.log(b), t));
 export const holidayTransform = pose => `translate(${pose.x.toFixed(2)} ${pose.y.toFixed(2)}) rotate(${(pose.angle || 0).toFixed(2)}) scale(${pose.scale.toFixed(3)})`;
 export function sunHolidayPose(game) {
   const elapsed = game.sunTime ?? 0, duration = sunTransitionDuration(game), transitioning = elapsed < duration;
-  const t = Math.max(0, elapsed - duration), w = game.width, h = game.height, scale = clamp(w / 800, .8, 1.25), ground = h * .72;
-  const landed = smooth(t / 2.2), walking = smooth((t - 2.7) / 2.2), reclining = smooth((t - 6.4) / .8);
+  const t = SUN_STORY_START + Math.max(0, elapsed - duration), w = game.width, h = game.height, scale = clamp(w / 800, .8, 1.25), ground = h * .72;
+  const walking = smooth((t - 2.7) / 2.2), reclining = smooth((t - 6.4) / .8);
   const shipX = w * .21, chairX = w * .68;
   const entry = { x: (game.sunFrom?.x ?? .25) * w, y: (game.sunFrom?.y ?? .5) * h, scale: .72, angle: 90 };
-  const hover = { x: shipX, y: Math.min(h * .4, ground - 86 * scale - 70), scale, angle: 0 };
-  let shuttle = { ...hover, y: blend(hover.y, ground - 86 * scale, landed) };
-  if (transitioning) {
-    if (game.reduced) {
-      const amount = smooth(elapsed / duration);
-      shuttle = { x: blend(entry.x, hover.x, amount), y: blend(entry.y, hover.y, amount), scale: blend(entry.scale, hover.scale, amount), angle: blend(90, 0, amount) };
-    } else {
-      const close = { x: w / 2, y: h / 2, scale: Math.hypot(w, h) / 30 * 1.1 };
-      if (elapsed < SUN_ZOOM_IN) {
-        const amount = smooth(elapsed / SUN_ZOOM_IN);
-        shuttle = { x: blend(entry.x, close.x, amount), y: blend(entry.y, close.y, amount), scale: zoom(entry.scale, close.scale, amount), angle: 90 };
-      } else if (elapsed < SUN_ZOOM_OUT_START) {
-        shuttle = { ...close, angle: blend(90, 0, smooth((elapsed - SUN_ZOOM_IN) / (SUN_ZOOM_OUT_START - SUN_ZOOM_IN))) };
-      } else {
-        const amount = smooth((elapsed - SUN_ZOOM_OUT_START) / (duration - SUN_ZOOM_OUT_START));
-        shuttle = { x: blend(close.x, hover.x, amount), y: blend(close.y, hover.y, amount), scale: zoom(close.scale, hover.scale, amount), angle: 0 };
-      }
+  const parked = { x: shipX, y: ground - 86 * scale, scale, angle: 0 };
+  const changeStart = game.reduced ? duration / 2 : SUN_SCENE_CHANGE_START;
+  const surfaceOpacity = smooth((elapsed - changeStart) / (duration - changeStart));
+  let shuttle = parked, shipOpacity = surfaceOpacity;
+  if (elapsed < changeStart) {
+    if (game.reduced) { shuttle = entry; shipOpacity = 1 - smooth(elapsed / changeStart); }
+    else {
+      const amount = smooth(elapsed / SUN_EXIT_DURATION), distance = Math.max(w - entry.x, entry.y) + 150;
+      shuttle = { x: entry.x + distance * amount, y: entry.y - distance * amount, scale: entry.scale, angle: blend(90, 45, smooth(elapsed / .45)) };
+      shipOpacity = 1;
     }
   }
-  // Change scenery only while the cockpit fills the viewport. Keep one pilot throughout.
-  const surfaceOpacity = game.reduced ? smooth(elapsed / duration) : Number(elapsed >= SUN_BACKGROUND_SWAP);
   const stage = transitioning ? 'arrival' : t < 2.2 ? 'landing' : t < 4.9 ? 'chair' : t < 5.7 ? 'unfolding' : t < 6.4 ? 'glasses' : 'relaxing';
   return {
-    stage, caption: `sun_story_${transitioning ? 'landing' : stage}`, ground, scale, time: t, transitioning, surfaceOpacity, storyVisible: !transitioning,
-    shuttle, airborne: transitioning || t < 2.2, pilot: transitioning || t < 2.35, hatch: !transitioning && t >= 2.25 && t < 3.2,
+    stage, caption: `sun_story_${transitioning ? 'landing' : stage}`, ground, scale, time: t, transitioning, surfaceOpacity, shipOpacity, storyVisible: !transitioning,
+    shuttle, airborne: elapsed < changeStart, pilot: transitioning || t < 2.35, hatch: !transitioning && t >= 2.25 && t < 3.2,
     actor: { x: blend(shipX + 27 * scale, chairX + 23 * scale, walking) + 11 * scale * reclining, y: ground - 17 * scale * reclining + (!game.reduced && t >= 7.2 ? Math.sin((t - 7.2) * 2) * .8 : 0), scale, angle: -62 * reclining },
     actorVisible: !transitioning && t >= 2.35, walking: t >= 2.7 && t < 4.9,
     foldedChair: t >= 2.7 && t < 4.9,
@@ -54,14 +44,14 @@ export function sunHolidayMarkup(game, animal, flightBackdrop = '', hat = false)
   const p = sunHolidayPose(game), w = game.width, h = game.height;
   let seed = 7331; const random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
   const stars = Array.from({ length: 100 }, (_, i) => `<circle cx="${(random() * w).toFixed(1)}" cy="${(random() * h * .58).toFixed(1)}" r="${i % 4 ? 1.4 : 2.4}" fill="${i % 3 ? '#fffcee' : '#ffb5df'}" opacity=".8"/>`).join('');
-  return `<svg id="world-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" font-family="Trebuchet MS,Arial,sans-serif" aria-label="${esc(text('sun_holiday_title'))}">${defs()}
+  return `<svg id="world-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" font-family="Trebuchet MS,Arial,sans-serif" aria-label="${esc(text('sun_holiday_title'))}">${defs()}<rect width="${w}" height="${h}" fill="#10152d"/>
     <g id="sun-holiday"><g id="sun-flight-background" opacity="${1 - p.surfaceOpacity}">${flightBackdrop || `<rect width="${w}" height="${h}" fill="#10152d"/>${stars}`}</g>
       <g id="sun-surface-background" opacity="${p.surfaceOpacity}"><rect width="${w}" height="${h}" fill="#10152d"/>${stars}
       <path d="M-50 ${p.ground - 25}Q${w / 2} ${p.ground - 130} ${w + 50} ${p.ground - 25}V${h + 50}H-50Z" fill="#fff20b" stroke="#101014" stroke-width="5"/>
       <path d="M0 ${h - 26}Q${w * .3} ${h - 72} ${w * .54} ${h - 25}T${w} ${h - 32}" fill="none" stroke="#ffc647" stroke-width="26" stroke-linecap="round"/>
       <ellipse cx="${w * .43}" cy="${h * .88}" rx="${45 * p.scale}" ry="${12 * p.scale}" fill="#ffc647"/><ellipse cx="${w * .85}" cy="${h * .92}" rx="${33 * p.scale}" ry="${8 * p.scale}" fill="#ffc647"/>
       </g><text id="sun-story" x="${w / 2}" y="${Math.min(92, h * .14)}" text-anchor="middle" fill="#fffcee" font-size="${w < 500 ? 19 : 27}" font-weight="900" ${p.storyVisible ? '' : 'hidden=""'}>${esc(text(p.caption))}</text>
-      <g id="sun-shuttle" transform="${holidayTransform({ ...p.shuttle, angle: 0 })}">${rocketMarkup({ position: { x: 0, y: 86 }, riding: true, airborne: p.airborne, angle: p.shuttle.angle, pilotHidden: !p.pilot, hat }, animal)}<g id="sun-hatch" ${p.hatch ? '' : 'hidden=""'}><path d="M14 17h20v35H14Z" fill="#1d55ff" stroke="#101014" stroke-width="3"/><path d="m34 17 14 7v35l-14-7Z" fill="#ff87ce" stroke="#101014" stroke-width="3"/></g></g>
+      <g id="sun-shuttle" opacity="${p.shipOpacity}" transform="${holidayTransform({ ...p.shuttle, angle: 0 })}">${rocketMarkup({ position: { x: 0, y: 86 }, riding: true, airborne: p.airborne, angle: p.shuttle.angle, pilotHidden: !p.pilot, hat }, animal)}<g id="sun-hatch" ${p.hatch ? '' : 'hidden=""'}><path d="M14 17h20v35H14Z" fill="#1d55ff" stroke="#101014" stroke-width="3"/><path d="m34 17 14 7v35l-14-7Z" fill="#ff87ce" stroke="#101014" stroke-width="3"/></g></g>
       <g id="sun-lounger" transform="${holidayTransform(p.chair)}" ${p.chairVisible ? '' : 'hidden=""'}><g id="sun-lounger-open" transform="scale(${p.chairOpen} 1)">${loungerMarkup}</g></g>
       <g id="sun-actor" transform="${holidayTransform(p.actor)}" ${p.actorVisible ? '' : 'hidden=""'}><g id="sun-actor-body"><use href="${animalHref(animal, hat)}" x="-34" y="-77" width="68" height="82" id="sun-actor-use"/><g id="sun-sunglasses" transform="translate(0 ${p.glassesY})" ${p.glasses ? '' : 'hidden=""'}>${sunglassesMarkup}</g><g id="sun-folded-chair" transform="translate(30 -26) rotate(-12) scale(.72)" ${p.foldedChair ? '' : 'hidden=""'}>${foldedChairMarkup}</g></g></g>
     </g><g id="player" hidden=""><use id="player-use"/></g><g id="destination-marker" hidden=""></g></svg>`;
