@@ -14,7 +14,7 @@ import { adventureMarkup, adventureShipPose, meteorMarkup } from './adventure-ar
 import { toolboxMarkup } from './toolbox.js';
 import { wreckageTransforms } from './rocket-wreckage.js';
 import { sunHolidayPose, holidayTransform } from './sun-holiday.js';
-import { createHatQuest, savedHatQuest, startHatQuest, tickHatQuest, hatInteraction, findHat, toggleHat, wearsHat, animalHref, hatEffectsMarkup, isHatTrack, hatSpot, HAT_STAND, HAT_HEADS } from './hat-quest.js';
+import { createHatQuest, savedHatQuest, startHatQuest, tickHatQuest, hatInteraction, findHat, toggleHat, paintHat, returnHat, wearsHat, animalHref, colorHatMarkup, hatEffectsMarkup, isHatTrack, hatSpot, HAT_STAND, HAT_HEADS } from './hat-quest.js';
 import { createReception, landReception, tickReception, receptionMarkup, receptionAway, swapReceptionPilot } from './reception.js';
 
 const previewMode = new URLSearchParams(location.search).get('preview') === '1';
@@ -237,15 +237,19 @@ function refreshHatQuest() {
   if (started && state.scene === 'wardrobe') renderScene();
   else if (changed || started) { updateAnimal(); refreshHatEffects(); state.near = null; updateNear(true); }
 }
+function hatOrigin() {
+  const head = HAT_HEADS[state.animal];
+  return { x: state.position.x + (head.x - 50) * .68, y: state.position.y + (state.rocket.riding ? -100 : -77 + head.y * 82 / 120) };
+}
 function tickHats(dt) {
-  const head = HAT_HEADS[state.animal], before = !!state.hat.celebration;
-  const origin = { x: state.position.x + (head.x - 50) * .68, y: state.position.y + (state.rocket.riding ? -100 : -77 + head.y * 82 / 120) };
-  const event = tickHatQuest(state.hat, dt, state.scene, origin, state.hatActive);
+  const before = !!(state.hat.celebration || state.hat.returning);
+  const event = tickHatQuest(state.hat, dt, state.scene, hatOrigin(), state.hatActive);
   if (event) {
     saveHat(); updateAnimal(); state.near = null;
     if (event === 'flying') { toast(text('hat_flew')); announce(text('hat_flew')); }
+    if (event === 'returned') { if (state.scene === 'wardrobe') renderScene(); announce(text('hat_returned')); }
   }
-  if (event || state.hat.phase === 'flying' || state.hat.celebration || before) refreshHatEffects();
+  if (event || state.hat.phase === 'flying' || state.hat.returning || state.hat.celebration || before) refreshHatEffects();
 }
 function refreshReceptionEffects() {
   const layer = $('#reception-effects');
@@ -263,7 +267,8 @@ function updateReception(dt) {
 function renderScene() {
   clearPaintPreview();
   const hat = wearsHat(state.hat, state.hatActive);
-  const markup = state.adventure ? adventureMarkup(state.adventure, state.animal, state.paint, hat) : state.scene === 'painting' ? studioMarkup(state.paint, PALETTE, state.studio) : outsideScene(state.scene) ? worldMarkup(state.paint, !!state.paintCan, state.scene, { ...state.rocket, hat }, state.animal) : roomMarkup(state.scene, state.shelfPage, state.tapes, state.animal, { can: state.paintCan, page: state.paintPage, world: state.paint, toolbox: state.toolbox, returns: state.homeReturns, hat: state.hat, away: receptionAway(state.reception) });
+  const artwork = state.adventure ? adventureMarkup(state.adventure, state.animal, state.paint, hat) : state.scene === 'painting' ? studioMarkup(state.paint, PALETTE, state.studio) : outsideScene(state.scene) ? worldMarkup(state.paint, !!state.paintCan, state.scene, { ...state.rocket, hat }, state.animal) : roomMarkup(state.scene, state.shelfPage, state.tapes, state.animal, { can: state.paintCan, page: state.paintPage, world: state.paint, toolbox: state.toolbox, returns: state.homeReturns, hat: state.hat, away: receptionAway(state.reception) });
+  const markup = colorHatMarkup(artwork, state.hat.color);
   const end = markup.lastIndexOf('</svg>');
   game.innerHTML = markup.slice(0, end) + '<g id="hat-effects"></g><g id="reception-effects"></g>' + markup.slice(end);
   world = $('#world-svg'); player = $('#player'); playerUse = $('#player-use'); marker = $('#destination-marker');
@@ -390,7 +395,10 @@ function currentInteraction() {
     return surface ? { ...surface, kind: 'studio-paint', label: text(surface.key) } : null;
   }
   const hat = hatInteraction(state.hat, state.scene, state.position, state.hatActive);
-  if (hat) return { ...hat, label: text(hat.kind === 'find-hat' ? 'hat_find' : hat.kind === 'wear-hat' ? 'hat_wear' : 'hat_return') };
+  if (hat) {
+    if (hat.kind === 'wear-hat' && bucketColors(PALETTE).some(color => color.id === state.paintCan)) return { ...hat, kind: 'paint-hat', label: text('hat_paint') };
+    return { ...hat, label: text(hat.kind === 'find-hat' ? 'hat_find' : hat.kind === 'wear-hat' ? 'hat_wear' : 'hat_return') };
+  }
   if (state.rocket.riding && !state.rocket.airborne) return { id: 'rocket', kind: 'rocket-exit', label: text('rocket_exit') };
   if (state.rocket.riding && state.scene !== 'sky') return null;
   const interaction = nearbyInteraction(state.scene, state.position, state.tapes, state.shelfPage, { can: state.paintCan, page: state.paintPage, toolbox: state.toolbox, animal: state.animal, returns: state.homeReturns, away: receptionAway(state.reception) }, state.rocket.position);
@@ -568,6 +576,11 @@ function performInteraction() {
     if (findHat(state.hat, state.scene, state.position, state.hatActive)) { saveHat(); renderScene(); toast(text('hat_found')); announce(text('hat_found')); }
     return;
   }
+  if (near.kind === 'paint-hat') {
+    const color = bucketColors(PALETTE).find(color => color.id === state.paintCan);
+    if (color && paintHat(state.hat, color.color)) { saveHat(); renderScene(); announce(text('hat_painted', { farbe: color.name })); }
+    return;
+  }
   if (near.kind === 'wear-hat' || near.kind === 'return-hat') {
     if (toggleHat(state.hat)) { saveHat(); renderScene(); announce(text(state.hat.wearing ? 'hat_worn' : 'hat_returned')); }
     return;
@@ -691,18 +704,19 @@ document.addEventListener('click', e => {
 });
 function chooseAnimal(id) {
   if (!ANIMALS.some(animal => animal.id === id)) return;
-  if (state.scene === 'wardrobe' && receptionAway(state.reception).includes(id)) return;
+  if (state.scene === 'wardrobe' && (receptionAway(state.reception).includes(id) || state.homeReturns.some(animal => animal.id === id))) return;
   const previous = state.animal;
+  const destination = state.scene === 'wardrobe' ? undefined : outsideScene(state.scene) ? HOUSE_DOORS.find(door => door.id === 'wardrobe') : EXIT;
+  if (id !== previous && returnHat(state.hat, state.scene, hatOrigin(), destination)) { saveHat(); announce(text('hat_returning')); }
   swapReceptionPilot(state.reception, previous, id, state.position, state.scene);
   if (state.scene === 'wardrobe' && id !== previous) {
     const nextSpot = ANIMAL_SPOTS.find(spot => spot.id === id), oldSpot = ANIMAL_SPOTS.find(spot => spot.id === previous);
-    if (state.homeReturns.some(animal => animal.id === id)) return;
     const position = { ...state.position }, path = planPath(position, oldSpot, 'wardrobe');
     state.homeReturns = state.homeReturns.filter(animal => animal.id !== previous);
     if (Math.hypot(position.x - oldSpot.x, position.y - oldSpot.y) > 3 && path.length) state.homeReturns.push({ id: previous, position, path });
     stopWalking(); state.position = { x: nextSpot.x, y: nextSpot.y };
   }
-  state.animal = id; updateAnimal();
+  state.animal = id; updateAnimal(); refreshHatEffects();
   if (state.scene === 'wardrobe' && id !== previous) renderScene();
   modalContent.querySelectorAll('[data-character]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.character === id)));
 }
@@ -867,13 +881,13 @@ $('#dpad').querySelectorAll('button').forEach(btn => {
   btn.addEventListener('pointerup', release); btn.addEventListener('pointercancel', release); btn.addEventListener('lostpointercapture', release);
   btn.addEventListener('click', e => { if (e.detail === 0 && state.started && !modal.open && !state.landing) { const [dx, dy] = padVectors[btn.dataset.direction]; if (state.adventure?.phase === 'playing') { const event = tickAdventure(state.adventure, .05, dx, dy); updateAdventure(); finishAdventureTick(event); } else if (!state.adventure) navigateTo(state.position.x + dx * 28, state.position.y + dy * 28); } });
 });
-$('#interact').addEventListener('click', () => { if (currentInteraction()?.kind !== 'paint') performInteraction(); });
+$('#interact').addEventListener('click', () => { if (!['paint', 'paint-hat'].includes(currentInteraction()?.kind)) performInteraction(); });
 function updateNear(force = false) {
   const near = currentInteraction();
   refreshPaintPreview(near);
   if (!force && near?.kind === state.near?.kind && near?.id === state.near?.id && near?.slot === state.near?.slot) return;
-  state.near = near; const btn = $('#interact'); btn.hidden = !near || near.kind === 'paint' || state.scene === 'painting';
-  if (near?.kind === 'paint') btn.innerHTML = '';
+  state.near = near; const btn = $('#interact'); btn.hidden = !near || ['paint', 'paint-hat'].includes(near.kind) || state.scene === 'painting';
+  if (['paint', 'paint-hat'].includes(near?.kind)) btn.innerHTML = '';
   else if (near) {
     const label = near.label;
     btn.innerHTML = `<kbd aria-hidden="true">↵ / ␣</kbd>${escape(label)}`; announce(text('action_hint', { aktion: label }));

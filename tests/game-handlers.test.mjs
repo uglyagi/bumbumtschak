@@ -410,7 +410,7 @@ try {
   h.state.position = { ...painting.PAINT_NEXT }; h.game.focus();
   h.press(h.windowHandlers, h.event(' ', 'Space', h.game));
   assert.equal(h.state.paintPage, 0); assert(!h.game.innerHTML.includes('Orange'));
-  assert.equal(painting.paintSlots(content.PALETTE).length, 5);
+  assert.equal(painting.paintSlots(content.PALETTE).length, 6);
   assert(!h.game.innerHTML.includes('data-room-target="paint-next"'));
   h.state.position = { ...rooms.PICTURE_SPOT }; h.frame(16);
   assert.equal(h.state.scene, 'painting');
@@ -725,11 +725,11 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space']]) {
     assert.equal(h.state.paint.grass, color.color, color.name + ' paints through the actual keyboard handler');
   }
   h.press(h.windowHandlers, h.event('Escape', 'Escape', h.game));
-  assert.equal((h.game.innerHTML.match(/data-room-target="paint:/g) || []).length, 5);
-  const white = new h.Element('not a bucket', 'g', { roomTarget: 'paint:white' });
-  h.press(h.game.handlers, h.event(key, code, white)); assert.equal(h.state.paintCan, null);
+  assert.equal((h.game.innerHTML.match(/data-room-target="paint:/g) || []).length, 6);
+  h.state.position = { ...painting.paintSlots(content.PALETTE).find(color => color.id === 'white') }; h.game.focus();
+  h.press(h.windowHandlers, h.event(key, code, h.game)); assert.equal(h.state.paintCan, 'white');
 }
-console.log('PASS: all eighteen picture colors can be taken and confirmed with Enter and Space; only five base buckets appear in the house.');
+console.log('PASS: all eighteen picture colors can be taken and confirmed with Enter and Space; five base buckets plus white appear in the house and the white bucket can be picked up.');
 
 const originalMelodies = content.BAND.map(member => member.audio);
 const originalCassetteAudio = content.TRACKS[0].src;
@@ -798,7 +798,7 @@ try {
   for (const [key, code] of [['Enter','Enter'], [' ','Space'], ['Enter','NumpadEnter']]) {
     const h = await harness(false, 'cat'); h.enterRoom('radio'); h.state.tapes.loaded = 'hut'; h.loadRecording(); let clock = 0;
     assert(h.state.hatActive); assert.equal(h.state.hat.phase, 'perched'); assert.equal(h.get('#player-use').getAttribute('href'), '#dressed-cat');
-    const spot = hats.HAT_HIDEOUTS.find(spot => spot.id === 'music-corner'); h.state.hat.spot = spot.id;
+    const spot = hats.HAT_HIDEOUTS.find(spot => spot.id === 'concert-corner'); h.state.hat.spot = spot.id;
     while (h.state.hat.phase === 'perched' && clock < 400) h.frame(++clock * 16);
     assert.equal(h.state.hat.phase, 'flying'); assert(h.get('#hat-effects').innerHTML.includes('id="flying-hat"'));
     h.get('#audio').pause(); for (const callback of h.get('#audio').handlers.get('pause')) callback({});
@@ -807,7 +807,8 @@ try {
     assert.equal(h.state.hat.elapsed, frozen); assert.equal(h.get('#hat-effects').innerHTML, '');
     await h.get('#audio').play(); for (const callback of h.get('#audio').handlers.get('play')) callback({});
     while (h.state.hat.phase === 'flying' && clock < 800) h.frame(++clock * 16);
-    assert.equal(h.state.hat.phase, 'lost'); assert(h.get('#hat-effects').innerHTML.includes('scale(.38)'));
+    assert.equal(h.state.hat.phase, 'lost'); assert(!h.get('#hat-effects').innerHTML.includes('scale(.38)'), 'the hat is not hidden in the music house');
+    h.enterRoom(spot.scene); assert(h.get('#hat-effects').innerHTML.includes('scale(.38)'));
     h.state.position = { ...spot }; h.game.focus();
     h.press(h.windowHandlers, h.event(key, code, h.game, true)); assert.equal(h.state.hat.phase, 'lost');
     const hatTarget = new h.Element('hidden hat', 'g', {hatTarget:'lost-hat'});
@@ -822,16 +823,28 @@ try {
     h.press(h.windowHandlers, h.event(key, code, h.game)); assert.equal(h.state.hat.phase, 'lost', 'the song ending disables collection');
     await h.get('#audio').play(); for (const callback of h.get('#audio').handlers.get('play')) callback({});
     h.game.focus(); h.press(h.game.handlers, h.event(key, code, hatTarget));
-    assert.equal(h.state.hat.phase, 'unlocked'); assert(!h.state.hat.wearing); assert(h.get('#hat-effects').innerHTML.includes('id="hat-fireworks"'));
-    assert.equal(JSON.parse(h.stored.get('bbt-hat-world')).phase, 'unlocked');
+    assert.equal(h.state.hat.phase, 'unlocked'); assert(h.state.hat.wearing); assert.equal(h.get('#player-use').getAttribute('href'), '#dressed-cat'); assert(h.get('#hat-effects').innerHTML.includes('id="hat-fireworks"'));
+    assert.equal(JSON.parse(h.stored.get('bbt-hat-world')).phase, 'unlocked'); assert(JSON.parse(h.stored.get('bbt-hat-world')).wearing);
     h.enterRoom('wardrobe'); assert(h.game.innerHTML.includes('data-hat-target="hat-stand"'));
     h.state.position = { ...hats.HAT_STAND }; h.game.focus();
+    h.press(h.windowHandlers, h.event(key, code, h.game)); assert(!h.state.hat.wearing); assert.equal(h.get('#player-use').getAttribute('href'), '#animal-cat');
     h.press(h.windowHandlers, h.event(key, code, h.game)); assert(h.state.hat.wearing); assert.equal(h.get('#player-use').getAttribute('href'), '#dressed-cat');
     const saved = JSON.parse(h.stored.get('bbt-hat-world')), reload = await harness(false, 'cat', null, false, saved);
     assert(reload.state.hat.wearing); assert.equal(reload.get('#player-use').getAttribute('href'), '#dressed-cat');
     h.press(h.windowHandlers, h.event(key, code, h.game)); assert(!h.state.hat.wearing); assert.equal(h.get('#player-use').getAttribute('href'), '#animal-cat');
     h.press(h.windowHandlers, h.event(key, code, h.game)); assert(h.state.hat.wearing);
-    new h.Element('dog', 'button', {character:'dog'}).click(); assert.equal(h.get('#player-use').getAttribute('href'), '#dressed-dog');
+    const dog = rooms.ANIMAL_SPOTS.find(spot => spot.id === 'dog'); h.state.position = { x: dog.x + 52, y: dog.y + 30 }; h.game.focus();
+    const oldPosition = { ...h.state.position };
+    h.press(h.windowHandlers, h.event(key, code, h.game)); assert.equal(h.state.animal, 'dog'); assert.equal(h.get('#player-use').getAttribute('href'), '#animal-dog');
+    assert(!h.state.hat.wearing); assert(h.state.hat.returning); assert(h.get('#hat-effects').innerHTML.includes('id="returning-hat"'));
+    assert(Math.abs(h.state.hat.returning.x - oldPosition.x) < 1); assert(h.state.hat.returning.y < oldPosition.y);
+    const rack = () => h.game.innerHTML.slice(h.game.innerHTML.indexOf('id="home-hat-stand"'), h.game.innerHTML.indexOf('data-home-slot='));
+    assert(!rack().includes('scale(.8)')); assert(!rack().includes('data-hat-target=')); assert(!JSON.parse(h.stored.get('bbt-hat-world')).wearing);
+    while (h.state.hat.returning && clock < 1000) h.frame(++clock * 16);
+    assert.equal(h.state.hat.returning, null); assert(!h.get('#hat-effects').innerHTML.includes('id="returning-hat"')); assert(rack().includes('scale(.8)'));
+    assert(!h.game.innerHTML.includes('href="#dressed-cat"'), 'the previous figure returns home without the hat');
+    h.state.position = { ...hats.HAT_STAND }; h.game.focus(); h.press(h.windowHandlers, h.event(key, code, h.game));
+    assert(h.state.hat.wearing); assert.equal(h.get('#player-use').getAttribute('href'), '#dressed-dog');
     h.leaveRoom(); h.state.position={...sky.GROUND_ROCKET}; h.game.focus(); h.press(h.windowHandlers,h.event(key,code,h.game));
     assert(h.game.innerHTML.includes('id="rocket-pilot" href="#dressed-dog"'));
     h.state.keys.add('ArrowUp'); while(!h.state.adventure && clock < 1800)h.frame(++clock*16);
@@ -848,12 +861,51 @@ try {
     const h=await harness(false,'horse',null,false,{phase:'lost',spot:spot.id});
     if(spot.scene==='wardrobe')h.enterRoom('wardrobe');else {h.state.scene=spot.scene;if(spot.scene==='sky'){h.state.rocket.riding=true;h.state.rocket.airborne=true;}}
     h.state.tapes.loaded='hut';h.loadRecording();h.state.position={...spot};h.game.focus();
-    h.press(h.windowHandlers,h.event('Enter','Enter',h.game));assert.equal(h.state.hat.phase,'unlocked',spot.id+' can be found through the real handler');
+    h.press(h.windowHandlers,h.event('Enter','Enter',h.game));assert.equal(h.state.hat.phase,'unlocked',spot.id+' can be found through the real handler');assert(h.state.hat.wearing);assert.equal(h.get('#player-use').getAttribute('href'),'#dressed-horse');
   }
   const preview=await harness(true,'cat',null,false,{phase:'unlocked',wearing:false});preview.enterRoom('wardrobe');preview.state.position={...hats.HAT_STAND};preview.game.focus();
   preview.press(preview.windowHandlers,preview.event(' ','Space',preview.game));assert(JSON.parse(preview.stored.get('bbt-hat-preview')).wearing);assert(!preview.stored.has('bbt-hat-world'));
 } finally {hutTrack.src=previousHutAudio;}
-console.log('PASS: Hut starts only during playback, flies off, pauses and hides on pause/switch/end, resumes its search, is found using Enter/Space/NumpadEnter outdoors, in houses and in the sky, celebrates once, persists as clothing, can be returned, follows character changes and stays on through rocket zoom and the Sun holiday; preview progress is separate.');
+console.log('PASS: Hut starts only during playback, hides outside the music house, pauses on pause/switch/end, is worn immediately when found with Enter/Space/NumpadEnter, flies from the old figure to its empty stand on a keyboard character change, can be worn again and stays on through rocket zoom and the Sun holiday; preview progress is separate.');
+
+for (const [i, animal] of content.ANIMALS.entries()) {
+  const h = await harness(false, animal.id, null, false, { phase: 'unlocked', wearing: true });
+  new h.Element('same figure', 'button', { character: animal.id }).click(); assert(h.state.hat.wearing); assert.equal(h.state.hat.returning, null);
+  const next = content.ANIMALS[(i + 1) % content.ANIMALS.length];
+  new h.Element('another figure', 'button', { character: next.id }).click();
+  assert.equal(h.state.animal, next.id); assert(!h.state.hat.wearing); assert(h.state.hat.returning); assert.equal(h.state.hat.returning.scene, 'world');
+  h.enterRoom('wardrobe'); assert(!h.game.innerHTML.includes('scale(.8)'));
+  let clock = 0; while (h.state.hat.returning && clock < 120) h.frame(++clock * 16);
+  assert.equal(h.state.hat.returning, null); assert(h.game.innerHTML.includes('scale(.8)')); assert(!h.state.hat.wearing);
+}
+console.log('PASS: changing away from any of the four animals returns its worn hat even without music; selecting the same figure keeps it on and entering Home during flight does not duplicate it.');
+
+for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'NumpadEnter']]) {
+  const h = await harness(false, 'cat', null, false, { phase: 'unlocked', wearing: false }); h.enterRoom('wardrobe');
+  let clock = 0;
+  for (const color of painting.paintSlots(content.PALETTE)) {
+    h.state.position = { ...color }; h.game.focus(); h.press(h.windowHandlers, h.event(key, code, h.game)); assert.equal(h.state.paintCan, color.id);
+    h.state.position = { ...hats.HAT_STAND }; h.frame(++clock * 16); assert.equal(h.currentInteraction()?.kind, 'paint-hat'); assert(h.get('#interact').hidden);
+    const before = h.state.hat.color, stand = new h.Element('hat stand', 'g', { hatTarget: 'hat-stand' });
+    for (const callback of h.game.handlers.get('click')) callback({ target: stand });
+    assert.equal(h.state.hat.color, before, 'mouse navigation cannot paint the hat');
+    for (const callback of h.get('#interact').handlers.get('click')) callback({}); assert.equal(h.state.hat.color, before, 'a hidden interaction button cannot paint it');
+    h.press(h.windowHandlers, h.event(key, code, h.game, true)); assert.equal(h.state.hat.color, before);
+    h.press(h.windowHandlers, h.event(key, code, h.game)); assert.equal(h.state.hat.color, color.color); assert(!h.state.hat.wearing); assert.equal(h.state.paintCan, color.id);
+    assert.equal(JSON.parse(h.stored.get('bbt-hat-world')).color, color.color);
+    assert(h.game.innerHTML.includes(`data-hat-color="" fill="${color.color}"`)); assert(!h.game.innerHTML.includes('data-hat-color="" fill="#1d55ff"') || color.color === '#1d55ff');
+  }
+  assert.equal(h.state.paintCan, 'white'); assert.equal(h.state.hat.color, '#ffffff');
+  h.press(h.windowHandlers, h.event('Escape', 'Escape', h.game)); assert.equal(h.state.paintCan, null);
+  h.press(h.windowHandlers, h.event(key, code, h.game)); assert(h.state.hat.wearing); assert.equal(h.get('#player-use').getAttribute('href'), '#dressed-cat');
+  const saved = JSON.parse(h.stored.get('bbt-hat-world')), reload = await harness(false, 'cat', null, false, saved);
+  assert(reload.state.hat.wearing); assert.equal(reload.state.hat.color, '#ffffff'); assert(reload.game.innerHTML.includes('data-hat-color="" fill="#ffffff"'));
+  const dog = rooms.ANIMAL_SPOTS.find(spot => spot.id === 'dog'); h.state.position = { x: dog.x + 52, y: dog.y + 30 }; h.game.focus(); h.press(h.windowHandlers, h.event(key, code, h.game));
+  assert(h.state.hat.returning); assert(h.get('#hat-effects').innerHTML.includes('data-hat-color="" fill="#ffffff"')); assert(!h.state.hat.wearing);
+  while (h.state.hat.returning && clock < 200) h.frame(++clock * 16);
+  assert.equal(h.state.hat.returning, null); assert.equal(h.state.hat.color, '#ffffff');
+}
+console.log('PASS: all six buckets paint only the resting hat through Enter/Space/NumpadEnter; clicks and repeats cannot paint, the bucket remains carried, and a white hat retains its color when worn, reloaded and flown back.');
 
 try {
  hutTrack.src='uploads/hut.mp3';

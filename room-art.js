@@ -1,6 +1,6 @@
 import { defs, mapLabel, landscapeMarkup } from './art.js';
 import { TRACKS, ANIMALS, PALETTE, text } from './content.js';
-import { paintSlots, paintPages, PAINT_NEXT, paintCanMarkup } from './painting.js';
+import { paintSlots, paintPages, PAINT_NEXT, paintCanMarkup, bucketColors } from './painting.js';
 import { HAT_STAND, hatMarkup } from './hat-quest.js';
 import { escapeXML as escape } from './utils.js';
 import { ROOMS, ROOM_PROPS, ANIMAL_SPOTS, TOOLBOX_SPOT, slotsOnPage, tapePages, createCassetteState } from './rooms.js';
@@ -64,8 +64,10 @@ function infoArt(scene) {
 }
 
 function wardrobeArt(selectedAnimal, paint) {
+  const hat = paint.hat, unlocked = hat?.phase === 'unlocked', available = unlocked && !hat.returning;
+  const hatAction = hat?.wearing ? 'hat_return' : bucketColors(PALETTE).some(color => color.id === paint.can) ? 'hat_paint' : 'hat_wear';
   return `${fitted(390, 295, text('wardrobe_board'), 420, 26)}${fitted(390, 327, text('wardrobe_hint'), 440, 14)}
-    ${paint.hat?.phase === 'unlocked' || paint.hat?.discovered ? `<g id="home-hat-stand" ${paint.hat.phase === 'unlocked' ? `data-hat-target="hat-stand" role="button" tabindex="0" aria-label="${escape(text(paint.hat.wearing ? 'hat_return' : 'hat_wear'))}"` : ''} transform="translate(${HAT_STAND.x} ${HAT_STAND.y})"><g stroke="#101014" stroke-width="4" stroke-linecap="round"><path d="M0-35V20m-20 0h40" fill="none"/><ellipse cy="-35" rx="23" ry="7" fill="#d69c5b"/></g>${paint.hat.phase !== 'unlocked' || paint.hat.wearing ? '' : `<g transform="translate(0 -43) scale(.8)">${hatMarkup()}</g>`}${fitted(0, 55, text('hat_stand'), 190, 17)}${fitted(0, 79, text(paint.hat.phase !== 'unlocked' ? 'hat_missing' : paint.hat.wearing ? 'hat_return' : 'hat_wear'), 210, 13)}</g>` : ''}
+    ${unlocked || hat?.discovered ? `<g id="home-hat-stand" ${available ? `data-hat-target="hat-stand" role="button" tabindex="0" aria-label="${escape(text(hatAction))}"` : ''} transform="translate(${HAT_STAND.x} ${HAT_STAND.y})"><g stroke="#101014" stroke-width="4" stroke-linecap="round"><path d="M0-35V20m-20 0h40" fill="none"/><ellipse cy="-35" rx="23" ry="7" fill="#d69c5b"/></g>${!available || hat.wearing ? '' : `<g transform="translate(0 -43) scale(.8)">${hatMarkup(hat.color)}</g>`}${fitted(0, 55, text('hat_stand'), 190, 17)}${fitted(0, 79, text(!unlocked ? 'hat_missing' : hat.returning ? 'hat_returning' : hatAction), 210, 13)}</g>` : ''}
     ${ANIMAL_SPOTS.map(spot => {
       const animal = ANIMALS.find(animal => animal.id === spot.id);
       return `<g data-home-slot="${animal.id}" transform="translate(${spot.x} ${spot.y})"><ellipse rx="40" ry="15" fill="${animal.color}" stroke="#101014" stroke-width="2"/>${mapLabel(0, 43, animal.name, 130, '#fffcee')}</g>`;

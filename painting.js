@@ -21,7 +21,7 @@ export const DEFAULT_PALETTE = [
   { id: 'gray', name: 'Grau', color: '#969ba5' },
   { id: 'white', name: 'Weiß', color: '#ffffff' },
 ];
-export const BUCKET_COLOR_IDS = ['yellow', 'red', 'green', 'blue', 'pink'];
+export const BUCKET_COLOR_IDS = ['yellow', 'red', 'green', 'blue', 'pink', 'white'];
 export const WORLD_COLOR_IDS = {
   sky: 'blue-light', water: 'blue-dark', grass: 'green', path: 'yellow-light', sun: 'yellow',
   'cloud-0': 'white', 'cloud-1': 'white',

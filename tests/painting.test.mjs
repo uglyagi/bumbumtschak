@@ -97,10 +97,10 @@ test('saved drawings accept only known surfaces and hexadecimal colors', () => {
   assert.deepEqual(cleanPaint(null), {}); assert.deepEqual(cleanPaint([]), {});
 });
 
-test('the picture has eighteen shades, buckets have five base colors, and original world colors belong to the same pool', () => {
+test('the picture has eighteen shades, buckets have five base colors plus white, and original world colors belong to the same pool', () => {
   assert.equal(DEFAULT_PALETTE.length, 18); assert.equal(new Set(DEFAULT_PALETTE.map(color => color.color)).size, 18);
-  assert.deepEqual(bucketColors().map(color => color.id), ['yellow', 'red', 'green', 'blue', 'pink']);
-  assert.equal(paintSlots(DEFAULT_PALETTE).length, 5);
+  assert.deepEqual(bucketColors().map(color => color.id), ['yellow', 'red', 'green', 'blue', 'pink', 'white']);
+  assert.equal(paintSlots(DEFAULT_PALETTE).length, 6);
   const originals = { sky: 'blue-light', water: 'blue-dark', grass: 'green', path: 'yellow-light', sun: 'yellow' };
   for (const [surface, color] of Object.entries(originals)) assert.equal(WORLD_COLOR_IDS[surface], color);
   for (const [surface, color] of Object.entries(WORLD_COLOR_IDS)) {
@@ -127,8 +127,8 @@ test('legacy palettes retain edits, gain missing shades and keep extra colors ex
 
 test('old nonbucket plant colors are discarded while permitted plants and saved picture colors survive', () => {
   const saved = { path: '#abcdef', 'tree-0': '#ffffff', 'tree-1': '#000000', 'tree-2': '#969ba5', 'tree-3': '#bde7ff', 'tree-4': '#ff3935', 'flower-0': '#ff87ce' };
-  assert.deepEqual(cleanPaint(saved), { 'tree-4': '#ff3935', 'flower-0': '#ff87ce', path: '#abcdef' });
-  assert.equal(paintColor('tree-0', '#ff87ce', saved), '#ff87ce');
+  assert.deepEqual(cleanPaint(saved), { 'tree-0': '#ffffff', 'tree-4': '#ff3935', 'flower-0': '#ff87ce', path: '#abcdef' });
+  assert.equal(paintColor('tree-0', '#ff87ce', saved), '#ffffff');
   const custom = paletteColors([{ id: 'blue', name: 'Unser Blau', color: '#2149aa' }]);
   assert.deepEqual(cleanPaint({ 'tree-0': '#2149aa', 'flower-0': '#1d55ff' }, custom), { 'tree-0': '#2149aa' });
 });

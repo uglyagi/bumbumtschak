@@ -1497,9 +1497,10 @@ export const COPY_GROUPS = [
       {
         "key": "paint_carry_hint",
         "label": "Hinweis beim Tragen",
-        "value": "Nur Bäume und Blumen: Pfeile bewegen · Enter / Leertaste färben.",
+        "value": "Bäume, Blumen und Hut auf der Ablage: Pfeile bewegen · Enter / Leertaste färben.",
         "max": 500,
         "previousValues": [
+          "Nur Bäume und Blumen: Pfeile bewegen · Enter / Leertaste färben.",
           "Enter / Leertaste: Fläche anmalen",
           "Vorschau · Enter / Leertaste: übernehmen"
         ]
@@ -1846,9 +1847,10 @@ export const COPY_GROUPS = [
       {
         "key": "studio_cans",
         "label": "Überschrift bei den Kanistern",
-        "value": "Farben für Bäume & Blumen",
+        "value": "Farben für Bäume, Blumen & Hut",
         "max": 180,
         "previousValues": [
+          "Farben für Bäume & Blumen",
           "Farben für draußen"
         ]
       },
@@ -2097,13 +2099,16 @@ COPY_GROUPS.push({ id: 'hat', label: 'Hut-Suche & Kleidung', fields: [
   { key: 'hat_started', label: 'Beginn der Hut-Suche', value: 'Du hast einen Hut auf! Pass gut auf ihn auf …', max: 300 },
   { key: 'hat_flew', label: 'Der Hut fliegt weg', value: 'Hui, der Hut ist weggeflogen! Such ihn draußen, in den Häusern oder im Himmel. Du kannst ihn nur finden, solange „Hut“ läuft.', max: 600 },
   { key: 'hat_find', label: 'Hut aufheben', value: 'Hut aufheben', max: 120 },
-  { key: 'hat_found', label: 'Hut gefunden', value: 'Gefunden! Dein Hut wartet jetzt im Home sweet Home auf dich.', max: 300 },
+  { key: 'hat_found', label: 'Hut gefunden', value: 'Gefunden! Du hast den Hut auf!', previousValues: ['Gefunden! Dein Hut wartet jetzt im Home sweet Home auf dich.'], max: 300 },
   { key: 'hat_stand', label: 'Schild am Hutplatz', value: 'Dein Hut', max: 120 },
   { key: 'hat_missing', label: 'Leerer Hutplatz während der Suche', value: 'Noch unterwegs', max: 120 },
   { key: 'hat_wear', label: 'Hut aufsetzen', value: 'Hut aufsetzen', max: 120 },
   { key: 'hat_return', label: 'Hut zurücklegen', value: 'Hut zurücklegen', max: 120 },
   { key: 'hat_worn', label: 'Hut aufgesetzt', value: 'Hut auf! Er begleitet dich auch im Weltraum.', max: 300 },
   { key: 'hat_returned', label: 'Hut zurückgelegt', value: 'Dein Hut liegt wieder an seinem Platz.', max: 300 },
+  { key: 'hat_returning', label: 'Hut fliegt zur Ablage', value: 'Der Hut fliegt zurück auf seine Ablage.', max: 300 },
+  { key: 'hat_paint', label: 'Hut auf der Ablage färben', value: 'Hut färben', max: 120 },
+  { key: 'hat_painted', label: 'Hut gefärbt', value: 'Dein Hut ist jetzt {farbe}.', max: 300 },
 ] });
 export const COPY_FIELDS = COPY_GROUPS.flatMap(group => group.fields);
 export const DEFAULT_TEXTS = Object.fromEntries(COPY_FIELDS.map(field => [field.key, field.value]));
