@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { BIKE_DOOR, BIKE_FINISH, BIKE_LANES, BIKE_LEVELS, BIKE_ENCOUNTERS, createBikeRace, startBikeRace, changeBikeLane, tickBikeRace, bikeKmh, bikeEncounterCount, bikeTime, isBikeTrack, touchingBikeDoor, cleanBikeScores, addBikeScore } from '../bike-race.js';
-import { bikeRaceMarkup, bikeTerrainMarkup, bikeRiderPose } from '../bike-art.js';
+import { BIKE_DOOR, BIKE_FINISH, BIKE_LANES, BIKE_LEVELS, BIKE_ENCOUNTERS, BIKE_RECOVERY_SECONDS, createBikeRace, startBikeRace, changeBikeLane, tickBikeRace, bikeKmh, bikeEncounterCount, bikeTime, isBikeTrack, touchingBikeDoor, cleanBikeScores, addBikeScore } from '../bike-race.js';
+import { bikeRaceMarkup, bikeTerrainMarkup, bikeRiderPose, bikeCrashPose } from '../bike-art.js';
 const tick=(race,time,keys)=>{for(let t=0;t<time-1e-8;t+=1/120)tickBikeRace(race,Math.min(1/120,time-t),keys);};
 const alone=race=>{for(const r of race.riders)if(r!==race.player){r.departed=true;r.active=false;}return race;};
 
@@ -34,33 +34,33 @@ test('the two higher levels are faster, show 22 and 30 km/h and add rocks withou
  assert(speeds[1]>speeds[0] && speeds[2]>speeds[1]);assert.deepEqual(stoneCounts,[63,90,126]);
  assert.equal(createBikeRace('cat',undefined,'invalid').difficulty,'leicht');
 });
-test('right accelerates, release coasts, left brakes and holding left never reverses',()=>{
+test('right accelerates, release keeps the exact speed, left brakes and holding left never reverses',()=>{
  for(const level of Object.keys(BIKE_LEVELS)){
   const r=alone(createBikeRace('dog',undefined,level));r.stones=[];r.ramps=[];startBikeRace(r);tick(r,2,{right:true});const fast=r.player.speed;
-  tick(r,.5,{});assert(r.player.speed<fast && r.player.speed>fast-15);tick(r,2,{left:true});assert.equal(r.player.speed,0);const x=r.player.x;tick(r,2,{left:true});assert.equal(r.player.x,x);
+  const before=r.player.x;tick(r,2,{});assert.equal(r.player.speed,fast);assert(Math.abs(r.player.x-before-fast*2)<1e-6);tick(r,2,{left:true});assert.equal(r.player.speed,0);const x=r.player.x;tick(r,2,{left:true});assert.equal(r.player.x,x);
  }
 });
-test('friends wait for the player at the beginning, one third and two thirds instead of racing ahead on a timer',()=>{
- const r=createBikeRace();r.stones=[];r.ramps=[];startBikeRace(r);tick(r,60,{});
- assert(r.riders.slice(1).every(friend=>friend.x===friend.encounterAt && !friend.active));
- assert(BIKE_ENCOUNTERS[0]<BIKE_FINISH*.07);assert.equal(BIKE_ENCOUNTERS[1],BIKE_FINISH/3);assert.equal(BIKE_ENCOUNTERS[2],BIKE_FINISH*2/3);
- for(const friend of r.riders.slice(1)){
-  r.player.speed=0;r.player.x=friend.encounterAt-700;tick(r,.1,{});assert(friend.active);assert(!friend.started);
-  const parked=friend.x;tick(r,10,{});assert.equal(friend.x,parked,'the next encounter waits even if the player stops');
-  r.player.x=friend.encounterAt-200;tick(r,.5,{});assert(friend.started);assert(friend.speed>0);assert(friend.x>parked);
-  r.player.x=friend.x-100;tick(r,.02,{});assert(friend.met);
-  const count=bikeEncounterCount(r);tick(r,.1,{});assert.equal(bikeEncounterCount(r),count,'one friend is counted once');
-  r.player.x=friend.x+500;tick(r,.02,{});assert(friend.departed && !friend.active);
+test('friends wait offscreen for their sections and appear already riding at 80 percent of each level maximum',()=>{
+ for(const level of Object.keys(BIKE_LEVELS)){
+  const r=createBikeRace('cat',undefined,level);r.stones=[];r.ramps=[];startBikeRace(r);tick(r,60,{});
+  assert(r.riders.slice(1).every(friend=>friend.x===friend.encounterAt && !friend.active));
+  assert(BIKE_ENCOUNTERS[0]<BIKE_FINISH*.07);assert.equal(BIKE_ENCOUNTERS[1],BIKE_FINISH/3);assert.equal(BIKE_ENCOUNTERS[2],BIKE_FINISH*2/3);
+  for(const friend of r.riders.slice(1)){
+   r.player.speed=0;r.player.x=friend.encounterAt-700;const before=friend.x;tick(r,.1,{});
+   assert(friend.active && friend.started && friend.met);assert.equal(friend.speed,BIKE_LEVELS[level].speed*.8);assert(friend.x>before);
+   const count=bikeEncounterCount(r);tick(r,.1,{});assert.equal(bikeEncounterCount(r),count,'a visible encounter counts once');
+   r.player.x=friend.x+500;tick(r,.02,{});assert(friend.departed && !friend.active);
+  }
+  assert.equal(bikeEncounterCount(r),3);assert.equal(r.phase,'racing');assert(r.riders.slice(1).every(friend=>friend.finishTime===null));
  }
- assert.equal(bikeEncounterCount(r),3);assert.equal(r.phase,'racing');assert(r.riders.slice(1).every(friend=>friend.finishTime===null));
 });
 test('a friend can hold the player up in the same lane; a lane change or a jump allows passing',()=>{
  const r=createBikeRace();r.stones=[];r.ramps=[];startBikeRace(r);const friend=r.riders[1];
  r.player.x=friend.x-55;r.player.lane=friend.lane;r.player.y=friend.y;r.player.speed=320;tickBikeRace(r,.01,{right:true});
- assert(friend.active);assert(friend.x-r.player.x>=59);assert(r.player.speed<20);
+ assert(friend.active);assert(friend.x-r.player.x>=59);assert.equal(r.player.speed,BIKE_LEVELS.leicht.speed*.8);
  changeBikeLane(r,-1);tick(r,.35,{right:true});assert.notEqual(r.player.lane,friend.lane);
  r.player.x=friend.x-10;r.player.speed=320;r.player.z=100;r.player.vy=20;r.player.y=friend.y;
- tickBikeRace(r,.1,{right:true});assert(r.player.x>friend.x);assert.equal(r.falls,0);
+ tickBikeRace(r,.2,{right:true});assert(r.player.x>friend.x);assert.equal(r.falls,0);
 });
 test('hitting a rock costs three seconds while the stopwatch and a nearby friend keep moving',()=>{
  const r=createBikeRace();startBikeRace(r);const friend=r.riders[1];friend.active=true;friend.started=true;friend.x=1000;friend.speed=100;
@@ -119,4 +119,41 @@ test('each difficulty keeps a separate local top ten with tenths, clean names an
  assert.deepEqual(cleanBikeScores({leicht:[{name:'Bad',time:NaN},{name:'Bad',time:-1}]}).leicht,[]);
  assert.equal(addBikeScore([], 'leicht','a'.repeat(100),40).leicht[0].name.length,18);
  assert.equal(addBikeScore([], 'leicht','\u0000',40).leicht[0].name,'Gast');assert.deepEqual(addBikeScore(null,'invalid','Name',40),{leicht:[],mittel:[],schwer:[]});
+});
+
+test('a crash separates the original figure from its bicycle, then walks and mounts within three seconds without snapping back',()=>{
+ const r=alone(createBikeRace());r.ramps=[];startBikeRace(r);r.player.x=760;r.player.lane=0;r.player.y=333;r.player.speed=180;
+ assert.equal(tickBikeRace(r,.01,{right:true}),'fall');const origin=r.player.x;assert.equal(r.falls,1);assert.equal(r.player.speed,0);
+ const initial=bikeCrashPose(r.player);assert(initial);assert.equal(initial.phase,'rolling');
+ tick(r,.35,{right:true});const rolling=bikeCrashPose(r.player);
+ const tx=transform=>Number(transform.match(/^translate\(([-\d.]+)/)[1]);
+ assert(tx(rolling.body)<0 && tx(rolling.bicycle)>0,'the figure and bicycle roll in opposite directions');
+ assert.notEqual(rolling.body,rolling.bicycle);assert.equal(r.player.x,origin);assert.equal(r.player.speed,0);
+ const paused=bikeRiderPose(r,r.player);r.phase='paused';tick(r,1,{right:true});assert.deepEqual(bikeRiderPose(r,r.player),paused);r.phase='racing';
+ tick(r,1.55,{});assert.equal(bikeCrashPose(r.player).phase,'walking');const walkingX=tx(bikeCrashPose(r.player).body);
+ tick(r,.6,{});assert(tx(bikeCrashPose(r.player).body)>walkingX);
+ tick(r,.35,{});assert.equal(bikeCrashPose(r.player).phase,'mounting');
+ const end=bikeCrashPose(r.player),drift=r.player.crash.offset;assert(Math.abs(tx(end.body)-drift)<.1);assert(Math.abs(tx(end.bicycle)-drift)<.1);
+ tick(r,.2,{});assert.equal(r.player.fall,0);assert.equal(r.player.crash,null);assert.equal(bikeCrashPose(r.player),null);
+ assert(Math.abs(r.player.x-origin-drift)<.001,'the recovered rider stays at the rolled bicycle location');assert.equal(r.player.speed,0);assert.equal(BIKE_RECOVERY_SECONDS,3);
+ tick(r,.1,{right:true});assert(r.player.speed>0 && r.player.x>origin+drift);
+});
+
+test('reduced motion keeps the same recovery period without rolling rotations',()=>{
+ const r=createBikeRace();r.player.fall=2.5;r.player.crash={offset:60};
+ const pose=bikeCrashPose(r.player,true);assert(pose.body.includes('rotate(0.00'));assert(pose.bicycle.includes('rotate(0.00'));
+ assert.notEqual(pose.body,pose.bicycle);assert(!pose.body.includes('NaN'));assert(!pose.bicycle.includes('NaN'));
+});
+
+test('flowers keep their world position, height and color when the scrolling segment wraps',()=>{
+ const flowers=cam=>{
+  const r=createBikeRace();r.camera=cam;const result=new Map();
+  for(const match of bikeTerrainMarkup(r).matchAll(/<use data-bike-flower="(-?\d+)" href="#flower" x="([\d.-]+)" y="([\d.-]+)"[^>]*style="color:([^"]+)"/g))result.set(Number(match[1]),{x:Number(match[2]),y:Number(match[3]),color:match[4]});
+  return result;
+ };
+ for(const boundary of [120,240,360,1200,8500,17000]){
+  const before=flowers(boundary-.2),after=flowers(boundary+.2);assert(before.size>=11 && after.size>=11);let shared=0;
+  for(const [id,first]of before){const next=after.get(id);if(!next)continue;shared++;assert(Math.abs(next.x-first.x+.4)<.011);assert.equal(next.y,first.y);assert.equal(next.color,first.color);}
+  assert(shared>=10,'only flowers outside the viewport are recycled');
+ }
 });

@@ -2365,11 +2365,12 @@ COPY_GROUPS.push({
     {
       "key": "bike_keys",
       "label": "Feste Spielanleitung",
-      "value": "Mit → beschleunigst du, mit ← bremst du. Mit ↑ und ↓ wechselst du zwischen vier Spuren. Unterwegs begegnest du drei Freunden, die dich auch aufhalten können. Weiche Steinen aus. Über Schanzen springst du automatisch – mit mehr Tempo fliegst du weiter. Nach einem Sturz brauchst du 3 Sekunden zum Aufsteigen. Escape pausiert.",
+      "value": "Mit → beschleunigst du, mit ← bremst du. Dein Tempo bleibt beim Loslassen erhalten. Mit ↑ und ↓ wechselst du zwischen vier Spuren. Unterwegs begegnest du drei Freunden auf Fahrrädern. Weiche Steinen aus. Über Schanzen springst du automatisch – mit mehr Tempo fliegst du weiter. Nach einem Sturz steigt deine Figur in etwa 3 Sekunden wieder auf. Escape pausiert.",
       "max": 700,
       "previousValues": [
         "Lenke nur mit ← und →. Die Strecke zieht von unten nach oben vorbei. Weiche Steinen aus und bleib auf dem Weg. Nach einem Sturz brauchst du 3 Sekunden zum Aufsteigen. Escape pausiert.",
-        "Mit → beschleunigst du, mit ← bremst du. Mit ↑ und ↓ wechselst du zwischen vier Spuren. Überhole deine Freunde und weiche den Steinen aus. Über Schanzen springst du automatisch – mit mehr Tempo fliegst du weiter. Nach einem Sturz brauchst du 3 Sekunden zum Aufsteigen. Escape pausiert."
+        "Mit → beschleunigst du, mit ← bremst du. Mit ↑ und ↓ wechselst du zwischen vier Spuren. Überhole deine Freunde und weiche den Steinen aus. Über Schanzen springst du automatisch – mit mehr Tempo fliegst du weiter. Nach einem Sturz brauchst du 3 Sekunden zum Aufsteigen. Escape pausiert.",
+        "Mit → beschleunigst du, mit ← bremst du. Mit ↑ und ↓ wechselst du zwischen vier Spuren. Unterwegs begegnest du drei Freunden, die dich auch aufhalten können. Weiche Steinen aus. Über Schanzen springst du automatisch – mit mehr Tempo fliegst du weiter. Nach einem Sturz brauchst du 3 Sekunden zum Aufsteigen. Escape pausiert."
       ]
     },
     {

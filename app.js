@@ -102,9 +102,9 @@ function updateAnimal() {
   $('#player-chip').setAttribute('aria-label', text('player_label', { tier: animal.name }));
   if (state.scene === 'radio') refreshDanceParty();
 }
-function faceMovement(previous, next) {
+function faceMovement(previous, next, direction = null) {
   if (state.scene === 'painting' || state.rocket.riding || state.race) return;
-  const facing = movementFacing(previous, next, state.facing);
+  const facing = movementFacing(previous, next, state.facing, direction);
   if (facing === state.facing) return;
   state.facing = facing;
   playerUse.setAttribute('href', animalHref(state.animal, wearsHat(state.hat, state.hatActive), facing));
@@ -449,6 +449,7 @@ function finishChocolateExit() {
   renderScene(); game.focus({ preventScroll: true }); announce(text('choco_returned'));
 }
 function frameChocolate(dt) {
+  let facingDirection = null;
   const previousPosition = { ...state.position };
   const run = state.chocolate.run;
   if (!run || !state.started || modal.open || document.hidden) return;
@@ -472,6 +473,7 @@ function frameChocolate(dt) {
     if (dx || dy) {
       const old = state.position, speed = chocolateSpeed(state.chocolate);
       const step = state.path.length ? Math.min(dt, Math.hypot(dx, dy) / (WORLD.speed * speed)) : dt;
+      facingDirection = { x: dx, y: dy };
       state.position = move(old, dx, dy, step, 'chocolate', null, speed); walking = Math.hypot(old.x - state.position.x, old.y - state.position.y) > .05;
     }
     const collected = collectChocolate(run, state.position);
@@ -486,7 +488,7 @@ function frameChocolate(dt) {
     }
     if (run.phase === 'search' && Math.hypot(state.position.x - MAZE_EXIT.x, state.position.y - MAZE_EXIT.y) < 20) { finishChocolateExit(); return; }
   }
-  faceMovement(previousPosition, state.position);
+  faceMovement(previousPosition, state.position, facingDirection);
   player.classList.toggle('is-moving', walking);
   player.setAttribute('transform', 'translate(' + state.position.x.toFixed(2) + ' ' + state.position.y.toFixed(2) + ')');
   updateNear(); updateCamera(dt); refreshChocolateItems();
@@ -752,6 +754,7 @@ function updateBicycleRace() {
     $('#bike-fly-' + id)?.setAttribute('transform', p.lift);
     for (const wheel of ['back', 'front']) $('#bike-wheel-' + wheel + '-' + id)?.setAttribute('transform', 'rotate(' + p.angle + ')');
     $('#bike-crank-' + id)?.setAttribute('transform', 'rotate(' + p.angle + ')');
+    $('#bike-machine-' + id)?.setAttribute('transform', p.bicycle);
     $('#bike-body-' + id)?.setAttribute('transform', p.body);
   }
   const values = { 'bike-clock': bikeTime(race.elapsed), 'bike-speed': bikeKmh(race) + ' km/h', 'bike-friends': bikeEncounterCount(race) + ' / 3', 'bike-jumps': String(race.jumps) };
@@ -1475,7 +1478,7 @@ function frame(time) {
         }
       } else if (state.scene === 'painting') { const length = Math.hypot(dx, dy); state.position = { x: clamp(old.x + dx / length * 400 * stepTime, 30, 1570), y: clamp(old.y + dy / length * 400 * stepTime, 110, 1055) }; }
       else state.position = move(old, dx, dy, stepTime, state.scene, state.rocket.position, chocolateSpeed(state.chocolate));
-      faceMovement(old, state.position);
+      faceMovement(old, state.position, { x: dx, y: dy });
       walking = Math.hypot(state.position.x - old.x, state.position.y - old.y) > .05;
       if (state.path.length) {
         stuckTime = walking ? 0 : stuckTime + dt;

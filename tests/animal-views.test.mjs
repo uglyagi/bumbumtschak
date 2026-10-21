@@ -13,8 +13,19 @@ const defaults=JSON.parse(await readFile(new URL('../data/content.json',import.m
 
 test('walking faces the actual movement, remembers a stopped or blocked direction and resolves diagonals consistently',()=>{
  const start={x:100,y:100};
- for(const [point,expected]of [[{x:105,y:100},'right'],[{x:95,y:100},'left'],[{x:100,y:95},'back'],[{x:100,y:105},'front'],[{x:103,y:99},'right'],[{x:99,y:96},'back']])assert.equal(movementFacing(start,point),expected);
+ for(const [point,expected]of [[{x:105,y:100},'right'],[{x:95,y:100},'left'],[{x:100,y:95},'back'],[{x:100,y:105},'front'],[{x:103,y:99},'right'],[{x:99,y:96},'left']])assert.equal(movementFacing(start,point),expected);
  for(const facing of ['front','right','left','back']){assert.equal(movementFacing(start,start,facing),facing);assert.equal(movementFacing(start,{x:100.01,y:100.01},facing),facing);}
+});
+test('all diagonals keep a side view through tiny rounding changes and sliding along a wall',()=>{
+ for(const x of [-1,1])for(const y of [-1,1]){
+  let p={x:100,y:100},facing='front';
+  for(let i=0;i<120;i++){
+   const next={x:p.x+x*(1+(i%2?1e-10:-1e-10)),y:p.y+y};
+   facing=movementFacing(p,next,facing);assert.equal(facing,x<0?'left':'right');p=next;
+  }
+  assert.equal(movementFacing(p,{x:p.x,y:p.y+y},'front',{x,y}),x<0?'left':'right');
+ }
+ assert.equal(movementFacing({x:100,y:100},{x:100+1e-9,y:98},'right'),'back');
 });
 test('all four legacy characters keep their front image and gain complete directional and seated assets',async()=>{
  const characters=playableAnimals(defaults.info.animals,defaults.info.texts);assert.equal(characters.length,4);

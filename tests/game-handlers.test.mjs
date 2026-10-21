@@ -1541,3 +1541,40 @@ new levelNav.Element('leave','button',{action:'bike-exit'}).click();assert.equal
 console.log('PASS: difficulty choices work vertically with arrows and Space, repeated confirmation is ignored, all difficulty speed caps and separate encounter visibility update in the actual HUD, and finishing allows a different level without switching character.');
 
 content.TRACKS.find(track=>track.id==='fahrradfahren').src=savedCycleTrack;
+
+for(const id of ['cat','dog','horse','monkey']){
+ const h=await harness(false,id,null,false,{phase:'unlocked',wearing:true});h.game.focus();let time=1000;h.frame(time);
+ for(const [horizontal,vertical,view]of [['ArrowRight','ArrowUp','right'],['ArrowLeft','ArrowUp','left'],['ArrowRight','ArrowDown','right'],['ArrowLeft','ArrowDown','left']]){
+  h.state.position={x:1050,y:850};h.state.keys.clear();h.state.keys.add(horizontal);h.state.keys.add(vertical);
+  for(let i=0;i<24;i++){
+   h.frame(time+=16);assert.equal(h.state.facing,view);assert.equal(h.get('#player-use').getAttribute('href'),'#dressed-'+id+'-'+view);
+  }
+  h.state.keys.delete(horizontal);h.frame(time+=16);assert.equal(h.state.facing,vertical==='ArrowUp'?'back':'front');h.state.keys.clear();
+ }
+ h.enterRoom('concerts');h.state.position={x:800,y:700};h.game.focus();h.state.keys.add('ArrowLeft');h.state.keys.add('ArrowUp');
+ for(let i=0;i<20;i++){h.frame(time+=16);assert.equal(h.state.facing,'left');}
+ h.state.keys.clear();h.leaveRoom();h.state.position={x:896,y:655};h.game.focus();h.state.keys.add('ArrowLeft');h.state.keys.add('ArrowUp');
+ for(let i=0;i<20;i++){h.frame(time+=16);assert.equal(h.state.facing,'left','diagonal input stays sideways while sliding along the house wall');}
+}
+console.log('PASS: every dressed animal keeps the correct side view throughout all four keyboard diagonals in the world and rooms, and returns to front/back as soon as horizontal input is released.');
+
+const crashSong=content.TRACKS.find(track=>track.id==='fahrradfahren'),previousCrashSong=crashSong.src;
+try{
+ crashSong.src='uploads/cycling.mp3';
+ const h=await harness(false,'monkey');h.enterRoom('radio');h.state.tapes.loaded=crashSong.id;h.loadRecording();h.state.position={...bike.BIKE_DOOR};let time=1000;h.frame(time);
+ new h.Element('easy','button',{bikeLevel:'leicht'}).click();
+ const race=h.state.race;race.riders.slice(1).forEach(r=>{r.departed=true;r.active=false;});race.ramps=[];const stones=race.stones;race.stones=[];
+ h.game.focus();h.press(h.windowHandlers,h.event('ArrowRight','ArrowRight',h.game));for(let i=0;i<60;i++)h.frame(time+=16);
+ h.state.keys.clear();const momentum=race.player.speed;
+ for(let i=0;i<60;i++){h.frame(time+=16);assert.equal(race.player.speed,momentum,'releasing the key preserves exact velocity');}
+ race.stones=stones;race.player.x=760;race.player.y=333;race.player.lane=0;race.player.speed=180;h.frame(time+=20);
+ assert(race.player.fall>0);assert.equal(race.player.speed,0);h.frame(time+=250);
+ const machine=h.get('#bike-machine-monkey').getAttribute('transform'),body=h.get('#bike-body-monkey').getAttribute('transform');
+ assert.notEqual(machine,body);assert(/^translate\(-/.test(body));assert(!/^translate\(-/.test(machine));
+ const frozen=JSON.stringify({fall:race.player.fall,machine,body});h.press(h.windowHandlers,h.event('Escape','Escape',h.game));h.frame(time+=500);
+ assert.equal(JSON.stringify({fall:race.player.fall,machine:h.get('#bike-machine-monkey').getAttribute('transform'),body:h.get('#bike-body-monkey').getAttribute('transform')}),frozen);
+ new h.Element('continue','button',{action:'bike-continue'}).click();
+ for(let i=0;i<190;i++)h.frame(time+=16);assert.equal(race.player.fall,0);assert.equal(h.get('#bike-machine-monkey').getAttribute('transform'),'translate(0 0)');assert.equal(race.player.speed,0);
+ h.game.focus();h.press(h.windowHandlers,h.event('ArrowRight','ArrowRight',h.game));h.frame(time+=16);assert(race.player.speed>0);
+}finally{crashSong.src=previousCrashSong;}
+console.log('PASS: actual race input keeps its speed on release, animates separate rolling figure/bicycle groups, freezes the crash on pause, remounts after three seconds and accelerates again.');

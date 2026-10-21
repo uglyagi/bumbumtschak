@@ -8,6 +8,7 @@ export const BIKE_LEVELS = {
   mittel: { speed: 432, factor: 1.35, kmh: 22, extraStones: 27 },
   schwer: { speed: 544, factor: 1.7, kmh: 30, extraStones: 63 },
 };
+export const BIKE_RECOVERY_SECONDS = 3, BIKE_CRASH_DRIFT = 60;
 export const BIKE_ENCOUNTERS = [1200, BIKE_FINISH / 3, BIKE_FINISH * 2 / 3];
 const DEFAULT_RACERS = ['cat', 'dog', 'horse', 'monkey'].map(id => ({ id }));
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
@@ -31,7 +32,7 @@ function courseStones(level) {
 class Race {
   constructor(animal, animals, difficulty) {
     this.difficulty=difficulty; this.phase='ready'; this.elapsed=0; this.camera=0; this.jumps=0; this.falls=0;
-    const make=(id,x,lane,ai=false)=>({id,x,prevX:x,lane,y:BIKE_LANES[lane],speed:0,z:0,vy:0,fall:0,crank:0,ai,active:!ai,departed:false,started:!ai,met:false,finished:false,finishTime:null,seen:new Set(),safe:0,flash:0});
+    const make=(id,x,lane,ai=false)=>({id,x,prevX:x,lane,y:BIKE_LANES[lane],speed:0,z:0,vy:0,fall:0,crash:null,crank:0,ai,active:!ai,departed:false,started:!ai,met:false,finished:false,finishTime:null,seen:new Set(),safe:0,flash:0});
     this.player=make(animal,180,2);
     this.riders=[this.player,...animals.filter(a=>a.id!==animal).slice(0,3).map((a,i)=>({...make(a.id,BIKE_ENCOUNTERS[i],[2,1,3][i],true),encounterAt:BIKE_ENCOUNTERS[i]}))];
     this.ramps=extendCourse(BASE_RAMPS); this.stones=courseStones(difficulty);
@@ -47,26 +48,30 @@ class Race {
       for (const rider of this.riders) {
         if (rider.ai) {
           if (rider.departed) continue;
-          if (!rider.active && this.player.x>=rider.encounterAt-750) rider.active=true;
+          if (!rider.active && this.player.x>=rider.encounterAt-750) {
+            rider.active=true; rider.started=true; rider.speed=settings.speed*.8; rider.met=true;
+          }
           if (!rider.active) continue;
-          if (Math.abs(this.player.x-rider.x)<190) rider.met=true;
           if (this.player.x-rider.x>450 || rider.met && rider.x-this.player.x>1000) { rider.departed=true; rider.active=false; continue; }
-          if (!rider.started && this.player.x>=rider.encounterAt-275) rider.started=true;
-          if (!rider.started) continue;
         }
         if (rider.finished) continue;
         rider.prevX=rider.x; rider.safe=Math.max(0,rider.safe-dt); rider.flash=Math.max(0,rider.flash-dt);
-        if (rider.fall>0) { rider.fall=Math.max(0,rider.fall-dt); if (!rider.fall) rider.safe=1.1; continue; }
+        if (rider.fall>0) {
+          rider.fall=Math.max(0,rider.fall-dt);
+          if (!rider.fall) {
+            rider.x+=rider.crash?.offset || 0; rider.prevX=rider.x; rider.crash=null; rider.safe=1.1;
+          }
+          continue;
+        }
         if (rider.ai) {
-          const index=this.riders.indexOf(rider), target=settings.speed*(.38+index*.025);
-          rider.speed+=clamp(target-rider.speed,-180*settings.factor*dt,88*settings.factor*dt);
+          rider.speed=settings.speed*.8;
           const danger=this.stones.find(s=>s.lane===rider.lane && s.x-rider.x>35 && s.x-rider.x<rider.speed*.72+40);
           const ramp=this.ramps.some(r=>r.lane===rider.lane && r.x+40>rider.x && (!danger || r.x<danger.x) && r.x-rider.x<190);
           if (danger && !ramp && rider.z<4) {
             const safe=[rider.lane-1,rider.lane+1].find(l=>l>=0 && l<4 && !this.stones.some(s=>s.lane===l && Math.abs(s.x-rider.x)<190) && !this.riders.some(r=>r!==rider && r.active && r.lane===l && Math.abs(r.x-rider.x)<90));
             if (safe!==undefined) rider.lane=safe;
           }
-        } else rider.speed=clamp(rider.speed+(keys.left?-215:keys.right?88:-10)*settings.factor*dt,0,settings.speed);
+        } else rider.speed=clamp(rider.speed+(keys.left?-215:keys.right?88:0)*settings.factor*dt,0,settings.speed);
         rider.x+=rider.speed*dt; rider.y+=(BIKE_LANES[rider.lane]-rider.y)*Math.min(1,dt*13); rider.crank+=rider.speed*dt/23;
         if (rider.z>0 || rider.vy>0) { rider.z+=rider.vy*dt; rider.vy-=880*dt; if (rider.z<=0) { rider.z=0; rider.vy=0; rider.flash=.15; } }
         for (const ramp of this.ramps) {
@@ -77,14 +82,15 @@ class Race {
           }
         }
         if (!rider.safe && rider.z<28 && this.stones.some(s=>Math.abs(s.x-rider.x)<28 && Math.abs(BIKE_LANES[s.lane]-rider.y)<24)) {
-          rider.speed=0; rider.fall=3; rider.z=0; rider.vy=0; if (!rider.ai) this.falls++;
+          rider.speed=0; rider.fall=BIKE_RECOVERY_SECONDS; rider.crash={offset:Math.max(0,Math.min(BIKE_CRASH_DRIFT,BIKE_FINISH-1-rider.x))};
+          rider.z=0; rider.vy=0; if (!rider.ai) this.falls++;
         }
         if (!rider.ai && rider.x>=BIKE_FINISH) { rider.finished=true; rider.finishTime=this.elapsed; this.phase='finished'; }
       }
       const p=this.player;
       if (!p.fall && !p.finished) for (const other of this.riders) {
         if (other!==p && other.active && !other.fall && other.x>p.x && other.x-p.x<60 && Math.abs(other.y-p.y)<23 && Math.abs(other.z-p.z)<28) {
-          p.x=other.x-60; p.speed=Math.min(p.speed,other.speed*.82);
+          p.x=other.x-60; p.speed=Math.min(p.speed,other.speed);
         }
       }
       this.camera+=(Math.max(0,p.x-275)-this.camera)*Math.min(1,dt*8);

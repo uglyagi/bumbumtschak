@@ -2,7 +2,7 @@ import { defs } from './art.js';
 import { text, PALETTE, ANIMALS } from './content.js';
 import { escapeXML as escape } from './utils.js';
 import { animalHref } from './hat-quest.js';
-import { BIKE_WIDTH, BIKE_HEIGHT, BIKE_FINISH, BIKE_LANES, bikeTime, bikeKmh, bikeEncounterCount } from './bike-race.js';
+import { BIKE_WIDTH, BIKE_HEIGHT, BIKE_FINISH, BIKE_LANES, BIKE_RECOVERY_SECONDS, BIKE_CRASH_DRIFT, bikeTime, bikeKmh, bikeEncounterCount } from './bike-race.js';
 
 const n = value => Number(value).toFixed(2);
 const palette = (id, fallback) => PALETTE.find(color => color.id === id)?.color || fallback;
@@ -30,14 +30,41 @@ export function bikeTerrainMarkup(race, paint = {}) {
     result += `<g transform="translate(${n(x)} 0)"><rect x="-13" y="294" width="26" height="264" fill="#fffcef"/>${Array.from({length:20},(_,i)=>`<rect x="${-13+i%2*13}" y="${294+i*13}" width="13" height="13" fill="${ink}"/>`).join('')}<rect x="-42" y="253" width="84" height="29" rx="7" fill="${mark.x===180?'#fffcef':'#fff20b'}" stroke="${ink}" stroke-width="3"/><text y="274" text-anchor="middle" fill="${ink}" font-size="18" font-weight="900">${escape(mark.label)}</text></g>`;
   }
   result += `<rect y="561" width="1100" height="89" fill="${grass}"/>`;
-  for(let i=-1;i<12;i++)result += `<use href="#flower" x="${n(i*120-(cam*.94)%120-15)}" y="${574+(i%3)*14}" width="30" height="35" style="color:${i%2?'#ff87ce':'#fff20b'}"/>`;
+  const firstFlower=Math.floor(cam/120)-1;
+  for (let i=firstFlower;i<firstFlower+12;i++) {
+    const row=(i%3+3)%3;
+    result += `<use data-bike-flower="${i}" href="#flower" x="${n(i*120-cam-15)}" y="${574+row*14}" width="30" height="35" style="color:${i%2?'#ff87ce':'#fff20b'}"/>`;
+  }
   return result;
 }
+const smooth = value => { const t=Math.max(0,Math.min(1,value)); return t*t*(3-2*t); };
+export function bikeCrashPose(rider, reduced = false) {
+  if (!rider.fall) return null;
+  const time=Math.max(0,BIKE_RECOVERY_SECONDS-rider.fall), drift=rider.crash?.offset ?? BIKE_CRASH_DRIFT;
+  const roll=smooth(time/.75), stand=smooth((time-1.35)/.4), walk=smooth((time-1.75)/.85), mount=smooth((time-2.6)/.4);
+  const angle=reduced?0:420*roll-60*mount, radians=angle*Math.PI/180;
+  const bottom=Math.max(-10+18*Math.abs(Math.sin(radians))+10*Math.cos(radians)+11,
+    -10+19*Math.sin(radians)-24*Math.cos(radians)+2,-10-14*Math.sin(radians)-17*Math.cos(radians)+2);
+  const bikeY=11-bottom-(reduced?0:Math.sin(Math.PI*roll)*8);
+  const bodyX=-48*roll*(1-walk)+drift*walk;
+  const bodyY=((27*roll)*(1-stand)+26*stand)*(1-mount)-(reduced?0:Math.sin(walk*Math.PI*6)*1.5*walk*(1-walk));
+  return {
+    bicycle:`translate(${n(drift*roll)} ${n(bikeY)}) rotate(${n(angle)} 0 -10)`,
+    body:`translate(${n(bodyX)} ${n(bodyY)}) rotate(${n(reduced?0:-270*roll-90*stand)} 0 -50)`,
+    phase:time<.75?'rolling':time<1.35?'resting':time<1.75?'standing':time<2.6?'walking':'mounting',
+  };
+}
 export function bikeRiderPose(race, rider, reduced = false) {
-  const ramp = race.ramps.find(p => Math.abs(BIKE_LANES[p.lane]-rider.y)<24 && rider.x>p.x-60 && rider.x<p.x+32);
-  const lift = rider.z>0 ? rider.z : ramp ? Math.max(0,(rider.x-ramp.x+60)/92*27) : 0;
-  const angle = reduced ? 0 : (rider.fall ? Math.min(1,rider.fall/.65)*-.47 : rider.z ? Math.max(-.3,Math.min(.25,-rider.vy/1600)) : ramp ? -.2 : 0)*180/Math.PI;
-  return { transform: `translate(${n(rider.x-race.camera)} ${n(rider.y)}) scale(${n(.81+rider.y/2300)})`, lift: `translate(0 ${n(-lift)}) rotate(${n(angle)})`, angle: n(rider.crank*180/Math.PI), body: `translate(0 ${n(!reduced && rider.speed > 0 && !rider.fall ? Math.sin(rider.crank*2)*.5 : 0)})` };
+  const crash=bikeCrashPose(rider,reduced);
+  const ramp=race.ramps.find(p=>Math.abs(BIKE_LANES[p.lane]-rider.y)<24 && rider.x>p.x-60 && rider.x<p.x+32);
+  const lift=crash?0:rider.z>0?rider.z:ramp?Math.max(0,(rider.x-ramp.x+60)/92*27):0;
+  const angle=reduced || crash?0:(rider.z?Math.max(-.3,Math.min(.25,-rider.vy/1600)):ramp?-.2:0)*180/Math.PI;
+  return {
+    transform:`translate(${n(rider.x-race.camera)} ${n(rider.y)}) scale(${n(.81+rider.y/2300)})`,
+    lift:`translate(0 ${n(-lift)}) rotate(${n(angle)})`, angle:n(rider.crank*180/Math.PI),
+    bicycle:crash?.bicycle || 'translate(0 0)',
+    body:crash?.body || `translate(0 ${n(!reduced && rider.speed>0?Math.sin(rider.crank*2)*.5:0)})`,
+  };
 }
 function wheel(id, x, rotation) {
   return `<g transform="translate(${x} 0)"><circle r="11" fill="${ink}"/><circle r="8.5" fill="#fffcef" stroke="${ink}" stroke-width="1.5"/><g id="${id}" transform="rotate(${rotation})" stroke="#8995ad" stroke-width="1">${Array.from({length:6},(_,i)=>{const a=i*Math.PI/3;return `<path d="M0 0 ${n(Math.cos(a)*8)} ${n(Math.sin(a)*8)}"/>`;}).join('')}</g><circle r="2.5" fill="${ink}"/></g>`;
@@ -45,7 +72,7 @@ function wheel(id, x, rotation) {
 function bicycleRiderMarkup(race, rider, selected, hat, reduced) {
   const p = bikeRiderPose(race,rider,reduced), a = ANIMALS.find(a=>a.id===rider.id), id = rider.id;
   const bike = ['#1d55ff','#ff3935','#fff20b','#ff87ce'][ANIMALS.indexOf(a)];
-  return `<g id="bike-rider-${id}" ${rider.ai && !rider.active ? 'hidden=""' : ''} transform="${p.transform}" aria-label="${escape(a.name)}"><ellipse cy="11" rx="32" ry="6" fill="${ink}" opacity=".14"/>${id===selected?'<ellipse cy="12" rx="36" ry="8" fill="#fff20b" fill-opacity=".2" stroke="#1d55ff" stroke-width="2" stroke-dasharray="5 5"/>':''}<g id="bike-fly-${id}" transform="${p.lift}" stroke-linecap="round" stroke-linejoin="round">${wheel('bike-wheel-back-'+id,-18,p.angle)}${wheel('bike-wheel-front-'+id,18,p.angle)}${path('M-18 0-8-21 1-10-18 0M-8-21 11-21 1-10M11-21 18 0','none',5)}<path d="M-18 0-8-21 1-10-18 0M-8-21 11-21 1-10M11-21 18 0" fill="none" stroke="${bike}" stroke-width="2.5"/>${path('M-8-21-9-27m-5 0h12M11-21 10-31 19-34','none',3)}<g id="bike-pedals-${id}" transform="translate(1 -10)"><g id="bike-crank-${id}" transform="rotate(${p.angle})">${path('M-7 0H7','none',2)}${path('M-9-2v4m16-4v4','none',2.5)}</g></g><g id="bike-body-${id}" transform="${p.body}"><use data-bike-animal="${id}" href="${animalHref(id,hat&&id===selected,'right')}" x="-34" y="-91" width="68" height="82"/></g></g></g>`;
+  return `<g id="bike-rider-${id}" ${rider.ai && !rider.active ? 'hidden=""' : ''} transform="${p.transform}" aria-label="${escape(a.name)}"><ellipse cy="11" rx="32" ry="6" fill="${ink}" opacity=".14"/>${id===selected?'<ellipse cy="12" rx="36" ry="8" fill="#fff20b" fill-opacity=".2" stroke="#1d55ff" stroke-width="2" stroke-dasharray="5 5"/>':''}<g id="bike-fly-${id}" transform="${p.lift}" stroke-linecap="round" stroke-linejoin="round"><g id="bike-machine-${id}" transform="${p.bicycle}">${wheel('bike-wheel-back-'+id,-18,p.angle)}${wheel('bike-wheel-front-'+id,18,p.angle)}${path('M-18 0-8-21 1-10-18 0M-8-21 11-21 1-10M11-21 18 0','none',5)}<path d="M-18 0-8-21 1-10-18 0M-8-21 11-21 1-10M11-21 18 0" fill="none" stroke="${bike}" stroke-width="2.5"/>${path('M-8-21-9-27m-5 0h12M11-21 10-31 19-34','none',3)}<g id="bike-pedals-${id}" transform="translate(1 -10)"><g id="bike-crank-${id}" transform="rotate(${p.angle})">${path('M-7 0H7','none',2)}${path('M-9-2v4m16-4v4','none',2.5)}</g></g></g><g id="bike-body-${id}" transform="${p.body}"><use data-bike-animal="${id}" href="${animalHref(id,hat&&id===selected,'right')}" x="-34" y="-91" width="68" height="82"/></g></g></g>`;
 }
 export function bikeObstaclesMarkup(race) {
   return [...race.ramps.map(o=>({...o,type:'ramp'})),...race.stones.map(o=>({...o,type:'stone'}))].sort((a,b)=>a.lane-b.lane).map(o=>{
