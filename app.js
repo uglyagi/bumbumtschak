@@ -495,6 +495,7 @@ function frameChocolate(dt) {
 }
 
 function renderScene() {
+  if (state.adventure?.phase === 'intro' && state.adventure.departure) { updateAdventure(); return; }
   clearPaintPreview();
   const hat = wearsHat(state.hat, state.hatActive);
   let artwork = state.race ? bikeRaceMarkup(state.race, state.animal, state.paint, hat, state.reduced) : state.adventure ? adventureMarkup(state.adventure, state.animal, state.paint, hat) : state.scene === 'chocolate' ? chocolateMazeMarkup(state.chocolate.run) : state.scene === 'painting' ? studioMarkup(state.paint, PALETTE, state.studio) : outsideScene(state.scene) ? worldMarkup(state.paint, !!state.paintCan, state.scene, { ...state.rocket, hat }, state.animal) : roomMarkup(state.scene, state.shelfPage, state.tapes, state.animal, { can: state.paintCan, page: state.paintPage, world: state.paint, toolbox: state.toolbox, returns: state.homeReturns, hat: state.hat, away: awayAnimals(), chocolate: state.chocolate, bikeDoor: state.bikeDoor });
@@ -831,9 +832,10 @@ function enterSpaceAdventure() {
   const point = matrix ? new DOMPoint(state.position.x, state.position.y - 86).matrixTransform(matrix) : null;
   const entry = point ? { x: clamp(point.x - (r.left || 0), 0, r.width), y: clamp(point.y - (r.top || 0), 0, r.height), scale: Math.hypot(matrix.a, matrix.b) || .8 } : null;
   state.adventure = createAdventure(r.width || 1200, r.height || 700, Date.now(), entry, bucketColors(PALETTE).find(color => color.id === state.paintCan)?.color);
+  state.adventure.departure = { x: state.position.x, y: state.position.y };
   state.adventure.reduced = state.reduced;
   state.adventure.nextDifficulty = state.difficulty;
-  state.scene = 'space'; renderScene(); announce(text('space_entered'));
+  state.scene = 'space'; game.setAttribute('aria-label', text('space_title')); renderScene(); announce(text('space_entered'));
 }
 function playAdventure() {
   if (!state.adventure || !['ready', 'won'].includes(state.adventure.phase)) return;
@@ -857,6 +859,18 @@ function finishAdventureTick(event) {
 }
 function updateAdventure() {
   const adventure = state.adventure; if (!adventure) return;
+  if (adventure.departure) {
+    if (adventure.phase === 'intro') {
+      const pose = adventureShipPose(adventure), origin = adventure.departure;
+      const y = origin.y + (pose.y - adventure.entry.y) / adventure.entry.scale;
+      $('#rocket')?.setAttribute('transform', `translate(${origin.x.toFixed(2)} ${y.toFixed(2)})`);
+      $('.exit-room').hidden = true;
+      return;
+    }
+    // The rocket has left the old view: replace it with the complete starting scene in one frame.
+    delete adventure.departure;
+    renderScene();
+  }
   if (adventure.sunTime !== null) { updateSunHoliday(); return; }
   const pose = adventureShipPose(adventure), angle = adventure.angle;
   const flight = ['playing', 'won'].includes(adventure.phase);
@@ -1327,6 +1341,16 @@ function updateNear(force = false) {
 function resize() {
   const r = game.getBoundingClientRect(); if (!r.width || !r.height) return;
   if (state.race) { world.setAttribute('viewBox', `0 0 ${BIKE_WIDTH} ${BIKE_HEIGHT}`); return; }
+  if (state.adventure?.phase === 'intro' && state.adventure.departure) {
+    const adventure = state.adventure, origin = adventure.departure;
+    resizeAdventure(adventure, r.width, r.height);
+    const matrix = world.getScreenCTM();
+    if (matrix) {
+      const point = new DOMPoint(origin.x, origin.y - 86).matrixTransform(matrix);
+      adventure.entry = { x: point.x - (r.left || 0), y: point.y - (r.top || 0), scale: Math.hypot(matrix.a, matrix.b) || .8 };
+    }
+    updateAdventure(); return;
+  }
   if (state.adventure) {
     if (state.adventure.width !== r.width || state.adventure.height !== r.height) { resizeAdventure(state.adventure, r.width, r.height); renderScene(); }
     world.setAttribute('viewBox', `0 0 ${r.width} ${r.height}`); return;

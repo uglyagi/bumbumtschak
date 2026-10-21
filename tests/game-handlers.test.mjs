@@ -119,7 +119,7 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null, d
     fetch: async () => ({ ok: false }), clearTimeout() {}, setTimeout: () => 1,
     ResizeObserver: class { observe() {} }, requestAnimationFrame() {},
   });
-  const app = await new vm.Script(`(async () => {${source.replace(/^import .*;\n/gm, '')}\nreturn {state, enterRoom, leaveRoom, showPanel, closePanel, goToStation, frame, renderPanel, loadRecording, checkWorldTouch, currentInteraction};})()`).runInContext(context);
+  const app = await new vm.Script(`(async () => {${source.replace(/^import .*;\n/gm, '')}\nreturn {state, enterRoom, leaveRoom, showPanel, closePanel, goToStation, frame, resize, renderPanel, loadRecording, checkWorldTouch, currentInteraction};})()`).runInContext(context);
   const event = (key, code, target, repeat = false) => ({ key, code, target, repeat, prevented: false, stopped: false, preventDefault() { this.prevented = true; }, stopPropagation() { this.stopped = true; } });
   function press(handlers, e) { for (const cb of handlers.get('keydown') || []) cb(e); return e; }
   return { ...app, opened, stored, get, game, modal, modalContent, Element, event, press, documentHandlers, windowHandlers, doc };
@@ -533,18 +533,19 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
   h.press(h.windowHandlers, h.event(key, code, h.game)); h.leaveRoom();
   h.state.position = { ...sky.GROUND_ROCKET }; h.game.focus(); h.press(h.windowHandlers, h.event(key, code, h.game));
   h.state.keys.add('ArrowUp'); let clock = 0, firstSpace = null;
-  while (!h.state.adventure && clock < 520) { h.frame(++clock * 16); if (clock * 16 < 6000) assert.notEqual(h.state.scene, 'space'); if (h.state.scene === 'space' && firstSpace === null) firstSpace = clock * 16; }
-  assert.equal(h.state.adventure.phase, 'intro'); assert(!h.modal.open); assert(h.game.innerHTML.includes('id="adventure-course" opacity="0"'));
+  let departureMarkup;
+  while (!h.state.adventure && clock < 520) { departureMarkup=h.game.innerHTML; h.frame(++clock * 16); if (clock * 16 < 6000) assert.notEqual(h.state.scene, 'space'); if (h.state.scene === 'space' && firstSpace === null) firstSpace = clock * 16; }
+  assert.equal(h.state.adventure.phase, 'intro'); assert(!h.modal.open); assert.equal(h.game.innerHTML,departureMarkup,'the old outdoor space view remains in place during departure');assert(!h.game.innerHTML.includes('id="adventure-course"'));
   const startingPose = adventureArt.adventureShipPose(h.state.adventure); assert.deepEqual({ ...startingPose }, { ...h.state.adventure.entry });
   h.showPanel('space-launch'); assert(!h.modal.open, 'the choice cannot open before the transition finishes');
   new h.Element('early difficulty', 'button', { difficulty: 'profi' }).click(); assert.equal(h.state.adventure.phase, 'intro');
   for (let i = 0; i < 35; i++) h.frame(++clock * 16);
   const departingPose = adventureArt.adventureShipPose(h.state.adventure);
   assert.equal(h.state.adventure.phase, 'intro'); assert(!h.modal.open); assert.equal(departingPose.scale, startingPose.scale); assert.equal(departingPose.x, startingPose.x); assert(departingPose.y < startingPose.y);
-  assert(!h.get('#adventure-course').attrs.has('hidden')); assert.equal(h.state.adventure.meteors.length, 0);
+  assert.equal(h.game.innerHTML,departureMarkup);assert.equal(h.state.adventure.angle,0);assert.equal(h.state.adventure.meteors.length,0);assert(h.get('#rocket').getAttribute('transform').includes('translate('));
   while (h.state.adventure.phase === 'intro' && clock < 800) h.frame(++clock * 16);
   assert(firstSpace >= 6000 && firstSpace <= 7000, String(firstSpace));
-  assert.equal(h.state.adventure.phase, 'ready'); assert.equal(h.state.modal, 'space-launch');
+  assert.equal(h.state.adventure.phase,'ready');assert.equal(h.state.modal,'space-launch');assert(!h.state.adventure.departure);assert(h.game.innerHTML.includes('id="adventure-course" opacity="1"'));assert(h.game.innerHTML.includes('id="bum-planet-crop"'));
   assert(h.modalContent.innerHTML.includes('Zurück zur Wiese')); assert.equal((h.modalContent.innerHTML.match(/<button\b/g) || []).length, 4); assert(!h.modalContent.innerHTML.includes('data-action="space-start"'));
   assert.equal(h.state.adventure.width, 1200); assert.equal(h.state.paintCan, 'yellow'); assert.equal(h.state.animal, 'monkey');
   assert(!h.get('#adventure-course').attrs.has('hidden')); assert.equal(h.get('#adventure-course').getAttribute('opacity'), '1.000'); assert(h.get('#rocket-paint').innerHTML.includes('#fff20b'));
@@ -643,7 +644,7 @@ assert.equal(choosingLand.state.modal, 'space-launch'); choosingLand.closePanel(
 assert(choosingLand.state.landing && !choosingLand.state.rocket.damaged, 'Escape at the launch choice lands safely');
 for (let time = 4500; time < 10000; time += 16) choosingLand.frame(time);
 assert.equal(choosingLand.state.scene, 'world'); assert(!choosingLand.state.rocket.riding && !choosingLand.state.rocket.damaged);
-console.log('PASS: space entry at 6–7 seconds, original-size straight upward departure, smooth entry into the visible starting scene, only three difficulties and return to meadow, immediate start on difficulty choice, four-direction flight, upright pilot, pause, Sun landing, carried/unfolded lounger, sunglasses, sunbathing before congratulations, replay, vibrating nose-down crash, scattering wreckage, persistent damage, consuming and replacing the toolbox, repair and restart work with Enter, Space and NumpadEnter.');
+console.log('PASS: space entry at 6–7 seconds, original-size straight upward departure in the unchanged world, one cut into the fully visible horizontal starting scene, only three difficulties and return to meadow, immediate start on difficulty choice, four-direction flight, upright pilot, pause, Sun landing, carried/unfolded lounger, sunglasses, sunbathing before congratulations, replay, vibrating nose-down crash, scattering wreckage, persistent damage, consuming and replacing the toolbox, repair and restart work with Enter, Space and NumpadEnter.');
 
 const dancingTrack = content.TRACKS.find(track => track.id === 'tanzen'), originalDanceAudio = dancingTrack.src;
 try {
@@ -1578,3 +1579,17 @@ try{
  h.game.focus();h.press(h.windowHandlers,h.event('ArrowRight','ArrowRight',h.game));h.frame(time+=16);assert(race.player.speed>0);
 }finally{crashSong.src=previousCrashSong;}
 console.log('PASS: actual race input keeps its speed on release, animates separate rolling figure/bicycle groups, freezes the crash on pause, remounts after three seconds and accelerates again.');
+
+{
+ const h=await harness(false,'cat');h.state.position={...h.state.rocket.position};h.game.focus();h.press(h.windowHandlers,h.event('Enter','Enter',h.game));h.state.keys.add('ArrowUp');let time=0;
+ while(!h.state.adventure && time<10000)h.frame(time+=16);
+ assert(h.state.adventure?.departure);const original=h.game.innerHTML,viewBox=h.get('#world-svg').getAttribute('viewBox');
+ const origin={...h.state.adventure.departure};h.game.getBoundingClientRect=()=>({width:600,height:350,left:0,top:0});
+ h.get('#world-svg').getScreenCTM=()=>({a:.5,b:0,c:0,d:.5,e:0,f:175-origin.y*.5});
+ h.resize();assert.equal(h.game.innerHTML,original);assert.equal(h.get('#world-svg').getAttribute('viewBox'),viewBox);assert.equal(h.state.adventure.entry.scale,.5);
+ assert.equal(h.state.adventure.angle,0);assert.equal(h.state.adventure.width,600);
+ while(h.state.adventure.phase==='intro')h.frame(time+=16);
+ assert.equal(h.state.modal,'space-launch');assert.equal(h.get('#world-svg').getAttribute('viewBox'),'0 0 600 350');assert.equal(h.state.adventure.angle,90);
+ assert(h.game.innerHTML.includes('id="bum-planet-crop"'));assert(h.game.innerHTML.includes('id="adventure-course" opacity="1"'));
+}
+console.log('PASS: resizing during the vertical departure preserves the old space background and upright rocket until one cut to the resized horizontal starting scene.');

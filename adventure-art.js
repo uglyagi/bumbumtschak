@@ -1,6 +1,6 @@
 import { defs, rocketMarkup, landscapeMarkup } from './art.js';
 import { planetMarkup } from './space-art.js';
-import { COURSE, FINISH_DISTANCE, SUN_DIAMETER, INTRO_DURATION, INTRO_DEPARTURE_DURATION } from './rocket-adventure.js';
+import { COURSE, FINISH_DISTANCE, SUN_DIAMETER, INTRO_DEPARTURE_DURATION } from './rocket-adventure.js';
 import { text } from './content.js';
 import { sunHolidayMarkup } from './sun-holiday.js';
 import { escapeXML as esc } from './utils.js';
@@ -11,16 +11,11 @@ export function meteorMarkup(meteor) {
 }
 export function adventureShipPose(game) {
   if (game.phase !== 'intro') return { ...game.ship, scale: .72 };
-  if (game.introTime <= INTRO_DEPARTURE_DURATION) {
-    const progress = Math.max(0, Math.min(1, game.introTime / INTRO_DEPARTURE_DURATION));
-    const amount = progress * progress * (3 - 2 * progress), endY = -140 * game.entry.scale;
-    return { x: game.entry.x, y: game.entry.y + (endY - game.entry.y) * amount, scale: game.entry.scale };
-  }
-  const progress = Math.max(0, Math.min(1, (game.introTime - INTRO_DEPARTURE_DURATION) / (INTRO_DURATION - INTRO_DEPARTURE_DURATION)));
-  const amount = progress * progress * (3 - 2 * progress);
-  return { x: -140 + (game.ship.x + 140) * amount, y: game.ship.y, scale: .72 };
+  const progress=Math.max(0,Math.min(1,game.introTime/INTRO_DEPARTURE_DURATION));
+  const endY=-110*game.entry.scale;
+  return {x:game.entry.x,y:game.entry.y+(endY-game.entry.y)*progress,scale:game.entry.scale};
 }
-export const adventureCourseOpacity = game => game.phase === 'intro' ? Math.max(0, Math.min(1, (game.introTime - .55) / .8)) : 1;
+export const adventureCourseOpacity = game => game.phase === 'intro' ? 0 : 1;
 
 export function adventureTrailPath(game) {
   if (!/^#[a-f0-9]{6}$/i.test(game.trailColor) || !game.paintTrail.length) return '';

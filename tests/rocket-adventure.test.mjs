@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { COURSE, ADVENTURE_PLANETS, SUN_DIAMETER, FINISH_DISTANCE, createAdventure, startAdventure, resizeAdventure, tickAdventure, meteorHits, landingPose, SUN_HOLIDAY_DURATION, INTRO_DURATION, INTRO_DEPARTURE_DURATION } from '../rocket-adventure.js';
 import { CSS_PIXELS_PER_CM } from '../solar-system.js';
 import { GROUND_ROCKET } from '../sky-world.js';
-import { adventureMarkup, adventureShipPose, adventureTrailPath, meteorMarkup } from '../adventure-art.js';
+import { adventureMarkup, adventureShipPose, adventureCourseOpacity, adventureTrailPath, meteorMarkup } from '../adventure-art.js';
 
 test('the journey visits every planet from Neptune to Mercury at an Earth 1 cm body scale', () => {
   assert.deepEqual(ADVENTURE_PLANETS.map(p => p.id), ['neptune', 'uranus', 'saturn', 'jupiter', 'mars', 'earth', 'venus', 'mercury']);
@@ -121,7 +121,7 @@ test('collisions work from every direction and departed meteors are removed beyo
 });
 
 
-test('arrival leaves upwards, glides into the ready scene, and starts without moving the ship or background', () => {
+test('arrival leaves completely upwards, cuts to a fully visible horizontal start and starts without moving that scene', () => {
   for (const [width, height, scale] of [[1200, 700, .806], [390, 580, .65], [800, 450, 1.2]]) {
     const entry = { x: width * .4, y: height * .8, scale }, game = createAdventure(width, height, 1, entry);
     assert.deepEqual(adventureShipPose(game), entry);
@@ -130,15 +130,11 @@ test('arrival leaves upwards, glides into the ready scene, and starts without mo
       game.introTime = INTRO_DEPARTURE_DURATION * i / 20;
       const pose = adventureShipPose(game);
       assert.equal(pose.x, entry.x); assert.equal(pose.scale, entry.scale); assert(pose.y <= previousY);
-      previousY = pose.y;
+      previousY = pose.y;assert.equal(adventureCourseOpacity(game),0,'the planet is never faded in while the departing rocket is visible');assert.equal(game.angle,0);
     }
     assert(previousY + 100 * scale < 0, 'the departing rocket is fully outside the image before the sideways entry');
-    let previousX = -Infinity;
-    for (let i = 1; i <= 20; i++) {
-      game.introTime = INTRO_DEPARTURE_DURATION + (INTRO_DURATION - INTRO_DEPARTURE_DURATION) * i / 20;
-      const pose = adventureShipPose(game); assert(pose.x >= previousX); assert.equal(pose.y, game.ship.y); previousX = pose.x;
-    }
     assert.equal(tickAdventure(game, .01), 'ready'); assert.equal(game.angle, 90);
+    assert.equal(adventureCourseOpacity(game),1,'the entire game background appears on the same frame as the horizontal ship');
     const ready = adventureShipPose(game), svg = adventureMarkup(game, 'monkey');
     assert.equal(ready.x, game.ship.x); assert.equal(ready.y, game.ship.y); assert.equal(ready.scale, .72);
     assert(svg.includes('id="adventure-course" opacity="1"'));
