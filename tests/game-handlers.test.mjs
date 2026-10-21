@@ -1131,8 +1131,10 @@ try {
       h.press(h.windowHandlers, h.event(key, code, h.game)); h.press(h.windowHandlers, h.event(key, code, h.game));
       assert.equal(h.state.chocolate.boost, 19.65); assert.equal(h.get('#audio').src, boostTrack.src); assert(h.state.playing);
       assert.equal(h.state.boostMusic.id, boostTrack.id); assert.equal(JSON.stringify(h.state.tapes), before, 'bonus music does not relocate any cassette');
-      assert(!h.state.party.active); assert(!h.state.hatActive); assert(h.state.chocolate.active);
-      h.frame(16); h.frame(18666); assert(h.state.boostMusic); assert.equal(h.state.chocolate.boost, 1);
+      assert(!h.state.party.active); assert(!h.state.hatActive); assert(!h.state.chocolate.active); assert(!h.state.chocolate.session);
+      h.enterRoom('radio'); assert(!h.game.innerHTML.includes('data-room-target="choco-door"'), 'treat music alone keeps the speaker closed');
+      h.state.position = { ...chocolate.CHOCOLATE_DOOR }; h.frame(16); assert.equal(h.state.scene, 'radio', 'walking into the speaker during a boost cannot enter the maze');
+      h.frame(18666); assert(h.state.boostMusic); assert.equal(h.state.chocolate.boost, 1);
       h.frame(19667); assert.equal(h.state.boostMusic, null); assert.equal(h.state.chocolate.boost, 0); assert.equal(h.get('#audio').loop, false);
       if (previousMode === 'empty') assert(h.get('#audio').paused);
       else {
@@ -1158,8 +1160,29 @@ try {
   alreadyPlaying.enterRoom('wardrobe'); alreadyPlaying.state.position = { ...chocolate.CHOCOLATE_DRAWER }; alreadyPlaying.game.focus();
   alreadyPlaying.press(alreadyPlaying.windowHandlers, alreadyPlaying.event('Enter', 'Enter', alreadyPlaying.game)); alreadyPlaying.press(alreadyPlaying.windowHandlers, alreadyPlaying.event('Enter', 'Enter', alreadyPlaying.game));
   assert.equal(alreadyPlaying.state.boostMusic.continuing, true); assert.equal(alreadyPlaying.get('#audio').currentTime, 43, 'Schokolade already playing continues smoothly until it fades out');
+  assert(alreadyPlaying.state.chocolate.active && alreadyPlaying.state.chocolate.session, 'a Schokolade cassette that is already playing keeps its own doorway');
+  alreadyPlaying.enterRoom('radio'); assert(alreadyPlaying.game.innerHTML.includes('data-room-target="choco-door"'));
+
+  const endedCassette = await harness(false, 'dog', null, false, null, { unlocked: true });
+  endedCassette.state.tapes.loaded = boostTrack.id; endedCassette.loadRecording();
+  endedCassette.get('#audio').ended = true; endedCassette.get('#audio').paused = true;
+  for (const cb of endedCassette.get('#audio').handlers.get('ended')) cb({});
+  assert(!endedCassette.state.chocolate.session);
+  endedCassette.enterRoom('wardrobe'); endedCassette.state.position = { ...chocolate.CHOCOLATE_DRAWER }; endedCassette.game.focus();
+  for (let press = 0; press < 2; press++) endedCassette.press(endedCassette.windowHandlers, endedCassette.event('Enter', 'Enter', endedCassette.game));
+  assert(endedCassette.state.boostMusic && endedCassette.state.playing); assert(!endedCassette.state.chocolate.active && !endedCassette.state.chocolate.session, 'eating does not reopen an ended Schokolade cassette');
+  endedCassette.enterRoom('radio'); assert(!endedCassette.game.innerHTML.includes('data-room-target="choco-door"'));
+
+  const insertDuringBoost = await harness(false, 'cat', null, false, null, { unlocked: true });
+  insertDuringBoost.enterRoom('wardrobe'); insertDuringBoost.state.position = { ...chocolate.CHOCOLATE_DRAWER }; insertDuringBoost.game.focus();
+  for (let press = 0; press < 2; press++) insertDuringBoost.press(insertDuringBoost.windowHandlers, insertDuringBoost.event(' ', 'Space', insertDuringBoost.game));
+  insertDuringBoost.enterRoom('radio'); assert(!insertDuringBoost.game.innerHTML.includes('data-room-target="choco-door"'));
+  insertDuringBoost.state.tapes.carrying = boostTrack.id; insertDuringBoost.state.position = { ...rooms.RADIO }; insertDuringBoost.game.focus();
+  insertDuringBoost.press(insertDuringBoost.windowHandlers, insertDuringBoost.event(' ', 'Space', insertDuringBoost.game));
+  assert.equal(insertDuringBoost.state.tapes.loaded, boostTrack.id); assert.equal(insertDuringBoost.state.boostMusic, null);
+  assert(insertDuringBoost.state.chocolate.active && insertDuringBoost.game.innerHTML.includes('data-room-target="choco-door"'), 'physically inserting the cassette opens the maze even during a boost');
 } finally { content.TRACKS.splice(content.TRACKS.indexOf(boostTrack), 1); content.TRACKS[1].src = originalBoostCassette; }
-console.log('PASS: eating with Enter, Space or Numpad Enter plays Schokolade for the 19.65-second boost, restores an empty, paused or playing radio at its saved position, leaves cassettes in place, supports repeated treats and respects a newly selected cassette.');
+console.log('PASS: eating with Enter, Space or Numpad Enter plays Schokolade for the 19.65-second boost, restores an empty, paused or playing radio at its saved position, leaves cassettes in place, supports repeated treats, never opens a maze from bonus music alone and respects a newly inserted cassette.');
 
 const returnTrack = { id: 'schokolade', title: 'Schokolade', src: 'uploads/schokolade.mp3', color: '#ff87ce', image: 'assets/hut.png' };
 content.TRACKS.push(returnTrack);

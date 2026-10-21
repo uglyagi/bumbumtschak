@@ -419,8 +419,10 @@ function refreshChocolateItems() {
   }
 }
 function refreshChocolatePlayback() {
-  const chocolate = state.chocolate, track = playbackTrack(), previous = chocolate.active, previousDoor = chocolate.session;
-  chocolate.active = state.playing && !audio.ended && !audio.error && isChocolateTrack(track);
+  const chocolate = state.chocolate, track = TRACKS.find(track => track.id === state.tapes.loaded), previous = chocolate.active, previousDoor = chocolate.session;
+  // Treat music can replace the audio temporarily; only a playing cassette opens the maze.
+  const cassettePlaying = !state.boostMusic || state.boostMusic.previous.id === state.tapes.loaded && state.boostMusic.previous.playing;
+  chocolate.active = cassettePlaying && state.playing && !audio.ended && !audio.error && isChocolateTrack(track);
   if (chocolate.active) chocolate.session = true;
   if (!isChocolateTrack(track) || audio.ended || audio.error) {
     chocolate.session = false;
