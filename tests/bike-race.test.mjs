@@ -19,7 +19,7 @@ test('ramps launch automatically; faster approach jumps farther',()=>{
 });
 test('airborne riders clear a stone; overtaking ground riders needs a different lane',()=>{
  const r=createBikeRace();r.start();r.ramps=[];r.player.x=760;r.player.speed=250;r.player.lane=0;r.player.y=333;r.player.z=100;r.player.vy=20;r.step(.1,{right:true});assert.equal(r.falls,0);
- const s=createBikeRace();s.start();s.stones=[];s.ramps=[];const other=s.riders[1];s.player.lane=other.lane;s.player.y=other.y;s.player.x=other.x-80;s.player.speed=320;s.step(.01,{right:true});assert(other.x-s.player.x>=84);s.changeLane(1);assert.notEqual(s.player.lane,other.lane);
+ const s=createBikeRace();s.start();s.stones=[];s.ramps=[];const other=s.riders[1];s.player.lane=other.lane;s.player.y=other.y;s.player.x=other.x-55;s.player.speed=320;s.step(.01,{right:true});assert(other.x-s.player.x>=59);s.changeLane(1);assert.notEqual(s.player.lane,other.lane);
 });
 test('pause freezes the race and stopwatch; finish produces a result',()=>{
  const r=alone(createBikeRace());r.start();r.phase='paused';tick(r,3,{right:true});assert.equal(r.elapsed,0);assert.equal(r.player.x,180);r.phase='racing';r.player.x=8498;r.player.speed=320;r.step(.02,{right:true});assert.equal(r.phase,'finished');assert.equal(r.rank(),1);const t=r.elapsed;tick(r,3,{right:true});assert.equal(r.elapsed,t);
@@ -47,9 +47,9 @@ test('the landscape scrolls horizontally and the same animal body sits on a smal
  const r=createBikeRace('monkey'),before=bikeTerrainMarkup(r);r.camera=700;
  const after=bikeTerrainMarkup(r);assert.notEqual(before,after);assert(after.includes('Home sweet Home'));
  const svg=bikeRaceMarkup(r,'monkey',{},true);
- assert(svg.includes('href="#dressed-monkey-seated"'));assert(!svg.includes('href="#animal-monkey" x="-60"'));
- for(const animal of ['cat','dog','horse'])assert(svg.includes('href="#animal-'+animal+'-seated"'));
- assert(svg.includes('bike-leg-front-monkey'));assert(svg.includes('bike-wheel-front-monkey'));
+ assert(svg.includes('href="#dressed-monkey-right"'));assert(!svg.includes('href="#animal-monkey" x="-60"'));
+ for(const animal of ['cat','dog','horse'])assert(svg.includes('href="#animal-'+animal+'-right"'));
+ assert(!svg.includes('bike-leg-'));assert(!svg.includes('bike-paw-'));assert(svg.includes('width="68" height="82"'));assert(svg.includes('bike-wheel-front-monkey'));
  assert(!svg.includes('data-character'));assert(!svg.includes('data-bike-level'));assert(!svg.includes('data-bicycle'));
  assert.equal(BIKE_LANES.length,4);assert(!bikeRiderPose(r,r.player).lift.includes('rotate(180'));
 });

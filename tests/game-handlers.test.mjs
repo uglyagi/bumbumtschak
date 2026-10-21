@@ -1459,7 +1459,7 @@ for (const id of ['cat','dog','horse','monkey']) {
   const h=await harness(false,id,null,false,{phase:'unlocked',wearing:true});
   h.enterRoom('radio');h.state.tapes.loaded='fahrradfahren';h.loadRecording();h.state.position={...bike.BIKE_DOOR};h.frame(1000);
   new h.Element('start','button',{action:'bike-start'}).click();
-  assert.equal(h.state.race.player.id,id);assert(h.game.innerHTML.includes('href="#dressed-'+id+'-seated"'));
+  assert.equal(h.state.race.player.id,id);assert(h.game.innerHTML.includes('href="#dressed-'+id+'-right"'));
   assert.equal(new Set(h.state.race.riders.map(r=>r.id)).size,4);assert(!h.modalContent.innerHTML.includes('data-character'));
   h.state.race.player.x=bike.BIKE_FINISH-.5;h.state.race.player.speed=320;h.state.race.elapsed=41.2;h.state.race.stones=[];
   h.frame(1020);assert.equal(h.state.modal,'bike-win');assert(!h.modalContent.innerHTML.includes('gewonnenes Fahrrad'));

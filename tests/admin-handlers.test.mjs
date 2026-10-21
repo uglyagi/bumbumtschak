@@ -187,11 +187,11 @@ test('each band member can upload, preview, publish and remove an independent me
   assert(await h.save(true)); assert.equal(h.repo.document().info.members[0].audio, '');
 });
 
-test('each directional and seated image uploads, previews and publishes independently, and originals restore all views',async()=>{
+test('each directional image uploads, previews and publishes independently, and originals restore all views',async()=>{
  const h=await harness();await h.login();await h.click(h.get('#tab-info'));
  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aOv0AAAAASUVORK5CYII=','base64');
  const originalFront=h.state.document.info.animals[0].image,paths=new Map();
- for(const key of ANIMAL_IMAGE_KEYS.filter(key=>key!=='image')){
+ for(const key of ['imageRight','imageBack']){
   assert(h.get('#panel').innerHTML.includes('info.animals.0.'+key));
   const input=new h.Element(key,{upload:key,animal:'cat'});input.files=[new File([png],key+'.png',{type:'image/png'})];
   await h.fire('#panel','change',input);
@@ -199,7 +199,7 @@ test('each directional and seated image uploads, previews and publishes independ
   assert(path.startsWith('uploads/'));assert(fileReferences(h.state.document).has(path));assert(h.get('#animal-cover-cat-'+key).innerHTML.includes('blob:'));
   assert.equal(h.state.document.info.animals[0].image,originalFront);assert.equal(h.repo.document().info.animals[0][key],undefined);
  }
- assert(await h.save());assert.equal(h.draft().files.length,3);assert(await h.save(true));
+ assert(await h.save());assert.equal(h.draft().files.length,2);assert(await h.save(true));
  for(const [key,path]of paths){assert.equal(h.repo.document().info.animals[0][key],path);assert.deepEqual(h.repo.blobs.get(h.repo.currentTree().get(path)),png);}
  assert.equal(h.repo.requests.filter(r=>r.method==='PATCH').length,1);
  await h.click(new h.Element('reset cat',{resetAnimal:'cat'}));

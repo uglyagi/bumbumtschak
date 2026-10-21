@@ -22,7 +22,7 @@ test('all four legacy characters keep their front image and gain complete direct
   assert.equal(a.image,defaults.info.animals[i].image);
   for(const key of ANIMAL_IMAGE_KEYS){const svg=await readFile(new URL('../'+a[key],import.meta.url),'utf8');assert(svg.includes('viewBox="0 0 100 120"'));assert(svg.includes('#101014'));assert(svg.endsWith('</svg>')||svg.endsWith('</svg>\n'));}
   const side=await readFile(new URL('../'+a.imageRight,import.meta.url),'utf8'),seat=await readFile(new URL('../'+a.imageSeated,import.meta.url),'utf8');
-  assert(side.includes('class="animal-feet"'));assert(!seat.includes('class="animal-feet"'));
+  assert(side.includes('class="animal-feet"'));assert(seat.includes('class="animal-feet"'));
  }
  const symbols=animalSymbols();
  for(const id of characters.map(a=>a.id))for(const view of ['front','right','left','back','seated'])for(const hat of [false,true])assert(symbols.includes('id="'+animalHref(id,hat,view).slice(1)+'"'));

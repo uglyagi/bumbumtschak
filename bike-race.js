@@ -56,7 +56,7 @@ class Race{
     if(rider.x>=FINISH){rider.finished=true;rider.finishTime=this.elapsed;if(!rider.ai)this.phase='finished';}
    }
    const p=this.player;
-   if(!p.fall&&!p.finished)for(const other of this.riders){if(other!==p&&!other.fall&&!other.finished&&other.x>p.x&&other.x-p.x<85&&Math.abs(other.y-p.y)<23&&Math.abs(other.z-p.z)<28){p.x=other.x-85;p.speed=Math.min(p.speed,other.speed*.82);}}
+   if(!p.fall&&!p.finished)for(const other of this.riders){if(other!==p&&!other.fall&&!other.finished&&other.x>p.x&&other.x-p.x<60&&Math.abs(other.y-p.y)<23&&Math.abs(other.z-p.z)<28){p.x=other.x-60;p.speed=Math.min(p.speed,other.speed*.82);}}
    this.camera+=(Math.max(0,this.player.x-275)-this.camera)*Math.min(1,dt*8);
   }
  }

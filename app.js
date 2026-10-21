@@ -21,7 +21,7 @@ import { chocolateMazeMarkup } from './chocolate-art.js';
 import { createFriends, savedFriends, isFriendsTrack, startFriends, releaseFriends, swapFriendsPlayer, friendsAway, friendsBlockBuildings, friendsTentNear, gatherFriends, tickFriends, friendsCameraView, FRIEND_CAMP_FADE_SECONDS, FRIEND_CAMP_PLAYER, FRIEND_TENT } from './friends-game.js';
 import { friendsHiddenMarkup, friendsWorldMarkup, friendsCampfireMarkup, friendsConfettiMarkup } from './friends-art.js';
 import { BIKE_WIDTH, BIKE_HEIGHT, BIKE_FINISH, BIKE_DOOR, BIKE_RETURN, isBikeTrack, touchingBikeDoor, bikeTime, bikeRank, createBikeRace, startBikeRace, changeBikeLane, tickBikeRace, cleanBikeScores, addBikeScore } from './bike-race.js';
-import { bikeRaceMarkup, bikeTerrainMarkup, bikeObstaclesMarkup, bikeRiderPose, bikeFrontLeg, bikeRearLeg } from './bike-art.js';
+import { bikeRaceMarkup, bikeTerrainMarkup, bikeObstaclesMarkup, bikeRiderPose } from './bike-art.js';
 import { movementFacing } from './animal-views.js';
 
 const previewMode = new URLSearchParams(location.search).get('preview') === '1';
@@ -746,11 +746,8 @@ function updateBicycleRace() {
     $('#bike-rider-' + id)?.setAttribute('transform', p.transform);
     $('#bike-fly-' + id)?.setAttribute('transform', p.lift);
     for (const wheel of ['back', 'front']) $('#bike-wheel-' + wheel + '-' + id)?.setAttribute('transform', 'rotate(' + p.angle + ')');
-    for (const suffix of ['', '-color']) {
-      $('#bike-leg-front' + suffix + '-' + id)?.setAttribute('d', bikeFrontLeg(p.front));
-      $('#bike-leg-back' + suffix + '-' + id)?.setAttribute('d', bikeRearLeg(p.rear));
-    }
-    $('#bike-paw-front-' + id)?.setAttribute('cx', p.front.x.toFixed(2)); $('#bike-paw-front-' + id)?.setAttribute('cy', p.front.y.toFixed(2));
+    $('#bike-crank-' + id)?.setAttribute('transform', 'rotate(' + p.angle + ')');
+    $('#bike-body-' + id)?.setAttribute('transform', p.body);
   }
   const values = { 'bike-clock': bikeTime(race.elapsed), 'bike-speed': Math.round(race.player.speed * .11) + ' km/h', 'bike-place': bikeRank(race) + ' / 4', 'bike-jumps': String(race.jumps) };
   for (const [id, value] of Object.entries(values)) { const node = $('#' + id); if (node && node.textContent !== value) node.textContent = value; }
