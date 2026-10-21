@@ -1,3 +1,4 @@
+import { ANIMAL_IMAGE_KEYS } from '../animal-views.js';
 import { COPY_GROUPS, normalizeTexts } from '../copy-defaults.js';
 import { DEFAULT_BAND, bandMembers } from '../band-defaults.js';
 import { DEFAULT_ANIMALS, playableAnimals } from '../animal-defaults.js';
@@ -55,7 +56,9 @@ function memberAudioEditor(member, path) {
 
 function animalEditor(animal, index) {
   const path = `info.animals.${index}`;
-  return `<article class="card member-editor"><div class="card-top"><h3 data-heading="${path}.name">Spielfigur: ${esc(animal.name)}</h3></div><div class="music-layout"><div class="cover-column"><div class="cover-frame member-frame animal-frame" id="animal-cover-${animal.id}"><img src="${esc(fileURL(animal.image))}" alt="${esc(animal.name)}"></div><label class="upload">Figurengrafik auswählen<input type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" data-upload="image" data-animal="${animal.id}" aria-label="Grafik für ${esc(animal.name)} hochladen"></label><p class="file-hint">PNG mit transparentem Hintergrund ist ideal. JPG / WebP · bis 12 MB. Das ganze Tier einschließlich Schwanz soll im Bild sein; es wird ohne Verzerrung eingepasst.</p><p class="file-status" id="animal-upload-image-${animal.id}" role="status"></p><button class="button small" data-reset-animal="${animal.id}">Originalgrafik verwenden</button><details><summary>Grafik über einen Link angeben</summary>${field('Bildlink', `${path}.image`, animal.image, { max: 2048 })}</details></div><div class="fields">${field('Name *', `${path}.name`, animal.name, { max: 40, required: true })}${field('Akzentfarbe', `${path}.color`, animal.color, { type: 'color' })}${textarea('Kurzbeschreibung', `${path}.trait`, animal.trait, 2, 180)}<p class="hint">Name und Grafik werden beim Aussuchen, im Haus und für die laufende Figur verwendet. Die Akzentfarbe färbt den Auswahlplatz, nicht die hochgeladene Grafik.</p></div></div></article>`;
+  const labels = { image: 'Vorderansicht', imageRight: 'Seitenansicht', imageBack: 'Rückenansicht', imageSeated: 'Sitzhaltung auf dem Fahrrad' };
+  const graphics = ANIMAL_IMAGE_KEYS.map(key => `<details class="animal-view-editor" ${key === 'image' ? 'open' : ''}><summary>${labels[key]}</summary><div class="cover-frame member-frame animal-frame" id="animal-cover-${animal.id}${key === 'image' ? '' : '-' + key}"><img src="${esc(fileURL(animal[key]))}" alt="${esc(animal.name)} – ${labels[key]}"></div><label class="upload">${labels[key]} auswählen<input type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" data-upload="${key}" data-animal="${animal.id}" aria-label="${labels[key]} für ${esc(animal.name)} hochladen"></label><p class="file-status" id="animal-upload-${key}-${animal.id}" role="status"></p>${field('Bildlink', `${path}.${key}`, animal[key], { max: 2048 })}</details>`).join('');
+  return `<article class="card member-editor"><div class="card-top"><h3 data-heading="${path}.name">Spielfigur: ${esc(animal.name)}</h3></div><div class="music-layout"><div class="cover-column">${graphics}<p class="file-hint">PNG mit transparentem Hintergrund ist ideal. JPG / WebP · bis 12 MB. Das ganze Tier einschließlich Schwanz soll im Bild sein. Die linke Seitenansicht wird automatisch gespiegelt. Bei der Sitzhaltung sind die Beine bereits am Fahrrad.</p><button class="button small" data-reset-animal="${animal.id}">Originalgrafiken verwenden</button></div><div class="fields">${field('Name *', `${path}.name`, animal.name, { max: 40, required: true })}${field('Akzentfarbe', `${path}.color`, animal.color, { type: 'color' })}${textarea('Kurzbeschreibung', `${path}.trait`, animal.trait, 2, 180)}<p class="hint">Die Vorderansicht erscheint beim Aussuchen. Beim Laufen wechseln die Ansichten mit der Richtung; im Rennen wird die Sitzhaltung verwendet.</p></div></div></article>`;
 }
 function paletteEditor() {
   return `<article class="card palette-editor"><div class="card-top"><h3>Farben & Malen</h3><button class="button small primary" data-add-color>+ Farbe hinzufügen</button></div><p class="hint">Im Landschaftsbild gibt es fünf Farben in dunkel, normal und hell sowie Schwarz, Grau und Weiß. Die fünf normalen Farben sind zusätzlich als Kübel für Bäume und Blumen verfügbar. Ändert hier Namen und Farbwerte oder ergänzt weitere Bildfarben (insgesamt bis ${PALETTE_LIMIT}). Die 18 Grundfarben bleiben erhalten. Die Ausgangsfarben der Welt verwenden dieselben Farbwerte. Gemalte Welten werden nur im Browser des jeweiligen Kindes gespeichert.</p><div class="palette-rows">${state.document.info.palette.map((color, index) => `<div class="palette-row">${field('Farbname *', `info.palette.${index}.name`, color.name, { max: 40, required: true })}${field('Farbe', `info.palette.${index}.color`, color.color, { type: 'color' })}${DEFAULT_PALETTE.some(base => base.id === color.id) ? `<span class="palette-use">${BUCKET_COLOR_IDS.includes(color.id) ? 'Bild + Farbkübel' : 'Nur im Bild'}</span>` : `<button class="button small danger" data-remove-color="${index}" aria-label="${esc(color.name)} entfernen">Entfernen</button>`}</div>`).join('')}</div></article>`;
@@ -111,7 +114,7 @@ document.addEventListener('click', async event => {
   if (button.dataset.resetAnimal) {
     if (state.uploads.size) return;
     const animal = state.document.info.animals.find(item => item.id === button.dataset.resetAnimal);
-    animal.image = DEFAULT_ANIMALS.find(item => item.id === animal.id).image;
+    const original = DEFAULT_ANIMALS.find(item => item.id === animal.id); for (const key of ANIMAL_IMAGE_KEYS) animal[key] = original[key];
     changed(); render(); $(`[data-reset-animal="${animal.id}"]`).focus(); return;
   }
   if (button.dataset.addColor !== undefined) {
@@ -209,7 +212,7 @@ $('#panel').addEventListener('change', async event => {
   const track = !member && !animal ? state.document.tracks.find(item => item.id === input.dataset.track) : null;
   const item = member || animal || track, key = input.dataset.upload;
   if (!item) return;
-  const statusId = member ? `#member-upload-${key}-${member.id}` : animal ? `#animal-upload-image-${animal.id}` : `#upload-${key}-${track.id}`;
+  const statusId = member ? `#member-upload-${key}-${member.id}` : animal ? `#animal-upload-${key}-${animal.id}` : `#upload-${key}-${track.id}`;
   const indicator = $(statusId), file = input.files[0];
   state.uploads.add(item.id + ':' + key); input.disabled = true; status();
   try {
@@ -221,10 +224,10 @@ $('#panel').addEventListener('change', async event => {
     indicator.textContent = 'Ausgewählt. Wird beim Veröffentlichen auf GitHub gespeichert.';
     if (member && key === 'audio') $(`#member-audio-${member.id}`).innerHTML = `<audio controls preload="none" src="${esc(fileURL(path))}" aria-label="Melodie von ${esc(member.name)} probehören"></audio>`;
     else if (member) $(`#member-cover-${member.id}`).innerHTML = `<img src="${esc(fileURL(path))}" alt="${esc(member.name)}">`;
-    else if (animal) $(`#animal-cover-${animal.id}`).innerHTML = `<img src="${esc(fileURL(path))}" alt="${esc(animal.name)}">`;
+    else if (animal) $(`#animal-cover-${animal.id}${key === 'image' ? '' : '-' + key}`).innerHTML = `<img src="${esc(fileURL(path))}" alt="${esc(animal.name)}">`;
     else if (key === 'image') $(`#cover-${track.id}`).innerHTML = `<img src="${esc(fileURL(path))}" alt="Cover von ${esc(track.title)}">`;
     else $(`#audio-${track.id}`).innerHTML = `<audio controls preload="none" src="${esc(fileURL(path))}" aria-label="${esc(track.title)} probehören"></audio>`;
-    const fieldPath = member ? `info.members.${state.document.info.members.indexOf(member)}.${key}` : animal ? `info.animals.${state.document.info.animals.indexOf(animal)}.image` : `tracks.${state.document.tracks.indexOf(track)}.${key}`;
+    const fieldPath = member ? `info.members.${state.document.info.members.indexOf(member)}.${key}` : animal ? `info.animals.${state.document.info.animals.indexOf(animal)}.${key}` : `tracks.${state.document.tracks.indexOf(track)}.${key}`;
     const linkInput = [...$('#panel').querySelectorAll('[data-path]')].find(node => node.dataset.path === fieldPath);
     if (linkInput) linkInput.value = path;
   } catch (error) { indicator.textContent = 'Die Datei wurde nicht zugeordnet.'; message(error.message, true); }

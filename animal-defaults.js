@@ -4,6 +4,7 @@ export const DEFAULT_ANIMALS = [
   { id: 'horse', name: 'Pferd', article: 'das', color: '#1d55ff', trait: 'Mit Schwung voraus', image: 'assets/player-horse.svg' },
   { id: 'monkey', name: 'Affe', article: 'der', color: '#40cea1', trait: 'Neugierig um jede Ecke', image: 'assets/player-monkey.svg' },
 ];
+for (const animal of DEFAULT_ANIMALS) Object.assign(animal, { imageRight: 'assets/player-' + animal.id + '-right.svg', imageBack: 'assets/player-' + animal.id + '-back.svg', imageSeated: 'assets/player-' + animal.id + '-seated.svg' });
 export function playableAnimals(saved, texts = {}) {
   return DEFAULT_ANIMALS.map(base => {
     const source = Array.isArray(saved) ? saved.find(animal => animal?.id === base.id) : null;

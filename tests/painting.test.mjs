@@ -153,7 +153,7 @@ test('temporary previews restore each original fill, tree color and readable lab
 });
 
 test('buckets paint plants and selected details while the mailbox stays exclusive to the picture', () => {
-  assert.equal(BUCKET_SURFACES.length, 34);
+  assert.equal(BUCKET_SURFACES.length, 38);
   assert(BUCKET_SURFACES.every(surface => surface.bucket || /^(tree|flower)-/.test(surface.id)));
   assert(!BUCKET_SURFACES.some(surface => surface.id === 'mailbox'));
   assert(!worldMarkup().includes('m212 473-15 35m200-35 15 35'));

@@ -1,7 +1,7 @@
 import { defs, mapLabel, landscapeMarkup } from './art.js';
 import { TRACKS, ANIMALS, PALETTE, text } from './content.js';
 import { paintSlots, paintPages, PAINT_NEXT, paintCanMarkup, bucketColors } from './painting.js';
-import { HAT_STAND, hatMarkup } from './hat-quest.js';
+import { HAT_STAND, hatMarkup, animalHref } from './hat-quest.js';
 import { escapeXML as escape } from './utils.js';
 import { ROOMS, ROOM_PROPS, ANIMAL_SPOTS, TOOLBOX_SPOT, slotsOnPage, tapePages, createCassetteState } from './rooms.js';
 import { danceGuests, dancePartyMarkup } from './dance-party.js';
@@ -81,7 +81,7 @@ function wardrobeArt(selectedAnimal, paint) {
       const animal = ANIMALS.find(animal => animal.id === spot.id), returning = paint.returns?.find(animal => animal.id === spot.id);
       const position = returning?.position || spot;
       const markup = `<g id="home-animal-${animal.id}" class="${returning ? 'home-returning' : ''}" transform="translate(${position.x} ${position.y})">
-        <g class="home-animal-body"><use href="#animal-${animal.id}" x="-34" y="-77" width="68" height="82"/></g>
+        <g class="home-animal-body"><use href="${animalHref(animal.id, false, returning?.facing)}" x="-34" y="-77" width="68" height="82"/></g>
       </g>`;
       return returning ? markup : target(`animal:${animal.id}`, text('action_change_character', { tier: animal.name }), markup);
     }).join('')}

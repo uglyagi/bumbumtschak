@@ -1,5 +1,6 @@
 // These defaults keep the world usable if the published content file is temporarily unavailable.
 import { DEFAULT_BAND, bandMembers } from './band-defaults.js';
+import { ANIMAL_IMAGE_KEYS } from './animal-views.js';
 import { DEFAULT_ANIMALS, playableAnimals } from './animal-defaults.js';
 import { DEFAULT_PALETTE, paletteColors } from './painting.js';
 import { DEFAULT_TEXTS, normalizeTexts, formatText } from './copy-defaults.js';
@@ -38,7 +39,7 @@ export function applyContent(document) {
   Object.assign(TEXTS, normalizeTexts(document.info.texts));
   for (const link of SOCIAL_LINKS) link.label = text(`network_${link.id}`);
   const animals = playableAnimals(document.info.animals, TEXTS);
-  for (const animal of ANIMALS) { const saved = animals.find(saved => saved.id === animal.id); Object.assign(animal, saved, { image: contentAssetURL(saved.image) }); }
+  for (const animal of ANIMALS) { const saved = animals.find(saved => saved.id === animal.id); Object.assign(animal, saved, Object.fromEntries(ANIMAL_IMAGE_KEYS.map(key => [key, contentAssetURL(saved[key])]))); }
   PALETTE.splice(0, PALETTE.length, ...paletteColors(document.info.palette));
   CONTACT.email = document.info.email || '';
   INFO.tagline = document.info.tagline || ''; INFO.about = document.info.about || '';

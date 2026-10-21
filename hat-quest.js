@@ -23,7 +23,7 @@ export const HAT_FIREWORK_SECONDS = FIREWORK_SECONDS;
 export const isHatTrack = track => !!track && (track.id === 'hut' || track.title?.trim().toLocaleLowerCase('de') === 'hut');
 export const hatSpot = quest => HAT_HIDEOUTS.find(spot => spot.id === quest.spot) || null;
 export const wearsHat = (quest, searchActive = true) => quest?.phase === 'perched' && searchActive || quest?.phase === 'unlocked' && quest.wearing;
-export const animalHref = (animal, wearing = false) => `#${wearing ? 'dressed' : 'animal'}-${animal}`;
+export const animalHref = (animal, wearing = false, facing = 'front') => `#${wearing ? 'dressed' : 'animal'}-${animal}${['right', 'left', 'back', 'seated'].includes(facing) ? '-' + facing : ''}`;
 export function createHatQuest(saved) {
   const spot = HAT_HIDEOUTS.find(spot => spot.id === saved?.spot) || (['music-corner', 'music-left'].includes(saved?.spot) ? HAT_HIDEOUTS.find(spot => spot.id === 'meadow') : null);
   const phase = saved?.phase === 'unlocked' ? 'unlocked' : spot && ['perched', 'flying', 'lost'].includes(saved?.phase) ? saved.phase === 'flying' ? 'lost' : saved.phase : 'idle';
@@ -88,9 +88,11 @@ export function hatReturnPose(quest, reduced = false) {
 export const hatMarkup = (color = DEFAULT_HAT_COLOR) => `<g data-hat-color="" fill="${/^#[a-f0-9]{6}$/i.test(color) ? color : DEFAULT_HAT_COLOR}" stroke="#101014" stroke-width="3.5" stroke-linejoin="round"><ellipse cy="1" rx="32" ry="8"/><path d="M-21-1-17-24Q-9-33 0-24q10-9 18 0l4 23Z"/><path d="M-21-7Q0-2 21-7L22-1Q0 5-21-1Z" fill="#fff20b"/><path d="M-11-23q5-3 9 0" fill="none" stroke="#82c6ff" stroke-width="2" stroke-linecap="round"/></g>`;
 export const colorHatMarkup = (markup, color) => markup.replace(/data-hat-color="" fill="#[a-f0-9]{6}"/gi, `data-hat-color="" fill="${/^#[a-f0-9]{6}$/i.test(color) ? color : DEFAULT_HAT_COLOR}"`);
 export const HAT_HEADS = { cat: { x: 49, y: 27, scale: .9 }, dog: { x: 50, y: 29, scale: .9 }, horse: { x: 49, y: 29, scale: .84 }, monkey: { x: 50, y: 29, scale: .9 } };
-export function dressedAnimalSymbol(animal) {
-  const p = HAT_HEADS[animal];
-  return `<symbol id="dressed-${animal}" viewBox="0 0 100 120"><use href="#animal-${animal}" width="100" height="120"/><g data-worn-hat="${animal}" transform="translate(${p.x} ${p.y}) scale(${p.scale})">${hatMarkup()}</g></symbol>`;
+export const PROFILE_HAT_HEADS = { cat: { x: 55, y: 20, scale: .84 }, dog: { x: 58, y: 16, scale: .84 }, horse: { x: 55, y: 20, scale: .8 }, monkey: { x: 58, y: 16, scale: .84 } };
+export function dressedAnimalSymbol(animal, facing = 'front') {
+  const profile = ['right', 'left', 'seated'].includes(facing), p = profile ? PROFILE_HAT_HEADS[animal] : HAT_HEADS[animal];
+  const suffix = facing === 'front' ? '' : '-' + facing, x = facing === 'left' ? 100 - p.x : p.x;
+  return `<symbol id="dressed-${animal}${suffix}" viewBox="0 0 100 120" overflow="visible"><use href="#animal-${animal}${suffix}" width="100" height="120"/><g data-worn-hat="${animal}" transform="translate(${x} ${p.y}) scale(${p.scale})">${hatMarkup()}</g></symbol>`;
 }
 export function hatFlightPose(quest, reduced = false) {
   if (!quest.flight) return null;

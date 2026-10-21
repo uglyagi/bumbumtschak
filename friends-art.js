@@ -1,9 +1,10 @@
+import { animalHref } from './hat-quest.js';
 import { FRIEND_CAMP, FRIEND_TENT } from './friends-game.js';
 import { text } from './content.js';
 import { escapeXML as escape } from './utils.js';
 
 function animalMarkup(actor) {
-  return '<g id="friend-' + actor.id + '" class="friend-guest' + (actor.status === 'camping' ? ' is-sitting' : '') + '" pointer-events="none" transform="translate(' + actor.position.x.toFixed(2) + ' ' + actor.position.y.toFixed(2) + ')"><ellipse rx="25" ry="9" fill="#101014" opacity=".16"/><g class="friend-body" style="--camp-delay:' + (actor.index * -.65) + 's"><use href="#animal-' + escape(actor.id) + '" x="-34" y="-77" width="68" height="82"/></g>' + '</g>';
+  return '<g id="friend-' + actor.id + '" class="friend-guest' + (actor.status === 'camping' ? ' is-sitting' : '') + '" pointer-events="none" transform="translate(' + actor.position.x.toFixed(2) + ' ' + actor.position.y.toFixed(2) + ')"><ellipse rx="25" ry="9" fill="#101014" opacity=".16"/><g class="friend-body" style="--camp-delay:' + (actor.index * -.65) + 's"><use href="' + animalHref(actor.id, false, actor.facing) + '" x="-34" y="-77" width="68" height="82"/></g>' + '</g>';
 }
 export function friendsHiddenMarkup(friends) {
   return friends.actors.filter(actor => actor.status === 'hidden').map(animalMarkup).join('');

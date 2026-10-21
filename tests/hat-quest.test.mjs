@@ -141,7 +141,7 @@ test('only a hat resting on its stand can be painted, preserving outlines and it
     const rack = room.slice(room.indexOf('id="home-hat-stand"'), room.indexOf('data-home-slot=')); assert(rack.includes(`data-hat-color="" fill="${color.color}"`));
     const reload = createHatQuest(savedHatQuest(q)); assert.equal(reload.color, color.color);
     assert(toggleHat(reload)); assert(!paintHat(reload, '#123456')); assert.equal(reload.color, color.color);
-    const worn = colorHatMarkup(animalSymbols(), reload.color); assert.equal((worn.match(new RegExp(`data-hat-color="" fill="${color.color}"`, 'g')) || []).length, 4);
+    const worn = colorHatMarkup(animalSymbols(), reload.color); assert.equal((worn.match(new RegExp(`data-hat-color="" fill="${color.color}"`, 'g')) || []).length, 20);
     assert(returnHat(reload, 'wardrobe', { x: 390, y: 440 })); assert(!paintHat(reload, '#123456'));
     assert(hatEffectsMarkup(reload, 'wardrobe').includes(`data-hat-color="" fill="${color.color}"`));
     assert(startHatQuest(reload, { id: 'hut' }, true, () => 0, true)); assert.equal(reload.returning, null); assert.equal(reload.color, color.color);

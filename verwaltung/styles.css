@@ -10,3 +10,5 @@
 .animal-frame{aspect-ratio:5/6}.palette-rows{display:grid;gap:18px;margin-top:24px}.palette-row{display:grid;grid-template-columns:minmax(0,1fr) 110px auto;gap:15px;align-items:end}.palette-row .button{margin-bottom:2px}.palette-row input[type=color]{width:100%;min-height:43px}@media(max-width:560px){.palette-row{grid-template-columns:minmax(0,1fr) 80px;gap:12px}.palette-row>.button{grid-column:1/-1;justify-self:start}}
 
 .palette-use{font-size:12px;font-weight:700;color:#5b526b;align-self:center;max-width:110px}@media(max-width:560px){.palette-use{grid-column:1/-1;max-width:none}}
+
+.animal-view-editor{margin-bottom:12px;border:2px solid #101014;border-radius:12px;padding:10px}.animal-view-editor summary{font-weight:800;cursor:pointer;margin-bottom:8px}

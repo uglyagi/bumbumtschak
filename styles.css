@@ -83,9 +83,6 @@ dialog.space-choice{width:min(640px,calc(100% - 28px));margin:auto auto 6vh;max-
 .bike-board li { padding: 9px 12px; border-bottom: 2px solid #10101422; }
 .bike-board li strong { float: right; font-variant-numeric: tabular-nums; }
 .bike-board-local { font-size: .82rem; opacity: .75; }
-.game.is-cycling #player-body, .game.bike-fallen #player-body { animation: none !important; }
-.game.bike-fallen #player-body { transform: rotate(-58deg); transform-origin: 0 0; }
-.game.is-bike-race ~ .dpad .pad-up, .game.is-bike-race ~ .dpad .pad-down { visibility: hidden; }
 .game.is-bike-race { background: #b5ed9b; }
 .is-pedaling .bike-pedals { animation: cycle-pedals .3s linear infinite alternate; }
 .game.paused .bike-pedals { animation-play-state: paused; }

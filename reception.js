@@ -1,3 +1,5 @@
+import { movementFacing } from './animal-views.js';
+import { animalHref } from './hat-quest.js';
 import { HOUSE_DOORS, WORLD, move, planPath } from './game-core.js';
 import { fireworksMarkup, FIREWORK_SECONDS } from './fireworks.js';
 
@@ -37,7 +39,7 @@ export function tickReception(reception, seconds, scene, player, riding = false,
       const point = guest.path[0], distance = Math.hypot(point.x - guest.position.x, point.y - guest.position.y);
       if (distance < 3) { guest.path.shift(); continue; }
       const step = Math.min(remaining, distance, WORLD.speed * .025), previous = guest.position;
-      guest.position = move(previous, point.x - previous.x, point.y - previous.y, step / WORLD.speed, 'world', reception.rocket);
+      guest.position = move(previous, point.x - previous.x, point.y - previous.y, step / WORLD.speed, 'world', reception.rocket); guest.facing = movementFacing(previous, guest.position, guest.facing);
       if (Math.hypot(guest.position.x - previous.x, guest.position.y - previous.y) < .01) break;
       remaining -= step;
     }
@@ -49,6 +51,6 @@ export function tickReception(reception, seconds, scene, player, riding = false,
 export function receptionMarkup(reception, scene, reduced = false) {
   if (!reception || scene !== 'world') return '';
   const cheer = reception.phase === 'celebrating' && reception.partyTime < 4.5;
-  return reception.guests.filter(guest => !guest.home).map(guest => `<g id="reception-${guest.id}" pointer-events="none" transform="translate(${guest.position.x.toFixed(2)} ${guest.position.y.toFixed(2)})" class="reception-guest ${!guest.arrived ? 'is-walking' : cheer && !reduced ? 'is-cheering' : ''}"><ellipse rx="25" ry="9" fill="#101014" opacity=".16"/><g class="reception-body"><use href="#animal-${guest.id}" x="-34" y="-77" width="68" height="82"/></g></g>`).join('')
+  return reception.guests.filter(guest => !guest.home).map(guest => `<g id="reception-${guest.id}" pointer-events="none" transform="translate(${guest.position.x.toFixed(2)} ${guest.position.y.toFixed(2)})" class="reception-guest ${!guest.arrived ? 'is-walking' : cheer && !reduced ? 'is-cheering' : ''}"><ellipse rx="25" ry="9" fill="#101014" opacity=".16"/><g class="reception-body"><use href="${animalHref(guest.id, false, guest.facing)}" x="-34" y="-77" width="68" height="82"/></g></g>`).join('')
     + (reception.phase === 'celebrating' && reception.fireworks ? fireworksMarkup({ x: reception.rocket.x, y: reception.rocket.y - 30, time: reception.partyTime % FIREWORK_SECONDS }, reduced, 'reception-fireworks') : '');
 }

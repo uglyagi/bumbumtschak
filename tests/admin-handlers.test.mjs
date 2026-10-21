@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { GitHubStore } from '../verwaltung/github-store.js';
 import { COPY_GROUPS, normalizeTexts } from '../copy-defaults.js';
 import { DEFAULT_BAND, bandMembers } from '../band-defaults.js';
+import { ANIMAL_IMAGE_KEYS } from '../animal-views.js';
 import { DEFAULT_ANIMALS, playableAnimals } from '../animal-defaults.js';
 import { paletteColors, PALETTE_LIMIT, DEFAULT_PALETTE, BUCKET_COLOR_IDS } from '../painting.js';
 import { fileReferences } from '../verwaltung/drafts.js';
@@ -35,7 +36,7 @@ async function harness(saved = null) {
   for (const id of ['concerts', 'music', 'info']) get('#tab-' + id).dataset.tab = id;
   get('#editor').hidden = true;
   const context = vm.createContext({
-    COPY_GROUPS, normalizeTexts, DEFAULT_BAND, bandMembers, DEFAULT_ANIMALS, playableAnimals, paletteColors, PALETTE_LIMIT, DEFAULT_PALETTE, BUCKET_COLOR_IDS, fileReferences, validateContent, validateUpload, checkMagic,
+    ANIMAL_IMAGE_KEYS, COPY_GROUPS, normalizeTexts, DEFAULT_BAND, bandMembers, DEFAULT_ANIMALS, playableAnimals, paletteColors, PALETTE_LIMIT, DEFAULT_PALETTE, BUCKET_COLOR_IDS, fileReferences, validateContent, validateUpload, checkMagic,
     REPOSITORY: 'uglyagi/bumbumtschak', GitHubStore: class extends GitHubStore { constructor(token) { super(token, repo.fetch); } },
     readDraft: async () => structuredClone(draft),
     writeDraft: async ({ document, contentSha, files }) => { draft = structuredClone({ document, contentSha, files, savedAt: '2026-10-18T09:00:00Z' }); },
@@ -184,4 +185,23 @@ test('each band member can upload, preview, publish and remove an independent me
   assert.equal(h.state.document.info.members[0].audio, '');
   assert(h.state.document.info.members[1].audio); assert(h.state.document.info.members[2].audio);
   assert(await h.save(true)); assert.equal(h.repo.document().info.members[0].audio, '');
+});
+
+test('each directional and seated image uploads, previews and publishes independently, and originals restore all views',async()=>{
+ const h=await harness();await h.login();await h.click(h.get('#tab-info'));
+ const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aOv0AAAAASUVORK5CYII=','base64');
+ const originalFront=h.state.document.info.animals[0].image,paths=new Map();
+ for(const key of ANIMAL_IMAGE_KEYS.filter(key=>key!=='image')){
+  assert(h.get('#panel').innerHTML.includes('info.animals.0.'+key));
+  const input=new h.Element(key,{upload:key,animal:'cat'});input.files=[new File([png],key+'.png',{type:'image/png'})];
+  await h.fire('#panel','change',input);
+  const path=h.state.document.info.animals[0][key];paths.set(key,path);
+  assert(path.startsWith('uploads/'));assert(fileReferences(h.state.document).has(path));assert(h.get('#animal-cover-cat-'+key).innerHTML.includes('blob:'));
+  assert.equal(h.state.document.info.animals[0].image,originalFront);assert.equal(h.repo.document().info.animals[0][key],undefined);
+ }
+ assert(await h.save());assert.equal(h.draft().files.length,3);assert(await h.save(true));
+ for(const [key,path]of paths){assert.equal(h.repo.document().info.animals[0][key],path);assert.deepEqual(h.repo.blobs.get(h.repo.currentTree().get(path)),png);}
+ assert.equal(h.repo.requests.filter(r=>r.method==='PATCH').length,1);
+ await h.click(new h.Element('reset cat',{resetAnimal:'cat'}));
+ for(const key of ANIMAL_IMAGE_KEYS)assert.equal(h.state.document.info.animals[0][key],DEFAULT_ANIMALS[0][key]);
 });

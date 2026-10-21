@@ -78,7 +78,7 @@ export function validateContent(input) {
     tagline: str(input.info.tagline, 100, 'Untertitel'), about: str(input.info.about, 6000, 'Bandgeschichte'), email, texts,
     animals: playableAnimals(input.info.animals, texts).map((animal, index) => ({ id: animal.id, article: DEFAULT_ANIMALS[index].article,
       name: str(animal.name, 40, 'Name der Spielfigur', true), trait: str(animal.trait, 180, 'Beschreibung der Spielfigur'),
-      image: url(animal.image || DEFAULT_ANIMALS[index].image, true), color: /^#[a-f0-9]{6}$/i.test(animal.color) ? animal.color : DEFAULT_ANIMALS[index].color })),
+      image: url(animal.image || DEFAULT_ANIMALS[index].image, true), imageRight: url(animal.imageRight || DEFAULT_ANIMALS[index].imageRight, true), imageBack: url(animal.imageBack || DEFAULT_ANIMALS[index].imageBack, true), imageSeated: url(animal.imageSeated || DEFAULT_ANIMALS[index].imageSeated, true), color: /^#[a-f0-9]{6}$/i.test(animal.color) ? animal.color : DEFAULT_ANIMALS[index].color })),
     palette: paletteColors(palette),
     members: bandMembers(input.info.members).map((member, index) => ({
       id: member.id,

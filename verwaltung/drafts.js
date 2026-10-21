@@ -1,3 +1,4 @@
+import { ANIMAL_IMAGE_KEYS } from '../animal-views.js';
 const NAME = 'bbt-github-verwaltung-v1';
 const STORE = 'drafts';
 const KEY = 'uglyagi/bumbumtschak';
@@ -31,7 +32,7 @@ export function fileReferences(document) {
   return new Set([
     ...(document.tracks || []).flatMap(track => [track.image, track.src]),
     ...(document.info?.members || []).flatMap(member => [member.image, member.audio]),
-    ...(document.info?.animals || []).map(animal => animal.image),
+    ...(document.info?.animals || []).flatMap(animal => ANIMAL_IMAGE_KEYS.map(key => animal[key])),
   ].filter(Boolean));
 }
 export function draftPreview(draft, createURL = file => URL.createObjectURL(file)) {
@@ -39,6 +40,6 @@ export function draftPreview(draft, createURL = file => URL.createObjectURL(file
   const urls = new Map((draft.files || []).map(item => [item.path, createURL(item.file)]));
   for (const track of document.tracks) for (const key of ['image', 'src']) track[key] = urls.get(track[key]) || track[key];
   for (const member of document.info.members || []) for (const key of ['image', 'audio']) member[key] = urls.get(member[key]) || member[key];
-  for (const animal of document.info.animals || []) animal.image = urls.get(animal.image) || animal.image;
+  for (const animal of document.info.animals || []) for (const key of ANIMAL_IMAGE_KEYS) animal[key] = urls.get(animal[key]) || animal[key];
   return document;
 }
