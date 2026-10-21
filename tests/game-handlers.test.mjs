@@ -1493,7 +1493,7 @@ for (const [id,level] of [['cat','leicht'],['dog','mittel'],['horse','schwer'],[
   assert.equal(h.state.bikeScores[level].length,1);assert(h.state.race.saved);assert(h.modalContent.innerHTML.includes('&lt;Rad &amp; Pferd&gt;'));
   new h.Element('duplicate','button',{action:'bike-save'}).click();assert.equal(h.state.bikeScores[level].length,1);
   assert.equal(JSON.parse(h.stored.get('bbt-bike-tour-scores-world'))[level][0].name,'<Rad & Pferd>');
-  new h.Element('again','button',{action:'bike-again'}).click();assert.equal(h.state.race.phase,'racing');assert.equal(h.state.race.difficulty,level);assert.equal(h.state.race.player.id,id);assert(!h.modal.open);
+  new h.Element('again','button',{bikeLevel:level}).click();assert.equal(h.state.race.phase,'racing');assert.equal(h.state.race.difficulty,level);assert.equal(h.state.race.player.id,id);assert(!h.modal.open);
   new h.Element('exit','button',{action:'bike-exit'}).click();h.leaveRoom();
   assert(!h.game.innerHTML.includes('data-bicycle'));assert(!Object.hasOwn(h.state,'garage'));assert(!h.stored.has('bbt-bikes-world'));
 }
@@ -1532,7 +1532,10 @@ const sameRace=levelNav.state.race;levelNav.press(levelNav.documentHandlers,leve
 levelNav.state.race.stones=[];levelNav.state.race.ramps=[];levelNav.state.race.player.speed=544;
 levelNav.frame(1020);assert.equal(levelNav.get('#bike-speed').textContent,'30 km/h');
 levelNav.state.race.player.x=bike.BIKE_FINISH-.5;levelNav.frame(1040);assert.equal(levelNav.state.modal,'bike-win');assert(!/Platz\s+[1-4]\s*\/\s*4/.test(levelNav.modalContent.innerHTML));assert(!levelNav.modalContent.innerHTML.includes('{platz}'));assert(levelNav.modalContent.innerHTML.includes('Bestenliste · Schwer'));
-new levelNav.Element('levels','button',{action:'bike-levels'}).click();assert.equal(levelNav.state.modal,'bike-launch');assert.equal(levelNav.state.race.phase,'ready');
+const resultMenu=levelNav.modalContent.innerHTML.match(/<div class="difficulty-options"[^>]*>([\s\S]*?)<\/div>/)[1];
+assert.deepEqual([...resultMenu.matchAll(/data-bike-level="([^"]+)"|data-action="([^"]+)"/g)].map(m=>m[1]||m[2]),['leicht','mittel','schwer','bike-world']);
+assert(resultMenu.includes('Zurück zur BumBumWelt'));assert(!levelNav.modalContent.innerHTML.includes('data-action="bike-again"'));assert(!levelNav.modalContent.innerHTML.includes('data-action="bike-levels"'));
+assert.equal(levelNav.doc.activeElement.name,'#modal-content [data-bike-level="leicht"]','finish focuses the first difficulty instead of the score form');
 new levelNav.Element('easy','button',{bikeLevel:'leicht'}).click();assert.equal(levelNav.state.race.difficulty,'leicht');
 levelNav.state.race.stones=[];levelNav.state.race.ramps=[];levelNav.state.race.player.speed=320;levelNav.frame(1060);assert.equal(levelNav.get('#bike-speed').textContent,'15 km/h');
 levelNav.state.race.player.x=900;levelNav.frame(1080);assert(levelNav.state.race.riders[1].active);assert.equal(levelNav.get('#bike-rider-'+levelNav.state.race.riders[1].id).getAttribute('hidden'),null);
@@ -1540,6 +1543,22 @@ assert.equal(levelNav.get('#bike-rider-'+levelNav.state.race.riders[2].id).getAt
 levelNav.state.race.player.x=8100;levelNav.frame(1100);assert(levelNav.state.race.riders[2].active);assert.equal(levelNav.get('#bike-rider-'+levelNav.state.race.riders[2].id).getAttribute('hidden'),null);
 new levelNav.Element('leave','button',{action:'bike-exit'}).click();assert.equal(levelNav.state.scene,'radio');assert.equal(levelNav.state.race,null);
 console.log('PASS: difficulty choices work vertically with arrows and Space, repeated confirmation is ignored, all difficulty speed caps and separate encounter visibility update in the actual HUD, and finishing allows a different level without switching character.');
+
+for(const [key,code]of [['Enter','Enter'],[' ','Space'],['Enter','NumpadEnter']]){
+ const h=await harness(false,'dog');h.enterRoom('radio');const outside={...h.state.returnPosition};
+ h.state.tapes.loaded='fahrradfahren';h.loadRecording();h.state.position={...bike.BIKE_DOOR};h.frame(1000);
+ new h.Element('start','button',{bikeLevel:'leicht'}).click();h.state.race.stones=[];h.state.race.player.x=bike.BIKE_FINISH-.5;h.state.race.player.speed=320;h.frame(1020);
+ assert.equal(h.state.modal,'bike-win');
+ const levels=['leicht','mittel','schwer'].map(bikeLevel=>new h.Element(bikeLevel,'button',{bikeLevel}));
+ const back=new h.Element('world','button',{action:'bike-world'}),name=new h.Element('name','input'),save=new h.Element('save','button',{action:'bike-save'});
+ h.modalContent.querySelectorAll=selector=>selector.startsWith('[data-bike-level]')?[...levels,back]:[name,save,...levels,back];levels[0].focus();
+ for(let i=0;i<3;i++){h.press(h.modalContent.handlers,h.event('ArrowDown','ArrowDown',h.doc.activeElement));assert.equal(h.doc.activeElement,[...levels,back][i+1]);}
+ h.press(h.modalContent.handlers,h.event('ArrowDown','ArrowDown',back));assert.equal(h.doc.activeElement,levels[0],'the four-choice menu wraps without entering the score form');
+ h.press(h.modalContent.handlers,h.event('ArrowUp','ArrowUp',levels[0]));assert.equal(h.doc.activeElement,back);
+ h.press(h.documentHandlers,h.event(key,code,back));assert.equal(h.state.race,null);assert.equal(h.state.scene,'world');assert.deepEqual({...h.state.position},outside);
+ assert(!h.modal.open);assert.equal(h.state.bikeMusic,null);assert.equal(h.get('#audio').volume,h.state.volume);assert.equal(h.state.animal,'dog');
+}
+console.log('PASS: finish offers exactly easy, medium, hard and return in vertical keyboard order; Enter, Space and NumpadEnter return directly to the BumBumWelt while keeping results and cassette playback.');
 
 content.TRACKS.find(track=>track.id==='fahrradfahren').src=savedCycleTrack;
 

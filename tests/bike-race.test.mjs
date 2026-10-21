@@ -62,6 +62,55 @@ test('a friend can hold the player up in the same lane; a lane change or a jump 
  r.player.x=friend.x-10;r.player.speed=320;r.player.z=100;r.player.vy=20;r.player.y=friend.y;
  tickBikeRace(r,.2,{right:true});assert(r.player.x>friend.x);assert.equal(r.falls,0);
 });
+test('all three moving friends can be passed within their own third at every difficulty',()=>{
+ for(const level of Object.keys(BIKE_LEVELS)){
+  const r=createBikeRace('cat',undefined,level);r.stones=[];r.ramps=[];startBikeRace(r);const passed=new Map();
+  while(r.phase==='racing' && r.elapsed<200){
+   if(r.riders.some(q=>q.ai && q.active && q.x>r.player.x && q.x-r.player.x<250 && q.lane===r.player.lane))changeBikeLane(r,r.player.lane===3?-1:1);
+   tickBikeRace(r,1/60,{right:true});
+   for(const friend of r.riders.slice(1))if(friend.started && !passed.has(friend.id) && r.player.x>friend.x+80)passed.set(friend.id,r.player.x);
+  }
+  assert.equal(r.phase,'finished');assert.equal(passed.size,3);
+  for(const friend of r.riders.slice(1)){
+   assert(passed.get(friend.id)<friend.sectionEnd,level+' / '+friend.id+' must be reachable in its own third');
+   assert.equal(friend.mistakes,0,'clean riding does not schedule an artificial mistake');
+  }
+ }
+});
+test('arcade pacing keeps an unpassed friend nearby during a long delay and still allows passing before the next third',()=>{
+ for(const level of Object.keys(BIKE_LEVELS)){
+  const r=createBikeRace('dog',undefined,level);r.stones=[];r.ramps=[];startBikeRace(r);const friend=r.riders[1];
+  r.player.x=friend.encounterAt-700;tick(r,20,{});
+  assert(friend.active && !friend.departed,'a friend never vanishes for getting too far ahead');
+  assert(friend.x-r.player.x<900);assert(friend.x>friend.encounterAt,'the friend approaches in motion, then waits');
+  r.player.x=friend.sectionEnd-2100;friend.x=r.player.x+800;r.player.speed=BIKE_LEVELS[level].speed;
+  const original=friend.x;let passedAt=null;
+  for(let i=0;i<3000 && passedAt===null;i++){
+   if(friend.lane===r.player.lane)changeBikeLane(r,r.player.lane===3?-1:1);
+   tickBikeRace(r,1/60,{right:true});if(r.player.x>friend.x+80)passedAt=r.player.x;
+  }
+  assert(passedAt && passedAt<friend.sectionEnd);assert(friend.x>original,'catch-up changes speed without teleporting the friend');
+ }
+});
+test('after repeated real player falls, a friend misses a real rock, rolls, recovers and remains catchable',()=>{
+ const r=createBikeRace();r.ramps=[];r.stones=[{x:740,lane:0},{x:1000,lane:0},{x:2200,lane:2}];
+ r.player.x=700;r.player.lane=0;r.player.y=BIKE_LANES[0];r.player.speed=320;
+ r.riders.slice(2).forEach(friend=>{friend.departed=true;friend.active=false;});startBikeRace(r);
+ const friend=r.riders[1];let crashed=false,recovered=false;
+ for(let i=0;i<2400 && r.player.x<4200;i++){
+  tickBikeRace(r,1/60,{right:true});
+  if(friend.fall && !crashed){
+   crashed=true;assert.equal(r.falls,2);assert.equal(friend.mistakes,1);assert(Math.abs(friend.x-2200)<28);
+   assert(bikeCrashPose(friend),'the same separation and remount animation applies to friends');
+   const time=r.elapsed,fall=friend.fall,x=friend.x;r.phase='paused';tick(r,2,{right:true});
+   assert.equal(r.elapsed,time);assert.equal(friend.fall,fall);assert.equal(friend.x,x);r.phase='racing';
+  }
+  if(crashed && !friend.fall)recovered=true;
+ }
+ assert(crashed && recovered);assert(r.player.x>friend.x+80);assert(r.player.x<friend.sectionEnd);
+ assert.equal(friend.mistakes,1,'a single recovery is enough for two player mistakes');
+ const fresh=createBikeRace();assert.equal(fresh.falls,0);assert(fresh.riders.every(q=>q.mistakes===0 && !q.mistakeTarget));
+});
 test('hitting a rock costs three seconds while the stopwatch and a nearby friend keep moving',()=>{
  const r=createBikeRace();startBikeRace(r);const friend=r.riders[1];friend.active=true;friend.started=true;friend.x=1000;friend.speed=100;
  r.player.x=760;r.player.lane=0;r.player.y=333;r.player.speed=180;assert.equal(tickBikeRace(r,.02,{right:true}),'fall');

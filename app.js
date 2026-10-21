@@ -187,15 +187,14 @@ function bicyclePanel(id) {
   const race = state.race, won = id === 'bike-win', pause = id === 'bike-pause';
   if (!race) return '';
   const level = text('bike_level_' + race.difficulty), scores = state.bikeScores[race.difficulty];
-  const choices = !won && !pause ? '<div class="difficulty-picker"><p>' + T('bike_choose') + '</p><div class="difficulty-options" role="group" aria-label="' + T('bike_choose') + '">' + Object.keys(BIKE_LEVELS).map(difficulty => '<button type="button" data-bike-level="' + difficulty + '"><strong>' + T('bike_level_' + difficulty) + '</strong><small>' + T('bike_hint_' + difficulty) + '</small></button>').join('') + '</div></div>' : '';
+  const choices = !pause ? '<div class="difficulty-picker"><p>' + T('bike_choose') + '</p><div class="difficulty-options" role="group" aria-label="' + T('bike_choose') + '">' + Object.keys(BIKE_LEVELS).map(difficulty => '<button type="button" data-bike-level="' + difficulty + '"><strong>' + T('bike_level_' + difficulty) + '</strong><small>' + T('bike_hint_' + difficulty) + '</small></button>').join('') + '<button type="button" class="secondary-button" data-action="' + (won ? 'bike-world' : 'bike-exit') + '">' + T(won ? 'bike_back_world' : 'bike_back') + '</button></div></div>' : '';
   const board = '<h3>' + T('bike_board', { stufe: level }) + '</h3><p class="bike-board-local">' + T('bike_board_local') + '</p>'
     + (scores.length ? '<ol class="bike-board">' + scores.map(item => '<li>' + escape(item.name) + '<strong>' + bikeTime(item.time / 10) + '</strong></li>').join('') + '</ol>' : '<p>' + T('bike_board_empty') + '</p>');
   const result = won ? '<div class="bike-results"><strong>' + T('bike_result', { stufe: level, zeit: bikeTime(race.elapsed), anzahl: race.falls, spruenge: race.jumps }) + '</strong></div>'
     + (race.saved ? '<p role="status">' + T('bike_saved') + '</p>' : '<div class="bike-score-entry"><label for="bike-racer-name">' + T('bike_name') + '<input id="bike-racer-name" maxlength="18" autocomplete="off" value="' + escape(storage.get('bike-name', '')) + '"></label><button type="button" class="primary-button" data-action="bike-save">' + T('bike_save') + '</button></div>') + board : '';
   return '<div class="modal-wrap bike-dialog"><div class="modal-kicker">' + T('bike_title') + (pause ? ' · ' + escape(level) : '') + '</div><h2 id="modal-title">' + T(won ? 'bike_win' : pause ? 'bike_pause' : 'bike_ready') + '</h2>'
     + (!won ? '<p class="modal-intro editable-prose">' + T('bike_keys') + '</p>' : '') + result + choices
-    + '<div class="modal-actions">' + (pause ? '<button class="primary-button" data-action="bike-continue">' + T('bike_continue') + '</button>' : won ? '<button class="primary-button" data-action="bike-again">' + T('bike_again') + '</button><button class="secondary-button" data-action="bike-levels">' + T('bike_other_level') + '</button>' : '')
-    + '<button class="secondary-button" data-action="bike-exit">' + T('bike_back') + '</button></div></div>';
+    + (pause ? '<div class="modal-actions"><button class="primary-button" data-action="bike-continue">' + T('bike_continue') + '</button><button class="secondary-button" data-action="bike-exit">' + T('bike_back') + '</button></div>' : '') + '</div>';
 }
 function pausePanel() {
   const options = [['map', 'map_open'], ['characters', 'pause_character'], ['radio', 'pause_radio'], ['concerts', 'pause_concerts'], ['panda', 'pause_band'], ['social', 'pause_social'], ['grownups', 'nav_grownups'], ['help', 'help_open']];
@@ -526,6 +525,7 @@ function showPanel(id, focusSelector = '') {
   if (!modal.open) modal.showModal();
   if (focusSelector) modalContent.querySelector(focusSelector)?.focus();
   else if (id === 'characters') modalContent.querySelector('[aria-pressed=true]')?.focus();
+  else if (id === 'bike-win' || id === 'bike-launch') modalContent.querySelector('[data-bike-level="leicht"]')?.focus();
   else modalContent.querySelector('button:not(.modal-close):not([disabled]), a[href], .modal-close')?.focus();
 }
 function closePanel() {
@@ -729,10 +729,10 @@ function launchBicycleRace(difficulty = state.race?.difficulty) {
   state.race = createBikeRace(state.animal, ANIMALS, difficulty); startBikeRace(state.race);
   startBicycleMusic(); closePanel(); renderScene(); game.focus({ preventScroll: true }); announce(text('bike_keys'));
 }
-function exitBicycleRace() {
+function exitBicycleRace(toWorld = false) {
   if (!state.race) return;
   state.race = null; stopWalking(); stopBicycleMusic(); if (modal.open) modal.close();
-  state.scene = 'radio'; state.position = { ...BIKE_RETURN }; state.facing = 'front';
+  state.scene = toWorld ? 'world' : 'radio'; state.position = { ...(toWorld ? state.returnPosition || WORLD_SPAWN : BIKE_RETURN) }; state.facing = 'front';
   renderScene(); game.focus({ preventScroll: true });
 }
 function saveBicycleResult() {
@@ -1099,12 +1099,9 @@ document.addEventListener('click', e => {
     playAdventure(); return;
   }
   if (btn.dataset.bikeLevel) { launchBicycleRace(btn.dataset.bikeLevel); return; }
-  if (action === 'bike-levels' && state.race?.phase === 'finished') {
-    state.race = createBikeRace(state.animal, ANIMALS); renderScene(); showPanel('bike-launch'); return;
-  }
+  if (action === 'bike-world' && state.race?.phase === 'finished') { exitBicycleRace(true); return; }
   if (action === 'bike-exit') { exitBicycleRace(); return; }
   if (action === 'bike-continue') { closePanel(); return; }
-  if (action === 'bike-again') { launchBicycleRace(); return; }
   if (action === 'bike-save') { saveBicycleResult(); return; }
   if (action === 'space-continue') { closePanel(); return; }
   if (action === 'space-land') { landFromAdventure(); return; }
@@ -1190,7 +1187,9 @@ modalContent.addEventListener('keydown', e => {
   if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
   if (e.target.matches('input[type=range]') && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
   e.preventDefault();
-  const controls = [...modalContent.querySelectorAll('button:not([disabled]),a[href],input:not([disabled])')].filter(el => !el.hidden && el.getClientRects().length);
+  const button = e.target.closest('button'), bikeMenu = ['bike-launch', 'bike-win'].includes(state.modal)
+    && (button?.dataset.bikeLevel || ['bike-exit', 'bike-world'].includes(button?.dataset.action));
+  const controls = [...modalContent.querySelectorAll(bikeMenu ? '[data-bike-level], [data-action="bike-exit"], [data-action="bike-world"]' : 'button:not([disabled]),a[href],input:not([disabled])')].filter(el => !el.hidden && el.getClientRects().length);
   controls[nextMenuIndex(controls.indexOf(document.activeElement), e.key, controls.length)]?.focus();
 });
 function activateRoomTarget(id) {

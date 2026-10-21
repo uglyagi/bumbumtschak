@@ -32,13 +32,39 @@ function courseStones(level) {
 class Race {
   constructor(animal, animals, difficulty) {
     this.difficulty=difficulty; this.phase='ready'; this.elapsed=0; this.camera=0; this.jumps=0; this.falls=0;
-    const make=(id,x,lane,ai=false)=>({id,x,prevX:x,lane,y:BIKE_LANES[lane],speed:0,z:0,vy:0,fall:0,crash:null,crank:0,ai,active:!ai,departed:false,started:!ai,met:false,finished:false,finishTime:null,seen:new Set(),safe:0,flash:0});
+    const make=(id,x,lane,ai=false)=>({id,x,prevX:x,lane,y:BIKE_LANES[lane],speed:0,z:0,vy:0,fall:0,crash:null,crank:0,ai,active:!ai,departed:false,started:!ai,met:false,finished:false,finishTime:null,seen:new Set(),safe:0,flash:0,mistakes:0,mistakeTarget:null,mistakeAfter:0});
     this.player=make(animal,180,2);
-    this.riders=[this.player,...animals.filter(a=>a.id!==animal).slice(0,3).map((a,i)=>({...make(a.id,BIKE_ENCOUNTERS[i],[2,1,3][i],true),encounterAt:BIKE_ENCOUNTERS[i]}))];
+    this.riders=[this.player,...animals.filter(a=>a.id!==animal).slice(0,3).map((a,i)=>({...make(a.id,BIKE_ENCOUNTERS[i],[2,1,3][i],true),encounterAt:BIKE_ENCOUNTERS[i],sectionEnd:BIKE_FINISH*(i+1)/3}))];
     this.ramps=extendCourse(BASE_RAMPS); this.stones=courseStones(difficulty);
   }
   start() { if (this.phase==='ready') this.phase='racing'; }
   changeLane(delta) { if (this.phase==='racing' && !this.player.fall) this.player.lane=clamp(this.player.lane+delta,0,3); }
+  crashRider(rider) {
+    rider.speed=0; rider.fall=BIKE_RECOVERY_SECONDS;
+    rider.crash={offset:Math.max(0,Math.min(BIKE_CRASH_DRIFT,BIKE_FINISH-1-rider.x))};
+    rider.z=0; rider.vy=0;
+    if (rider.ai) { rider.mistakes++; rider.mistakeTarget=null; rider.mistakeAfter=this.elapsed+7; }
+    else this.falls++;
+  }
+  paceFriend(rider,maxSpeed,dt) {
+    const lead=rider.x-this.player.x;
+    let target=maxSpeed*.8;
+    // Keep a struggling player in reach, without moving or hiding the friend.
+    if (lead>750) target=Math.min(target,Math.max(0,this.player.speed-(lead-750)*1.6));
+    // Leave enough room to pass in this animal's third of the course.
+    if (this.player.x>rider.sectionEnd-2200 && lead>-120) {
+      const remaining=Math.max(160,rider.sectionEnd-180-this.player.x);
+      target=Math.min(target,this.player.speed*clamp(1-(lead+120)/remaining,0,1));
+    }
+    rider.speed+=(target-rider.speed)*Math.min(1,dt*4);
+    // After repeated player crashes, a friend occasionally misses a real rock.
+    const mistakes=Math.min(3,Math.floor(this.falls/2));
+    if (!rider.mistakeTarget && rider.mistakes<mistakes && this.elapsed>=rider.mistakeAfter && rider.z===0 && lead>0) {
+      rider.mistakeTarget=this.stones.find(s=>s.x-rider.x>150 && s.x-rider.x<700 && Math.abs(s.lane-rider.lane)<=1
+        && !this.ramps.some(r=>r.lane===s.lane && r.x+32>rider.x && r.x+32<s.x && s.x-r.x<650)) || null;
+    }
+    if (rider.mistakeTarget && rider.mistakeTarget.x<rider.x-35) { rider.mistakeTarget=null; rider.mistakeAfter=this.elapsed+1; }
+  }
   step(elapsed,keys={}) {
     if (this.phase!=='racing') return;
     const settings=BIKE_LEVELS[this.difficulty];
@@ -52,7 +78,7 @@ class Race {
             rider.active=true; rider.started=true; rider.speed=settings.speed*.8; rider.met=true;
           }
           if (!rider.active) continue;
-          if (this.player.x-rider.x>450 || rider.met && rider.x-this.player.x>1000) { rider.departed=true; rider.active=false; continue; }
+          if (this.player.x-rider.x>450) { rider.departed=true; rider.active=false; continue; }
         }
         if (rider.finished) continue;
         rider.prevX=rider.x; rider.safe=Math.max(0,rider.safe-dt); rider.flash=Math.max(0,rider.flash-dt);
@@ -64,10 +90,11 @@ class Race {
           continue;
         }
         if (rider.ai) {
-          rider.speed=settings.speed*.8;
+          this.paceFriend(rider,settings.speed,dt);
           const danger=this.stones.find(s=>s.lane===rider.lane && s.x-rider.x>35 && s.x-rider.x<rider.speed*.72+40);
           const ramp=this.ramps.some(r=>r.lane===rider.lane && r.x+40>rider.x && (!danger || r.x<danger.x) && r.x-rider.x<190);
-          if (danger && !ramp && rider.z<4) {
+          if (rider.mistakeTarget && rider.z<4) rider.lane=rider.mistakeTarget.lane;
+          else if (danger && !ramp && rider.z<4) {
             const safe=[rider.lane-1,rider.lane+1].find(l=>l>=0 && l<4 && !this.stones.some(s=>s.lane===l && Math.abs(s.x-rider.x)<190) && !this.riders.some(r=>r!==rider && r.active && r.lane===l && Math.abs(r.x-rider.x)<90));
             if (safe!==undefined) rider.lane=safe;
           }
@@ -82,8 +109,7 @@ class Race {
           }
         }
         if (!rider.safe && rider.z<28 && this.stones.some(s=>Math.abs(s.x-rider.x)<28 && Math.abs(BIKE_LANES[s.lane]-rider.y)<24)) {
-          rider.speed=0; rider.fall=BIKE_RECOVERY_SECONDS; rider.crash={offset:Math.max(0,Math.min(BIKE_CRASH_DRIFT,BIKE_FINISH-1-rider.x))};
-          rider.z=0; rider.vy=0; if (!rider.ai) this.falls++;
+          this.crashRider(rider);
         }
         if (!rider.ai && rider.x>=BIKE_FINISH) { rider.finished=true; rider.finishTime=this.elapsed; this.phase='finished'; }
       }

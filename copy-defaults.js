@@ -2404,6 +2404,12 @@ COPY_GROUPS.push({
       ]
     },
     {
+      "key": "bike_back_world",
+      "label": "Rückweg vom Ziel",
+      "value": "Zurück zur BumBumWelt",
+      "max": 700
+    },
+    {
       "key": "bike_win",
       "label": "Zielüberschrift",
       "value": "Im Ziel! Gut geradelt!",
