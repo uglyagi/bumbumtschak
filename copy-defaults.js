@@ -2365,22 +2365,17 @@ COPY_GROUPS.push({
     {
       "key": "bike_keys",
       "label": "Feste Spielanleitung",
-      "value": "Mit → beschleunigst du, mit ← bremst du. Mit ↑ und ↓ wechselst du zwischen vier Spuren. Überhole deine Freunde und weiche den Steinen aus. Über Schanzen springst du automatisch – mit mehr Tempo fliegst du weiter. Nach einem Sturz brauchst du 3 Sekunden zum Aufsteigen. Escape pausiert.",
+      "value": "Mit → beschleunigst du, mit ← bremst du. Mit ↑ und ↓ wechselst du zwischen vier Spuren. Unterwegs begegnest du drei Freunden, die dich auch aufhalten können. Weiche Steinen aus. Über Schanzen springst du automatisch – mit mehr Tempo fliegst du weiter. Nach einem Sturz brauchst du 3 Sekunden zum Aufsteigen. Escape pausiert.",
       "max": 700,
       "previousValues": [
-        "Lenke nur mit ← und →. Die Strecke zieht von unten nach oben vorbei. Weiche Steinen aus und bleib auf dem Weg. Nach einem Sturz brauchst du 3 Sekunden zum Aufsteigen. Escape pausiert."
+        "Lenke nur mit ← und →. Die Strecke zieht von unten nach oben vorbei. Weiche Steinen aus und bleib auf dem Weg. Nach einem Sturz brauchst du 3 Sekunden zum Aufsteigen. Escape pausiert.",
+        "Mit → beschleunigst du, mit ← bremst du. Mit ↑ und ↓ wechselst du zwischen vier Spuren. Überhole deine Freunde und weiche den Steinen aus. Über Schanzen springst du automatisch – mit mehr Tempo fliegst du weiter. Nach einem Sturz brauchst du 3 Sekunden zum Aufsteigen. Escape pausiert."
       ]
     },
     {
       "key": "bike_controls",
       "label": "Steuerung im Rennen",
       "value": "→ Gas · ← Bremse · ↑ ↓ Spur wechseln · Schanzen springen automatisch · Esc Pause",
-      "max": 700
-    },
-    {
-      "key": "bike_start",
-      "label": "Startknopf",
-      "value": "Losfahren!",
       "max": 700
     },
     {
@@ -2419,19 +2414,21 @@ COPY_GROUPS.push({
     {
       "key": "bike_result",
       "label": "Ergebnis",
-      "value": "Platz {platz} / 4 · {zeit} · {spruenge} Sprünge · {anzahl} Stürze",
+      "value": "{stufe} · {zeit} · {spruenge} Sprünge · {anzahl} Stürze",
       "max": 700,
       "previousValues": [
-        "Deine Zeit: {zeit} · Stürze: {anzahl}"
+        "Deine Zeit: {zeit} · Stürze: {anzahl}",
+        "Platz {platz} / 4 · {zeit} · {spruenge} Sprünge · {anzahl} Stürze"
       ]
     },
     {
       "key": "bike_board",
       "label": "Bestenliste",
-      "value": "Bestenliste",
+      "value": "Bestenliste · {stufe}",
       "max": 700,
       "previousValues": [
-        "Bestenliste · {stufe}"
+        "Bestenliste · {stufe}",
+        "Bestenliste"
       ]
     },
     {
@@ -2504,12 +2501,6 @@ COPY_GROUPS.push({
       "max": 700
     },
     {
-      "key": "bike_place",
-      "label": "Position",
-      "value": "Platz",
-      "max": 700
-    },
-    {
       "key": "bike_jumps",
       "label": "Sprünge",
       "value": "Sprünge",
@@ -2520,6 +2511,66 @@ COPY_GROUPS.push({
       "label": "Wieder aufsteigen",
       "value": "Wieder aufsteigen … {sekunden} s",
       "max": 700
+    },
+    {
+      "key": "bike_choose",
+      "max": 700,
+      "label": "Schwierigkeitswahl",
+      "value": "Wie möchtest du fahren?"
+    },
+    {
+      "key": "bike_level_leicht",
+      "max": 700,
+      "label": "Stufe leicht",
+      "value": "Leicht"
+    },
+    {
+      "key": "bike_level_mittel",
+      "max": 700,
+      "label": "Stufe mittel",
+      "value": "Mittel"
+    },
+    {
+      "key": "bike_level_schwer",
+      "max": 700,
+      "label": "Stufe schwer",
+      "value": "Schwer"
+    },
+    {
+      "key": "bike_hint_leicht",
+      "max": 700,
+      "label": "Beschreibung leicht",
+      "value": "Bis 15 km/h · gemütliches Tempo und wenige Steine"
+    },
+    {
+      "key": "bike_hint_mittel",
+      "max": 700,
+      "label": "Beschreibung mittel",
+      "value": "Bis 22 km/h · höheres Tempo und mehr Steine"
+    },
+    {
+      "key": "bike_hint_schwer",
+      "max": 700,
+      "label": "Beschreibung schwer",
+      "value": "Bis 30 km/h · hohes Tempo und viele Steine"
+    },
+    {
+      "key": "bike_other_level",
+      "max": 700,
+      "label": "Andere Stufe auswählen",
+      "value": "Andere Stufe wählen"
+    },
+    {
+      "key": "bike_friends",
+      "max": 700,
+      "label": "Begegnungen im Spiel",
+      "value": "Freunde"
+    },
+    {
+      "key": "bike_difficulty",
+      "max": 700,
+      "label": "Schwierigkeit im Spiel",
+      "value": "Stufe"
     }
   ]
 });

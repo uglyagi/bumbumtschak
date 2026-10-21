@@ -48,6 +48,6 @@ test('the previous race instructions migrate to the horizontal course while cust
  const old='Lenke nur mit ← und →. Die Strecke zieht von unten nach oben vorbei. Weiche Steinen aus und bleib auf dem Weg. Nach einem Sturz brauchst du 3 Sekunden zum Aufsteigen. Escape pausiert.';
  assert(normalizeTexts({bike_keys:old}).bike_keys.includes('vier Spuren'));
  assert.equal(normalizeTexts({bike_keys:'Unsere eigene Anleitung'}).bike_keys,'Unsere eigene Anleitung');
- assert.equal(normalizeTexts({bike_board:'Bestenliste · {stufe}'}).bike_board,'Bestenliste');
+ assert.equal(normalizeTexts({bike_board:'Bestenliste'}).bike_board,'Bestenliste · {stufe}');
  assert.equal(DEFAULT_ANIMALS[0].image,'assets/player-cat.svg');
 });
