@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ANIMALS } from '../content.js';
 import { canStand, WORLD } from '../game-core.js';
-import { isDanceTrack, danceGuests, guestPose, guestExitPose, createParty, syncParty, tickParty, dancePartyMarkup, discoLightPoses } from '../dance-party.js';
+import { isDanceTrack, danceGuests, guestPose, guestExitPose, createParty, syncParty, tickParty, dancePartyMarkup, discoLightPoses, PLAYER_DANCES, playerDancePose, playerDanceMarkup } from '../dance-party.js';
 import { roomMarkup } from '../room-art.js';
 
 test('Tanzen activates the party and every selected animal is excluded from its guest list', () => {
@@ -65,4 +65,20 @@ test('the spotlight heads, beams and floor pools move gently and respect reduced
   }
   assert.notDeepEqual(a.pools, b.pools);
   assert.deepEqual(discoLightPoses(0, true), discoLightPoses(100, true));
+});
+
+test('moonwalk slides backwards in both directions while robot poses hold before a sharp change', () => {
+  assert(PLAYER_DANCES.includes('moonwalk') && PLAYER_DANCES.includes('robot'));
+  const x = pose => Number(pose.motion.match(/translate\(([-\d.]+)/)[1]);
+  assert.equal(playerDancePose('moonwalk', .1).facing, 'right');
+  assert(x(playerDancePose('moonwalk', .5)) < x(playerDancePose('moonwalk', .1)));
+  assert.equal(playerDancePose('moonwalk', 1.7).facing, 'left');
+  assert(x(playerDancePose('moonwalk', 2)) > x(playerDancePose('moonwalk', 1.7)));
+  assert.notEqual(playerDancePose('moonwalk', .125).leftFoot, playerDancePose('moonwalk', .125).rightFoot);
+  assert.deepEqual(playerDancePose('robot', .01), playerDancePose('robot', .2));
+  assert.notDeepEqual(playerDancePose('robot', .2), playerDancePose('robot', .4));
+  for (const style of PLAYER_DANCES) assert.deepEqual(playerDancePose(style, 0, true), playerDancePose(style, 200, true));
+  const markup = playerDanceMarkup();
+  assert.equal([...markup.matchAll(/width="68" height="82"/g)].length, 3, 'the original avatar dimensions are retained');
+  assert(!markup.includes('<image'), 'all slices reuse the selected original animal symbol');
 });

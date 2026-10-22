@@ -129,6 +129,26 @@ body.game-fullscreen:not(.landscape-turn) #modal { max-height: calc(100dvh - 28p
 .touch-controls .touch-pause:not([hidden]) { display: grid; }
 .touch-controls .round-button { min-width: 44px; min-height: 44px; }
 .touch-controls .nav-button, .touch-controls dialog button { min-height: 44px; }
+
+/* In-document windows preserve native fullscreen, including on mobile WebKit. */
+.dialog-open { overflow: hidden; }
+.game-dialog-backdrop { position: fixed; inset: 0; z-index: 30; background: rgba(16,16,20,.48); backdrop-filter: blur(3px); }
+.game-dialog-backdrop.space-choice { background: rgba(10,13,30,.2); backdrop-filter: none; }
+#modal { position: fixed; inset: 0; margin: auto; z-index: 31; }
+#modal.space-choice { margin: auto auto 6vh; }
+.game-fullscreen #modal { margin: auto; }
+.game-fullscreen.landscape-turn #modal { inset: auto; left: 50%; top: 50%; margin: 0; }
+.dance-toggle { position: absolute; top: max(16px, var(--game-safe-top)); left: max(16px, var(--game-safe-left)); z-index: 3; display: flex; align-items: center; gap: 8px; background: var(--pink); }
+.dance-toggle kbd { font: inherit; font-size: 10px; border: 1px solid currentColor; border-radius: 4px; padding: 2px 4px; }
+.touch-controls .dance-toggle { min-height: 44px; padding: 8px 12px; }
+.touch-controls .dance-toggle kbd { display: none; }
+.dance-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 24px; }
+.dance-option { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px 8px; border: var(--line); border-radius: 16px; background: white; font-size: 15px; }
+.dance-option .animal-art { width: 60px; height: 72px; }
+.dance-option[aria-pressed=true], .dance-option:focus-visible { background: var(--yellow); }
+.dance-options > .secondary-button { grid-column: 1 / -1; }
+@media (max-width: 480px) { .dance-options { gap: 7px; } .dance-option { font-size: 12px; padding: 12px 4px; } }
+@media (prefers-reduced-motion: reduce) { .game-dialog-backdrop { backdrop-filter: none; } }
 .touch-controls .main { padding-left: max(6px, var(--game-safe-left)); padding-right: max(6px, var(--game-safe-right)); }
 @media (orientation: landscape) and (max-height: 500px) {
   .touch-controls .header { flex-wrap: nowrap; gap: 10px; padding: 5px max(10px, var(--game-safe-right)) 5px max(10px, var(--game-safe-left)); }

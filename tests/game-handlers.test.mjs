@@ -25,6 +25,7 @@ const animalViews = await import(new URL(`animal-views.${extension}`, root));
 const bikeArt = await import(new URL(`bike-art.${extension}`, root));
 const touchControls = await import(new URL(`touch-controls.${extension}`, root));
 const fullscreen = await import(new URL(`fullscreen.${extension}`, root));
+const gameDialog = await import(new URL(`game-dialog.${extension}`, root));
 
 // Exercise the application's real registered handlers with DOM test doubles.
 // This checks app behavior, not browser rendering or native default actions.
@@ -85,7 +86,8 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null, d
     setPointerCapture(id) { this.captures.add(id); }
     hasPointerCapture(id) { return this.captures.has(id); }
     releasePointerCapture(id) { this.captures.delete(id); for (const cb of this.handlers.get('lostpointercapture') || []) cb({ pointerId: id }); }
-    showModal() { this.open = true; }
+    show() { this.open = true; }
+    showModal() { throw new Error('Game windows must not enter the native top layer and leave fullscreen'); }
     close() { if (!this.open) return; this.open = false; for (const cb of this.handlers.get('close') || []) cb({}); }
     matches(selector) { return selector === 'input[type=range]' && this.tag === 'input'; }
     closest(selector) {
@@ -118,7 +120,7 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null, d
   const game = get('#game'), modal = get('#modal'), modalContent = get('#modal-content'), audio = get('#audio');
   for (const node of [audio, get('#member-audio'), get('#camp-audio'), get('#bike-audio')]) Object.assign(node, { paused: true, ended: false, currentTime: 0, pause() { this.paused = true; }, play() { this.paused = false; this.ended = false; return Promise.resolve(); }, load() {} });
   const context = vm.createContext({
-    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky, ...dance, ...studio, ...adventure, ...adventureArt, ...toolbox, ...wreckage, ...holiday, ...hats, ...reception, ...chocolate, ...chocolateArt, ...friends, ...friendsArt, ...bike, ...bikeArt, ...animalViews, ...touchControls, ...fullscreen,
+    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky, ...dance, ...studio, ...adventure, ...adventureArt, ...toolbox, ...wreckage, ...holiday, ...hats, ...reception, ...chocolate, ...chocolateArt, ...friends, ...friendsArt, ...bike, ...bikeArt, ...animalViews, ...touchControls, ...fullscreen, ...gameDialog,
     loadContent: async () => ({ ok: true }), document: doc,
     window: { innerWidth: 1200, matchMedia: query => ({ matches: touchScreen && query === '(any-pointer: coarse)' }), addEventListener: (n, cb) => add(windowHandlers, n, cb), open(...args) { opened.push(args); } },
     location: { search: preview ? '?preview=1' : '' }, localStorage: { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value) },
@@ -1771,3 +1773,44 @@ console.log('PASS: a held left thumb remains usable while the right finger takes
  new h.Element('normal view','button',{action:'fullscreen'}).click();assert(!h.doc.body.classList.contains('game-fullscreen'));assert(!h.state.landscapeTurn);
 }
 console.log('PASS: portrait fullscreen presents a landscape game, remaps thumb axes and space dimensions correctly, switches cleanly after physical rotation and restores the normal view on exit.');
+
+{
+ const h=await harness(false,'cat',null,false,null,null,null,null,null,true);let requests=0,exits=0;
+ h.doc.documentElement.requestFullscreen=function(){requests++;h.doc.fullscreenElement=this;for(const cb of h.documentHandlers.get('fullscreenchange')||[])cb({});return Promise.resolve();};
+ h.doc.exitFullscreen=function(){exits++;h.doc.fullscreenElement=null;for(const cb of h.documentHandlers.get('fullscreenchange')||[])cb({});return Promise.resolve();};
+ new h.Element('fullscreen','button',{action:'fullscreen'}).click();await Promise.resolve();
+ const check=()=>{assert.equal(h.doc.fullscreenElement,h.doc.documentElement);assert(h.doc.body.classList.contains('game-fullscreen'));assert.equal(exits,0);assert.equal(requests,1);};
+ for(const id of ['help','grownups','letter','panda','characters']){
+  h.showPanel(id);check();assert(h.modal.open);assert(h.get('.app').inert);assert(!h.get('#modal-backdrop').hidden);
+  h.closePanel();check();assert(!h.modal.open);assert(!h.get('.app').inert);assert(h.get('#modal-backdrop').hidden);
+ }
+ h.state.race=bike.createBikeRace('cat',content.ANIMALS);bike.startBikeRace(h.state.race);h.state.race.obstacles=[];h.state.race.player.x=bike.BIKE_FINISH-1;h.state.race.player.speed=320;h.renderScene();
+ h.frame(1000);h.frame(1020);assert.equal(h.state.race.phase,'finished');assert.equal(h.state.modal,'bike-win');assert(h.modal.open);check();
+ new h.Element('race again','button',{bikeLevel:'mittel'}).click();assert.equal(h.state.race.phase,'racing');assert(!h.modal.open);check();
+ h.showPanel('bike-pause');const escape=h.press(h.documentHandlers,h.event('Escape','Escape',h.modal));assert(escape.prevented&&escape.stopped);assert(!h.modal.open);check();
+ new h.Element('back','button',{action:'bike-exit'}).click();assert(!h.state.race);check();
+ h.state.adventure=adventure.createAdventure(1200,700);h.state.adventure.phase='ready';h.state.scene='space';h.renderScene();h.showPanel('space-launch');assert(h.modal.open);check();
+ new h.Element('space easy','button',{difficulty:'leicht'}).click();assert.equal(h.state.adventure.phase,'playing');assert(!h.modal.open);check();
+}
+console.log('PASS: the actual cycling finish, retry/pause menus, space difficulty menu and information windows keep native fullscreen; Escape closes the window and restores background interaction.');
+
+try {
+ dancingTrack.src='uploads/tanzen.mp3';
+ for(const id of ['cat','dog','horse','monkey']){
+  const h=await harness(false,id,null,false,{phase:'unlocked',wearing:true},null,null,null,null,true);h.enterRoom('radio');h.state.position={x:800,y:780};h.state.tapes.loaded='tanzen';h.loadRecording();h.frame(1000);
+  assert(!h.get('#dance-toggle').hidden);h.game.focus();h.press(h.windowHandlers,h.event('t','KeyT',h.game));assert.equal(h.state.modal,'dance');
+  for(const style of dance.PLAYER_DANCES)assert(h.modalContent.innerHTML.includes('data-dance-style="'+style+'"'));
+  new h.Element('moonwalk','button',{danceStyle:'moonwalk'}).click();assert(!h.modal.open);assert.equal(h.state.playerDance.style,'moonwalk');
+  assert(h.get('#player-use').attrs.has('hidden'));assert(!h.get('#player-dance').attrs.has('hidden'));assert.equal(h.get('#player-dance-upper-use').getAttribute('href'),'#dressed-'+id+'-right');
+  const origin={...h.state.position},first=h.get('#player-dance-motion').getAttribute('transform');for(let i=1;i<=20;i++)h.frame(1000+i*16);
+  assert.notEqual(h.get('#player-dance-motion').getAttribute('transform'),first);assert.deepEqual({...h.state.position},origin,'dancing never changes collision coordinates');
+  new h.Element('choose dance','button',{action:'dance-picker'}).click();const elapsed=h.state.playerDance.elapsed;h.frame(1340);assert.equal(h.state.playerDance.elapsed,elapsed,'opening a menu freezes the selected dance');
+  new h.Element('robot','button',{danceStyle:'robot'}).click();assert.equal(h.state.playerDance.style,'robot');assert.equal(h.get('#player-dance-upper-use').getAttribute('href'),'#dressed-'+id);
+  h.press(h.windowHandlers,h.event('ArrowRight','ArrowRight',h.game));h.frame(1360);h.state.keys.clear();assert.equal(h.state.playerDance.style,null);assert(!h.get('#player-use').attrs.has('hidden'));
+  new h.Element('choose again','button',{action:'dance-picker'}).click();new h.Element('party','button',{danceStyle:'party'}).click();assert.equal(h.state.playerDance.style,'party');
+  new h.Element('choose stop','button',{action:'dance-picker'}).click();new h.Element('stop','button',{danceStyle:'stop'}).click();assert.equal(h.state.playerDance.style,null);assert(!h.modal.open);
+  new h.Element('choose before end','button',{action:'dance-picker'}).click();h.get('#audio').ended=true;for(const cb of h.get('#audio').handlers.get('ended')||[])cb({});assert(!h.modal.open);assert(h.get('#dance-toggle').hidden);assert.equal(h.state.playerDance.style,null);
+  h.loadRecording();new h.Element('choose restarted','button',{action:'dance-picker'}).click();new h.Element('moonwalk again','button',{danceStyle:'moonwalk'}).click();h.leaveRoom();assert(h.get('#dance-toggle').hidden);assert.equal(h.state.playerDance.style,null);
+ }
+}finally{dancingTrack.src=originalDanceAudio;}
+console.log('PASS: every original avatar can choose moonwalk, robot and party by keyboard/touch, keeps its hat, stops dancing on movement or song ending, and retains the existing three disco guests.');

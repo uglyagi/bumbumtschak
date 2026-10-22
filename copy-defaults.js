@@ -2603,6 +2603,17 @@ COPY_GROUPS.push({
     { key: 'touch_bike_keys', label: 'Bedienung beim Fahrradfahren', value: 'Links unten wechselst du mit den Pfeilen nach oben und unten die Spur. Ein Antippen wechselt genau eine Spur. Rechts unten hältst du Gas zum Beschleunigen oder Bremse zum Abbremsen. Beim Loslassen behält das Rad sein Tempo. Du kannst gleichzeitig Gas geben und die Spur wechseln. Weiche Steinen aus; über Schanzen springst du automatisch. Die Pausentaste steht über den Pfeilen.', max: 1200, previousValues: ['Lege deinen Daumen auf die Steuerfläche links unten. Nach rechts gibst du Gas, nach links bremst du. Nach oben oder unten wechselst du zwischen den vier Spuren. Beim Loslassen behält das Rad sein Tempo. Weiche Steinen aus; über Schanzen springst du automatisch. Nach einem Sturz steigt dein Tier wieder auf. Mit der Pausentaste über der Daumenfläche kannst du pausieren.', 'Halte deinen Finger rechts vom Rad, um Gas zu geben, und links vom Rad, um zu bremsen. Oberhalb oder unterhalb wechselst du zwischen den vier Spuren. Beim Loslassen behält das Rad sein Tempo. Weiche Steinen aus; über Schanzen springst du automatisch. Nach einem Sturz steigt dein Tier wieder auf. Mit der Pausentaste unten links kannst du pausieren.'] },
   ],
 });
+COPY_GROUPS.push({
+  id: 'player-dances', label: 'Tanzen: Tanzwahl', fields: [
+    { key: 'dance_choose', label: 'Knopf zur Tanzwahl', value: 'Tanz wählen', max: 100 },
+    { key: 'dance_title', label: 'Überschrift der Tanzwahl', value: 'Wie möchtest du tanzen?', max: 180 },
+    { key: 'dance_intro', label: 'Erklärung der Tanzwahl', value: 'Wähle einen Tanz für dein Tier. Sobald du mit den Richtungstasten oder der Daumensteuerung losläufst, hört es wieder auf zu tanzen.', max: 700 },
+    { key: 'dance_party', label: 'Normaler Tanz', value: 'Partytanz', max: 100 },
+    { key: 'dance_moonwalk', label: 'Moonwalk', value: 'Moonwalk', max: 100 },
+    { key: 'dance_robot', label: 'Robotdance', value: 'Robotdance', max: 100 },
+    { key: 'dance_stop', label: 'Tanz beenden', value: 'Tanzpause', max: 100 },
+  ],
+});
 export const COPY_FIELDS = COPY_GROUPS.flatMap(group => group.fields);
 export const DEFAULT_TEXTS = Object.fromEntries(COPY_FIELDS.map(field => [field.key, field.value]));
 export function normalizeTexts(saved) {

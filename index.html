@@ -7,7 +7,7 @@
   <title>Bum Bum Tschak · Deine bunte Musikwelt</title>
   <meta name="description" content="Such dir ein Tier aus und entdecke die bunte Welt von Bum Bum Tschak. Besuche das Kassettenradio, die Konzerttafel und unsere drei Bandfreunde.">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css?v=ec02f8b3fe575705">
+  <link rel="stylesheet" href="styles.css?v=6e38053dee09b71e">
 </head>
 <body class="game-hints-off">
   <div class="app">
@@ -62,6 +62,7 @@
           </div>
         </div>
         <button id="interact" class="interact-button" hidden></button>
+        <button id="dance-toggle" class="dance-toggle secondary-button" data-action="dance-picker" hidden><span aria-hidden="true">♫</span> <span data-copy="dance_choose">Tanz wählen</span> <kbd aria-hidden="true">T</kbd></button>
         <button id="fullscreen-toggle" class="fullscreen-toggle round-button" data-action="fullscreen" data-copy-aria="touch_fullscreen" aria-label="Vollbild öffnen" aria-pressed="false"><svg class="fullscreen-enter" aria-hidden="true" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg><svg class="fullscreen-leave" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 8h5V3m13 5h-5V3M8 21v-5H3m13 5v-5h5"/></svg></button>
         <button id="touch-pause" class="touch-pause round-button" data-action="touch-pause" data-copy-aria="touch_pause" aria-label="Spiel pausieren" hidden><span aria-hidden="true">Ⅱ</span></button>
         <button id="player-chip" class="player-chip" data-open="characters" aria-label="Spielfigur wechseln" hidden></button>
@@ -70,7 +71,8 @@
 
     <footer class="footer"><span data-copy="footer">Eine kleine Welt. Ganz viel ♥ Musik.</span><button data-open="social"><span data-copy="nav_social">Kontakt</span> <span aria-hidden="true">↗</span></button><a id="admin-link" data-copy="admin_link" href="verwaltung/">Bandverwaltung ↗</a></footer>
   </div>
-  <dialog id="modal" aria-labelledby="modal-title"><div id="modal-content"></div></dialog>
+  <div id="modal-backdrop" class="game-dialog-backdrop" hidden aria-hidden="true"></div>
+  <dialog id="modal" aria-labelledby="modal-title" tabindex="-1"><div id="modal-content"></div></dialog>
   <div id="announcement" class="sr-only" aria-live="polite" aria-atomic="true"></div>
   <div id="toast" class="toast" role="status" hidden></div>
   <audio id="audio" preload="none"></audio>
@@ -81,47 +83,48 @@
   <!-- versioned-game-assets -->
   <script type="importmap">{
   "imports": {
-    "./adventure-art.js": "./adventure-art.js?v=ec02f8b3fe575705",
-    "./animal-defaults.js": "./animal-defaults.js?v=ec02f8b3fe575705",
-    "./animal-views.js": "./animal-views.js?v=ec02f8b3fe575705",
-    "./app.js": "./app.js?v=ec02f8b3fe575705",
-    "./art.js": "./art.js?v=ec02f8b3fe575705",
-    "./band-defaults.js": "./band-defaults.js?v=ec02f8b3fe575705",
-    "./bike-art.js": "./bike-art.js?v=ec02f8b3fe575705",
-    "./bike-race.js": "./bike-race.js?v=ec02f8b3fe575705",
-    "./chocolate-art.js": "./chocolate-art.js?v=ec02f8b3fe575705",
-    "./chocolate.js": "./chocolate.js?v=ec02f8b3fe575705",
-    "./connection.js": "./connection.js?v=ec02f8b3fe575705",
-    "./content.js": "./content.js?v=ec02f8b3fe575705",
-    "./copy-defaults.js": "./copy-defaults.js?v=ec02f8b3fe575705",
-    "./cover-art.js": "./cover-art.js?v=ec02f8b3fe575705",
-    "./dance-party.js": "./dance-party.js?v=ec02f8b3fe575705",
-    "./fireworks.js": "./fireworks.js?v=ec02f8b3fe575705",
-    "./friends-art.js": "./friends-art.js?v=ec02f8b3fe575705",
-    "./friends-game.js": "./friends-game.js?v=ec02f8b3fe575705",
-    "./fullscreen.js": "./fullscreen.js?v=ec02f8b3fe575705",
-    "./game-core.js": "./game-core.js?v=ec02f8b3fe575705",
-    "./hat-quest.js": "./hat-quest.js?v=ec02f8b3fe575705",
-    "./painting-studio.js": "./painting-studio.js?v=ec02f8b3fe575705",
-    "./painting.js": "./painting.js?v=ec02f8b3fe575705",
-    "./reception.js": "./reception.js?v=ec02f8b3fe575705",
-    "./rocket-adventure.js": "./rocket-adventure.js?v=ec02f8b3fe575705",
-    "./rocket-wreckage.js": "./rocket-wreckage.js?v=ec02f8b3fe575705",
-    "./room-art.js": "./room-art.js?v=ec02f8b3fe575705",
-    "./rooms.js": "./rooms.js?v=ec02f8b3fe575705",
-    "./site-config.js": "./site-config.js?v=ec02f8b3fe575705",
-    "./sky-world.js": "./sky-world.js?v=ec02f8b3fe575705",
-    "./social.js": "./social.js?v=ec02f8b3fe575705",
-    "./solar-system.js": "./solar-system.js?v=ec02f8b3fe575705",
-    "./space-art.js": "./space-art.js?v=ec02f8b3fe575705",
-    "./sun-holiday.js": "./sun-holiday.js?v=ec02f8b3fe575705",
-    "./toolbox.js": "./toolbox.js?v=ec02f8b3fe575705",
-    "./touch-controls.js": "./touch-controls.js?v=ec02f8b3fe575705",
-    "./utils.js": "./utils.js?v=ec02f8b3fe575705",
-    "./verwaltung/drafts.js": "./verwaltung/drafts.js?v=ec02f8b3fe575705"
+    "./adventure-art.js": "./adventure-art.js?v=6e38053dee09b71e",
+    "./animal-defaults.js": "./animal-defaults.js?v=6e38053dee09b71e",
+    "./animal-views.js": "./animal-views.js?v=6e38053dee09b71e",
+    "./app.js": "./app.js?v=6e38053dee09b71e",
+    "./art.js": "./art.js?v=6e38053dee09b71e",
+    "./band-defaults.js": "./band-defaults.js?v=6e38053dee09b71e",
+    "./bike-art.js": "./bike-art.js?v=6e38053dee09b71e",
+    "./bike-race.js": "./bike-race.js?v=6e38053dee09b71e",
+    "./chocolate-art.js": "./chocolate-art.js?v=6e38053dee09b71e",
+    "./chocolate.js": "./chocolate.js?v=6e38053dee09b71e",
+    "./connection.js": "./connection.js?v=6e38053dee09b71e",
+    "./content.js": "./content.js?v=6e38053dee09b71e",
+    "./copy-defaults.js": "./copy-defaults.js?v=6e38053dee09b71e",
+    "./cover-art.js": "./cover-art.js?v=6e38053dee09b71e",
+    "./dance-party.js": "./dance-party.js?v=6e38053dee09b71e",
+    "./fireworks.js": "./fireworks.js?v=6e38053dee09b71e",
+    "./friends-art.js": "./friends-art.js?v=6e38053dee09b71e",
+    "./friends-game.js": "./friends-game.js?v=6e38053dee09b71e",
+    "./fullscreen.js": "./fullscreen.js?v=6e38053dee09b71e",
+    "./game-core.js": "./game-core.js?v=6e38053dee09b71e",
+    "./game-dialog.js": "./game-dialog.js?v=6e38053dee09b71e",
+    "./hat-quest.js": "./hat-quest.js?v=6e38053dee09b71e",
+    "./painting-studio.js": "./painting-studio.js?v=6e38053dee09b71e",
+    "./painting.js": "./painting.js?v=6e38053dee09b71e",
+    "./reception.js": "./reception.js?v=6e38053dee09b71e",
+    "./rocket-adventure.js": "./rocket-adventure.js?v=6e38053dee09b71e",
+    "./rocket-wreckage.js": "./rocket-wreckage.js?v=6e38053dee09b71e",
+    "./room-art.js": "./room-art.js?v=6e38053dee09b71e",
+    "./rooms.js": "./rooms.js?v=6e38053dee09b71e",
+    "./site-config.js": "./site-config.js?v=6e38053dee09b71e",
+    "./sky-world.js": "./sky-world.js?v=6e38053dee09b71e",
+    "./social.js": "./social.js?v=6e38053dee09b71e",
+    "./solar-system.js": "./solar-system.js?v=6e38053dee09b71e",
+    "./space-art.js": "./space-art.js?v=6e38053dee09b71e",
+    "./sun-holiday.js": "./sun-holiday.js?v=6e38053dee09b71e",
+    "./toolbox.js": "./toolbox.js?v=6e38053dee09b71e",
+    "./touch-controls.js": "./touch-controls.js?v=6e38053dee09b71e",
+    "./utils.js": "./utils.js?v=6e38053dee09b71e",
+    "./verwaltung/drafts.js": "./verwaltung/drafts.js?v=6e38053dee09b71e"
   }
 }</script>
-  <script type="module" src="app.js?v=ec02f8b3fe575705"></script>
+  <script type="module" src="app.js?v=6e38053dee09b71e"></script>
   <!-- /versioned-game-assets -->
 </body>
 </html>

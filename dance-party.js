@@ -1,5 +1,30 @@
 import { escapeXML } from './utils.js';
 
+export const PLAYER_DANCES = ['party', 'moonwalk', 'robot'];
+export function playerDancePose(style, seconds, reduced = false) {
+  const t = reduced ? 0 : Math.max(0, seconds), beat = Math.sin(t * Math.PI * 4);
+  if (style === 'moonwalk') {
+    const cycle = t % 3.2, backwards = cycle < 1.6;
+    const x = backwards ? 18 - cycle * 22.5 : -18 + (cycle - 1.6) * 22.5;
+    return { facing: backwards ? 'right' : 'left', motion: `translate(${x.toFixed(2)} 0)`,
+      body: `translate(0 ${(-1 - Math.abs(beat)).toFixed(2)}) rotate(${backwards ? -3 : 3} 0 -30)`,
+      leftFoot: `translate(${(beat * 4).toFixed(2)} ${Math.min(0, beat * 2).toFixed(2)})`,
+      rightFoot: `translate(${(-beat * 4).toFixed(2)} ${Math.min(0, -beat * 2).toFixed(2)})` };
+  }
+  if (style === 'robot') {
+    const step = Math.floor(t * 3) % 8, angles = [-12, -12, 0, 12, 12, 0, -6, 6];
+    return { facing: 'front', motion: `translate(${step < 4 ? -5 : 5} 0)`, body: `rotate(${angles[step]} 0 -24)`,
+      leftFoot: `translate(${step % 2 ? -3 : 0} ${step === 2 || step === 6 ? -4 : 0})`,
+      rightFoot: `translate(${step % 2 ? 0 : 3} ${step === 0 || step === 4 ? -4 : 0})` };
+  }
+  return { facing: 'front', motion: `translate(${(beat * 6).toFixed(2)} ${(-Math.abs(beat) * 6).toFixed(2)})`,
+    body: `rotate(${(beat * 7).toFixed(2)} 0 -20)`, leftFoot: 'translate(0 0)', rightFoot: 'translate(0 0)' };
+}
+export function playerDanceMarkup() {
+  const use = part => `<use id="player-dance-${part}-use" href="#animal-cat" x="-34" y="-77" width="68" height="82"/>`;
+  return `<defs><clipPath id="player-dance-upper-clip"><path d="M-60-110H60v98H-60Z"/></clipPath><clipPath id="player-dance-left-clip"><path d="M-60-12H0v30H-60Z"/></clipPath><clipPath id="player-dance-right-clip"><path d="M0-12H60v30H0Z"/></clipPath></defs><g id="player-dance" hidden="" pointer-events="none"><g id="player-dance-motion"><g id="player-dance-upper"><g clip-path="url(#player-dance-upper-clip)">${use('upper')}</g></g><g id="player-dance-left"><g clip-path="url(#player-dance-left-clip)">${use('left')}</g></g><g id="player-dance-right"><g clip-path="url(#player-dance-right-clip)">${use('right')}</g></g></g></g>`;
+}
+
 export const isDanceTrack = track => !!track && (track.id === 'tanzen' || track.title?.trim().toLocaleLowerCase('de') === 'tanzen');
 export const danceGuests = (animals, selected) => animals.filter(animal => animal.id !== selected);
 export const DISCO_LIGHTS = [

@@ -7,7 +7,7 @@ import { ROOMS, ROOM_SPAWN, EXIT, RADIO, TAPE_SLOTS, SHELF_SWITCH, ROOM_PROPS, A
 import { brandIcon, socialPads, contactLinks } from './social.js';
 import { adminURL } from './connection.js';
 import { SPACE, ROCKET_SPEED, GROUND_ROCKET, moveRocket, outsideScene, flightScene, spaceViewIsDark } from './sky-world.js';
-import { createParty, syncParty, tickParty, guestPose, guestExitPose, dancePartyMarkup, discoLightPoses } from './dance-party.js';
+import { createParty, syncParty, tickParty, guestPose, guestExitPose, dancePartyMarkup, discoLightPoses, PLAYER_DANCES, playerDancePose, playerDanceMarkup } from './dance-party.js';
 import { studioMarkup, studioInteraction, studioColors, studioPages, STUDIO_CONTROLS, largeSurfaces } from './painting-studio.js';
 import { createAdventure, startAdventure, resizeAdventure, tickAdventure, FINISH_DISTANCE, landingPose, crashVibration, DIFFICULTIES } from './rocket-adventure.js';
 import { adventureMarkup, adventureShipPose, adventureCourseOpacity, adventureTrailPath, meteorMarkup } from './adventure-art.js';
@@ -25,6 +25,7 @@ import { bikeRaceMarkup, bikeTerrainMarkup, bikeObstaclesMarkup, bikeRiderPose }
 import { movementFacing } from './animal-views.js';
 import { thumbDirection, thumbOffset, landscapeSize, screenPointInGame } from './touch-controls.js';
 import { createFullscreenMode } from './fullscreen.js';
+import { createGameDialog } from './game-dialog.js';
 
 const previewMode = new URLSearchParams(location.search).get('preview') === '1';
 const contentStatus = await loadContent(previewMode);
@@ -72,7 +73,7 @@ const state = {
   rocket: { position: { ...GROUND_ROCKET }, riding: false, airborne: false, damaged: savedRocketDamage, broken: savedRocketDamage, impact: null },
   adventure: null, landing: null, toolbox: false, homeReturns: [],
   race: null, bikeScores: cleanBikeScores(savedBikeScores), bikeDoor: false, bikeMusic: null,
-  party: createParty(), chocolate: createChocolate(savedChocolates),
+  party: createParty(), playerDance: { style: null, elapsed: 0 }, chocolate: createChocolate(savedChocolates),
   friends: createFriends(savedFriendCamp), friendsRestartPending: false, friendsExit: null, campMusic: null,
   hat: createHatQuest(savedHat), hatActive: false, hatRestartPending: false,
   difficulty: Object.hasOwn(DIFFICULTIES, savedDifficulty) ? savedDifficulty : 'leicht', reception: null,
@@ -100,6 +101,7 @@ const screenMode = createFullscreenMode(document, active => {
   refreshFullscreenButton(); resize();
   if (!modal.open) game.focus({ preventScroll: true });
 }, window.screen?.orientation);
+const gameDialog = createGameDialog(document, modal, $('#modal-backdrop'), $('.app'), () => closePanel());
 function refreshFullscreenButton() {
   const button = $('#fullscreen-toggle'), label = text(screenMode.active ? 'touch_fullscreen_exit' : 'touch_fullscreen');
   button.setAttribute('aria-pressed', String(screenMode.active)); button.setAttribute('aria-label', label); button.title = label;
@@ -181,6 +183,7 @@ function helpPanel() {
   return wrap(`${icon('help')} ${T('help_kicker')}`, text('help_title'), `<div class="help-board"><div class="help-list">${[1, 2, 3].map(i => `<div class="help-row"><span class="help-number">${i}</span><div><strong>${T('help_step' + i + '_title')}</strong><p class="editable-prose">${T('help_step' + i + '_body')}</p></div></div>`).join('')}</div></div>`, 'help-sign-view');
 }
 function renderPanel(id) {
+  if (id === 'dance') return dancePanel();
   if (id.startsWith('bike-')) return bicyclePanel(id);
   if (id.startsWith('space-')) return adventurePanel(id);
   if (id === 'characters') return characterPanel();
@@ -215,6 +218,36 @@ function pausePanel() {
   const options = [['map', 'map_open'], ['characters', 'pause_character'], ['radio', 'pause_radio'], ['concerts', 'pause_concerts'], ['panda', 'pause_band'], ['social', 'pause_social'], ['grownups', 'nav_grownups'], ['help', 'help_open']];
   return wrap(`${icon('map')} ${T('pause_kicker')}`, text('pause_title'), `<p class="modal-intro editable-prose">${T('pause_intro')}</p><div class="map-grid"><button class="map-destination" data-action="close"><span class="destination-dot">↩</span><strong>${T('pause_continue')}</strong></button>${options.map(([id, key]) => `<button class="map-destination" data-open="${id}"><strong>${T(key)}</strong></button>`).join('')}</div>`);
 }
+function canPlayerDance() { return state.scene === 'radio' && state.party.active && state.playing && !state.race && !state.adventure; }
+function dancePanel() {
+  return wrap(icon('music'), text('dance_title'), `<p class="modal-intro editable-prose">${T('dance_intro')}</p><div class="dance-options" role="group" aria-label="${T('dance_title')}">${PLAYER_DANCES.map(style => `<button class="dance-option" data-dance-style="${style}" aria-pressed="${state.playerDance.style === style}">${avatar(state.animal, '', wearsHat(state.hat, state.hatActive))}<strong>${T('dance_' + style)}</strong></button>`).join('')}<button class="secondary-button" data-dance-style="stop">${T('dance_stop')}</button></div>`, 'dance-dialog');
+}
+function chooseDance(style) {
+  if (!canPlayerDance() || ![...PLAYER_DANCES, 'stop'].includes(style)) return;
+  state.playerDance = { style: style === 'stop' ? null : style, elapsed: 0 };
+  closePanel(); updatePlayerDance(); game.focus({ preventScroll: true });
+}
+function updatePlayerDance(dt = 0, walking = false) {
+  const available = canPlayerDance();
+  $('#dance-toggle').hidden = !available;
+  if (!available || walking) state.playerDance = { style: null, elapsed: 0 };
+  const active = available && !!state.playerDance.style;
+  $('#player-dance')?.toggleAttribute('hidden', !active);
+  playerUse.toggleAttribute('hidden', active);
+  if (!active) return;
+  if (!modal.open && !document.hidden) state.playerDance.elapsed += dt;
+  const pose = playerDancePose(state.playerDance.style, Math.floor(state.playerDance.elapsed * 20) / 20, state.reduced);
+  const href = animalHref(state.animal, wearsHat(state.hat, state.hatActive), pose.facing);
+  const attributes = { motion: pose.motion, upper: pose.body, left: pose.leftFoot, right: pose.rightFoot };
+  for (const [part, transform] of Object.entries(attributes)) {
+    const node = $('#player-dance-' + part);
+    if (node && node.getAttribute('transform') !== transform) node.setAttribute('transform', transform);
+  }
+  for (const part of ['upper', 'left', 'right']) {
+    const node = $('#player-dance-' + part + '-use');
+    if (node && node.getAttribute('href') !== href) node.setAttribute('href', href);
+  }
+}
 function clearTouchInput() {
   const touch = state.touch; state.touch = null;
   const pad = $('#thumb-pad'); pad.classList.remove('is-held'); $('#thumb-knob').style.transform = 'translate(0px, 0px)';
@@ -247,6 +280,8 @@ function refreshCassettes() {
 }
 function refreshDanceParty() {
   syncParty(state.party, playbackTrack(), state.playing, audio.ended || !!audio.error, ANIMALS, state.animal, state.reduced);
+  updatePlayerDance();
+  if (!canPlayerDance() && state.modal === 'dance') closePanel();
   const layer = $('#dance-party'), visible = state.scene === 'radio' && (state.party.active || state.party.departing);
   if (!layer || state.scene !== 'radio') return;
   const castKey = state.party.castKey;
@@ -523,7 +558,7 @@ function renderScene() {
   clearPaintPreview();
   const hat = wearsHat(state.hat, state.hatActive);
   let artwork = state.race ? bikeRaceMarkup(state.race, state.animal, state.paint, hat, state.reduced) : state.adventure ? adventureMarkup(state.adventure, state.animal, state.paint, hat) : state.scene === 'chocolate' ? chocolateMazeMarkup(state.chocolate.run) : state.scene === 'painting' ? studioMarkup(state.paint, PALETTE, state.studio) : outsideScene(state.scene) ? worldMarkup(state.paint, !!state.paintCan, state.scene, { ...state.rocket, hat }, state.animal) : roomMarkup(state.scene, state.shelfPage, state.tapes, state.animal, { can: state.paintCan, page: state.paintPage, world: state.paint, toolbox: state.toolbox, returns: state.homeReturns, hat: state.hat, away: awayAnimals(), chocolate: state.chocolate, bikeDoor: state.bikeDoor });
-  const markup = colorHatMarkup(artwork, state.hat.color);
+  const markup = colorHatMarkup(artwork.replace('<g id="player-body">', playerDanceMarkup() + '<g id="player-body">'), state.hat.color);
   const end = markup.lastIndexOf('</svg>');
   game.innerHTML = markup.slice(0, end) + '<g id="hat-effects"></g><g id="reception-effects"></g><g id="chocolate-carry" pointer-events="none" hidden="">' + chocolateBarMarkup() + '</g>' + markup.slice(end);
   world = $('#world-svg'); player = $('#player'); playerUse = $('#player-use'); marker = $('#destination-marker');
@@ -541,6 +576,7 @@ function renderScene() {
   bikeTerrainStep = -1; if (state.race) updateBicycleRace();
 }
 function showPanel(id, focusSelector = '') {
+  if (id === 'dance' && !canPlayerDance()) return;
   if (state.race && !id.startsWith('bike-')) id = state.race.phase === 'finished' ? 'bike-win' : state.race.phase === 'ready' ? 'bike-launch' : 'bike-pause';
   if (state.scene === 'chocolate') { requestChocolateExit(); return; }
   if (state.landing || ['intro', 'sun-finale'].includes(state.adventure?.phase)) return;
@@ -549,9 +585,10 @@ function showPanel(id, focusSelector = '') {
   modal.classList.toggle('space-choice', id.startsWith('space-') || id.startsWith('bike-'));
   modalContent.innerHTML = renderPanel(id);
   if (BAND.some(member => member.id === id)) playMemberMelody(id); else stopMemberMelody();
-  if (!modal.open) modal.showModal();
+  gameDialog.show();
   if (focusSelector) modalContent.querySelector(focusSelector)?.focus();
   else if (id === 'characters') modalContent.querySelector('[aria-pressed=true]')?.focus();
+  else if (id === 'dance') modalContent.querySelector('[data-dance-style="' + (state.playerDance.style || 'party') + '"]')?.focus();
   else if (id === 'bike-win' || id === 'bike-launch') modalContent.querySelector('[data-bike-level="leicht"]')?.focus();
   else modalContent.querySelector('button:not(.modal-close):not([disabled]), a[href], .modal-close')?.focus();
 }
@@ -1123,6 +1160,8 @@ document.addEventListener('click', e => {
   const action = btn.dataset.action;
   if (action === 'fullscreen') { void screenMode.toggle(); return; }
   if (state.landing) return;
+  if (action === 'dance-picker') { if (canPlayerDance()) showPanel('dance'); return; }
+  if (btn.dataset.danceStyle) { chooseDance(btn.dataset.danceStyle); return; }
   if (btn.dataset.difficulty && state.adventure && ['ready', 'won'].includes(state.adventure.phase) && Object.hasOwn(DIFFICULTIES, btn.dataset.difficulty)) {
     state.difficulty = btn.dataset.difficulty; state.adventure.nextDifficulty = state.difficulty; storage.set('adventure-difficulty', state.difficulty);
     playAdventure(); return;
@@ -1422,6 +1461,7 @@ window.addEventListener('keydown', e => {
     return;
   }
   if (directions.has(e.code)) { e.preventDefault(); state.paintTarget = null; state.keys.add(e.code); state.path = []; state.destination = null; marker.setAttribute('hidden', ''); }
+  else if (e.code === 'KeyT' && canPlayerDance()) { e.preventDefault(); if (!e.repeat) showPanel('dance'); }
   else if (isActionKey(e) || e.code === 'KeyE') { e.preventDefault(); if (!e.repeat) performInteraction(); }
 });
 window.addEventListener('keyup', e => { state.keys.delete(e.code); });
@@ -1634,6 +1674,7 @@ function frame(time) {
     updateNear(); updateCamera(dt);
   }
   player.classList.toggle('is-moving', walking); player.setAttribute('transform', `translate(${state.position.x.toFixed(2)} ${state.position.y.toFixed(2)})`);
+  updatePlayerDance(dt, walking);
   refreshChocolateItems();
   if (outsideScene(state.scene) && state.rocket.riding) $('#rocket')?.setAttribute('transform', `translate(${state.position.x.toFixed(2)} ${state.position.y.toFixed(2)})`);
   requestAnimationFrame(frame);
