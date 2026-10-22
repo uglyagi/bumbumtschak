@@ -1177,9 +1177,10 @@ export const COPY_GROUPS = [
       {
         "key": "help_step2_body",
         "label": "Schritt 2: Text",
-        "value": "Mit den Pfeiltasten oder W, A, S, D bewegst du deine Figur. Am Smartphone oder Tablet hältst du einen Finger in der Spielwelt: Dein Tier läuft in seine Richtung. Bewege den Finger zum Lenken und lass los, um stehen zu bleiben. Für Kassetten, Gespräche und andere Aktionen tippst du auf die Aktionstaste rechts unten. Mit Tab erreichst du jede Station direkt.",
+        "value": "Mit den Pfeiltasten oder W, A, S, D bewegst du deine Figur. Am Smartphone oder Tablet legst du deinen Daumen auf die kleine Steuerfläche links unten. Leichte Bewegungen lenken dein Tier; beim Loslassen bleibt es stehen. Für Kassetten, Gespräche und andere Aktionen tippst du auf die Aktionstaste rechts unten. Der Knopf oben rechts öffnet und schließt die Vollbildansicht. Mit Tab erreichst du jede Station direkt.",
         "max": 2400,
         "previousValues": [
+          "Mit den Pfeiltasten oder W, A, S, D bewegst du deine Figur. Am Smartphone oder Tablet hältst du einen Finger in der Spielwelt: Dein Tier läuft in seine Richtung. Bewege den Finger zum Lenken und lass los, um stehen zu bleiben. Für Kassetten, Gespräche und andere Aktionen tippst du auf die Aktionstaste rechts unten. Mit Tab erreichst du jede Station direkt.",
           "Mit den Pfeiltasten oder W, A, S, D bewegst du deine Figur. Am Handy nutzt du die Richtungstasten. Du kannst auch auf eine freie Stelle tippen. Mit Tab erreichst du jede Station direkt."
         ]
       },
@@ -2586,11 +2587,14 @@ COPY_GROUPS.push({
 });
 COPY_GROUPS.push({
   id: 'touch', label: 'Smartphone und Tablet', fields: [
+    { key: 'touch_thumb', label: 'Daumenfläche', value: 'Daumensteuerung: Daumen auflegen, leicht bewegen und zum Anhalten loslassen', max: 180 },
+    { key: 'touch_fullscreen', label: 'Vollbild öffnen', value: 'Vollbild öffnen', max: 180 },
+    { key: 'touch_fullscreen_exit', label: 'Vollbild schließen', value: 'Vollbild schließen', max: 180 },
     { key: 'touch_pause', label: 'Spiel pausieren', value: 'Spiel pausieren', max: 180 },
     { key: 'touch_paint', label: 'Aktionstaste zum Anmalen', value: 'Anmalen', max: 180 },
     { key: 'touch_color', label: 'Aktionstaste für die Farbpalette', value: 'Farbe nehmen', max: 180 },
-    { key: 'touch_world_keys', label: 'Bedienung der Spielwelt', value: 'Halte einen Finger in der Spielwelt. Dein Tier läuft in Richtung des Fingers. Bewege den Finger zum Lenken; beim Loslassen bleibt das Tier stehen. In der Nähe eines Gegenstands erscheint rechts unten eine Aktionstaste. Damit kannst du Kassetten nehmen und einlegen, mit der Band sprechen, die Figur wechseln oder anmalen. Menüs und Schließen-Knöpfe kannst du direkt antippen.', max: 1200 },
-    { key: 'touch_bike_keys', label: 'Bedienung beim Fahrradfahren', value: 'Halte deinen Finger rechts vom Rad, um Gas zu geben, und links vom Rad, um zu bremsen. Oberhalb oder unterhalb wechselst du zwischen den vier Spuren. Beim Loslassen behält das Rad sein Tempo. Weiche Steinen aus; über Schanzen springst du automatisch. Nach einem Sturz steigt dein Tier wieder auf. Mit der Pausentaste unten links kannst du pausieren.', max: 1200 },
+    { key: 'touch_world_keys', label: 'Bedienung der Spielwelt', value: 'Lege deinen Daumen auf die kleine Steuerfläche links unten. Leichte Bewegungen lenken dein Tier in jede Richtung; beim Loslassen bleibt es stehen. Rechts unten erscheint eine Aktionstaste für Kassetten, Gespräche, Figurenwechsel und Anmalen. Der Knopf oben rechts öffnet die Vollbildansicht; derselbe Knopf schließt sie wieder. Menüs und Schließen-Knöpfe kannst du direkt antippen.', max: 1200, previousValues: ['Halte einen Finger in der Spielwelt. Dein Tier läuft in Richtung des Fingers. Bewege den Finger zum Lenken; beim Loslassen bleibt das Tier stehen. In der Nähe eines Gegenstands erscheint rechts unten eine Aktionstaste. Damit kannst du Kassetten nehmen und einlegen, mit der Band sprechen, die Figur wechseln oder anmalen. Menüs und Schließen-Knöpfe kannst du direkt antippen.'] },
+    { key: 'touch_bike_keys', label: 'Bedienung beim Fahrradfahren', value: 'Lege deinen Daumen auf die Steuerfläche links unten. Nach rechts gibst du Gas, nach links bremst du. Nach oben oder unten wechselst du zwischen den vier Spuren. Beim Loslassen behält das Rad sein Tempo. Weiche Steinen aus; über Schanzen springst du automatisch. Nach einem Sturz steigt dein Tier wieder auf. Mit der Pausentaste über der Daumenfläche kannst du pausieren.', max: 1200, previousValues: ['Halte deinen Finger rechts vom Rad, um Gas zu geben, und links vom Rad, um zu bremsen. Oberhalb oder unterhalb wechselst du zwischen den vier Spuren. Beim Loslassen behält das Rad sein Tempo. Weiche Steinen aus; über Schanzen springst du automatisch. Nach einem Sturz steigt dein Tier wieder auf. Mit der Pausentaste unten links kannst du pausieren.'] },
   ],
 });
 export const COPY_FIELDS = COPY_GROUPS.flatMap(group => group.fields);

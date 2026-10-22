@@ -23,7 +23,8 @@ import { friendsHiddenMarkup, friendsWorldMarkup, friendsCampfireMarkup, friends
 import { BIKE_WIDTH, BIKE_HEIGHT, BIKE_FINISH, BIKE_LEVELS, BIKE_DOOR, BIKE_RETURN, isBikeTrack, touchingBikeDoor, bikeTime, bikeKmh, bikeEncounterCount, createBikeRace, startBikeRace, changeBikeLane, tickBikeRace, cleanBikeScores, addBikeScore } from './bike-race.js';
 import { bikeRaceMarkup, bikeTerrainMarkup, bikeObstaclesMarkup, bikeRiderPose } from './bike-art.js';
 import { movementFacing } from './animal-views.js';
-import { fingerDirection, fingerBikeInput } from './touch-controls.js';
+import { thumbDirection, thumbOffset, thumbBikeInput } from './touch-controls.js';
+import { createFullscreenMode } from './fullscreen.js';
 
 const previewMode = new URLSearchParams(location.search).get('preview') === '1';
 const contentStatus = await loadContent(previewMode);
@@ -93,6 +94,16 @@ audio.volume = state.volume;
 let previousFocus = null, toastTimer, lastTime = 0, stuckTime = 0, paintPreview = null, memberRequest = 0, discoFrame = null, friendsRenderKey = '', friendsEffectFrame = -1, bikeTerrainStep = -1;
 let ignoreGameClickUntil = 0;
 if (state.touchMode) document.body.classList.add('touch-controls');
+const screenMode = createFullscreenMode(document, active => {
+  stopWalking();
+  if (active) document.body.classList.add('game-fullscreen'); else document.body.classList.remove('game-fullscreen');
+  refreshFullscreenButton(); resize();
+  if (!modal.open) game.focus({ preventScroll: true });
+});
+function refreshFullscreenButton() {
+  const button = $('#fullscreen-toggle'), label = text(screenMode.active ? 'touch_fullscreen_exit' : 'touch_fullscreen');
+  button.setAttribute('aria-pressed', String(screenMode.active)); button.setAttribute('aria-label', label); button.title = label;
+}
 
 function announce(message) { $('#announcement').textContent = message; }
 function toast(message) { clearTimeout(toastTimer); const el = $('#toast'); el.textContent = message; el.hidden = false; toastTimer = setTimeout(() => { el.hidden = true; }, 3500); }
@@ -205,11 +216,12 @@ function pausePanel() {
   return wrap(`${icon('map')} ${T('pause_kicker')}`, text('pause_title'), `<p class="modal-intro editable-prose">${T('pause_intro')}</p><div class="map-grid"><button class="map-destination" data-action="close"><span class="destination-dot">↩</span><strong>${T('pause_continue')}</strong></button>${options.map(([id, key]) => `<button class="map-destination" data-open="${id}"><strong>${T(key)}</strong></button>`).join('')}</div>`);
 }
 function clearTouchInput() {
-  const touch = state.touch; state.touch = null; $('#touch-target').hidden = true;
-  if (touch && game.hasPointerCapture?.(touch.id)) game.releasePointerCapture(touch.id);
+  const touch = state.touch; state.touch = null;
+  const pad = $('#thumb-pad'); pad.classList.remove('is-held'); $('#thumb-knob').style.transform = 'translate(0px, 0px)';
+  if (touch && pad.hasPointerCapture?.(touch.id)) pad.releasePointerCapture(touch.id);
 }
-function clearInput() { clearTouchInput(); state.keys.clear(); state.pad.clear(); $('#dpad').querySelectorAll('button').forEach(b => b.classList.remove('pressed')); }
-function stopWalking() { clearInput(); state.path = []; state.destination = null; marker?.setAttribute('hidden', ''); }
+function clearInput(keepThumb = false) { if (keepThumb !== true) clearTouchInput(); state.keys.clear(); state.pad.clear(); $('#dpad').querySelectorAll('button').forEach(b => b.classList.remove('pressed')); }
+function stopWalking(keepThumb = false) { clearInput(keepThumb); state.path = []; state.destination = null; marker?.setAttribute('hidden', ''); }
 function refreshCassettes() {
   if (state.scene === 'radio') for (const slot of slotsOnPage(state.shelfPage)) {
     const ground = $(`#tape-slot-${slot.slot}`);
@@ -440,7 +452,7 @@ function refreshChocolatePlayback() {
 }
 function enterChocolateMaze() {
   if (state.scene !== 'radio' || !state.chocolate.active) return false;
-  stopWalking(); closePanel(); state.chocolate.run = newChocolateRun(state.chocolate.collected);
+  stopWalking(true); closePanel(); state.chocolate.run = newChocolateRun(state.chocolate.collected);
   state.scene = 'chocolate'; state.position = { ...MAZE_SPAWN };
   renderScene(); game.focus({ preventScroll: true }); announce(text('choco_collect_hint')); return true;
 }
@@ -567,7 +579,7 @@ function enterRoom(id) {
   if (state.rocket.riding) { closePanel(); toast(text('rocket_land_first')); return false; }
   if (!state.started) beginWorld(false);
   state.returnPosition = { ...(HOUSE_DOORS.find(door => door.id === room)?.outside || ROOMS[room].outside || WORLD_SPAWN) };
-  stopWalking(); closePanel(); state.paintTarget = null; state.scene = room; state.position = { ...(ROOMS[room].spawn || ROOM_SPAWN) };
+  stopWalking(true); closePanel(); state.paintTarget = null; state.scene = room; state.position = { ...(ROOMS[room].spawn || ROOM_SPAWN) };
   renderScene(); game.focus({ preventScroll: true });
   announce(text('entered_room', { haus: ROOMS[room].title }));
   return true;
@@ -579,7 +591,7 @@ function leaveRoom() {
   if (state.adventure) { landFromAdventure(); return; }
   if (state.scene === 'painting') { closePainting(); return; }
   if (state.rocket.riding) { closePanel(); if (state.rocket.airborne) returnToGround(); else exitRocket(); return; }
-  stopWalking(); closePanel();
+  stopWalking(true); closePanel();
   if (state.scene !== 'world') {
     state.scene = 'world'; state.position = { ...(state.returnPosition || WORLD_SPAWN) }; renderScene();
   }
@@ -811,7 +823,7 @@ function currentInteraction() {
 }
 function boardRocket() {
   if (state.race || state.rocket.damaged || state.rocket.repair != null || state.landing || state.adventure) return;
-  stopWalking(); state.paintTarget = null; state.rocket.riding = true; state.rocket.airborne = false;
+  stopWalking(true); state.paintTarget = null; state.rocket.riding = true; state.rocket.airborne = false;
   state.position = { ...state.rocket.position }; renderScene(); game.focus({ preventScroll: true });
   toast(text('rocket_boarded')); announce(text('rocket_boarded'));
 }
@@ -819,7 +831,7 @@ function exitRocket() {
   if (!state.rocket.riding || state.rocket.airborne) return;
   const exit = rocketExitPosition(state.rocket.position); if (!exit) return;
   stopReceptionFireworks(state.reception);
-  stopWalking(); state.rocket.riding = false; state.scene = 'world'; state.position = exit; state.paintTarget = null;
+  stopWalking(true); state.rocket.riding = false; state.scene = 'world'; state.position = exit; state.paintTarget = null;
   renderScene(); game.focus({ preventScroll: true }); announce(text('rocket_exited'));
 }
 function returnToGround() {
@@ -933,7 +945,7 @@ function refreshPaintPreview(near) {
 function paintSurface(id) {
   const surface = BUCKET_SURFACES.find(surface => surface.id === id), color = bucketColors(PALETTE).find(color => color.id === state.paintCan);
   if (!color || !outsideScene(state.scene) || state.rocket.riding && state.scene !== 'sky' || !canPaintSurface(state.position, surface)) return;
-  stopWalking(); state.paint[id] = color.color; state.paintTarget = id;
+  stopWalking(true); state.paint[id] = color.color; state.paintTarget = id;
   storage.set(paintStorageKey, JSON.stringify(state.paint)); renderScene(); game.focus({ preventScroll: true });
   announce(text('paint_done', { flaeche: text(surface.key), farbe: color.name }));
 }
@@ -961,7 +973,7 @@ function closePainting() {
   renderScene(); game.focus({ preventScroll: true });
 }
 function studioAction(near) {
-  stopWalking(); clearPaintPreview();
+  stopWalking(true); clearPaintPreview();
   if (near?.kind === 'studio-color') state.studio.color = near.id;
   else if (near?.kind === 'studio-control') {
     if (near.id === 'close') { closePainting(); return; }
@@ -985,7 +997,7 @@ function performInteraction() {
   const near = currentInteraction();
   if (!near) return;
   if (state.scene === 'painting') { studioAction(near); return; }
-  stopWalking();
+  stopWalking(true);
   if (near.kind === 'take-chocolate') { if (takeChocolate(state.chocolate)) { renderScene(); announce(text('choco_taken')); } return; }
   if (near.kind === 'friends-camp') { inviteFriends(); return; }
   if (near.kind === 'enter-room') { enterRoom(near.id); return; }
@@ -1100,6 +1112,7 @@ document.addEventListener('keydown', e => {
 document.addEventListener('click', e => {
   const btn = e.target.closest('button'); if (!btn) return;
   const action = btn.dataset.action;
+  if (action === 'fullscreen') { void screenMode.toggle(); return; }
   if (state.landing) return;
   if (btn.dataset.difficulty && state.adventure && ['ready', 'won'].includes(state.adventure.phase) && Object.hasOwn(DIFFICULTIES, btn.dataset.difficulty)) {
     state.difficulty = btn.dataset.difficulty; state.adventure.nextDifficulty = state.difficulty; storage.set('adventure-difficulty', state.difficulty);
@@ -1280,52 +1293,52 @@ function enableTouchControls() {
   state.touchMode = true; document.body.classList.add('touch-controls'); updateNear(true);
   $('#game-instructions').textContent = text('touch_world_keys');
 }
-function canSteerWithFinger() {
+function canUseThumb() {
   return state.started && !modal.open && !document.hidden && !state.landing && !state.friendsExit
     && (!state.race || state.race.phase === 'racing') && (!state.adventure || state.adventure.phase === 'playing')
     && (state.scene !== 'chocolate' || state.chocolate.run?.phase === 'search');
 }
-function showFingerTarget() {
+function showThumbPosition() {
   if (!state.touch) return;
-  const rect = game.getBoundingClientRect(), target = $('#touch-target');
-  target.style.left = (state.touch.clientX - (rect.left || 0)) + 'px';
-  target.style.top = (state.touch.clientY - (rect.top || 0)) + 'px'; target.hidden = false;
+  const offset = thumbOffset(state.touch, state.touch.origin);
+  $('#thumb-knob').style.transform = 'translate(' + offset.x.toFixed(2) + 'px, ' + offset.y.toFixed(2) + 'px)';
 }
 game.addEventListener('pointerdown', e => {
   if (e.pointerType === 'mouse') { ignoreGameClickUntil = 0; return; }
   if (!['touch', 'pen'].includes(e.pointerType)) return;
+  enableTouchControls(); ignoreGameClickUntil = Date.now() + 900;
+});
+const thumbPad = $('#thumb-pad');
+thumbPad.addEventListener('pointerdown', e => {
   enableTouchControls();
-  if (!canSteerWithFinger() || state.touch || e.button > 0) return;
+  if (!canUseThumb() || state.touch || e.button > 0) return;
   e.preventDefault(); stopWalking();
-  state.touch = { id: e.pointerId, clientX: e.clientX, clientY: e.clientY, laneAfter: 0, laneDirection: 0 };
+  state.touch = { id: e.pointerId, clientX: e.clientX, clientY: e.clientY, origin: { x: e.clientX, y: e.clientY }, laneAfter: 0, laneDirection: 0 };
   ignoreGameClickUntil = Date.now() + 900;
-  game.setPointerCapture?.(e.pointerId); showFingerTarget(); game.focus({ preventScroll: true });
+  thumbPad.setPointerCapture?.(e.pointerId); thumbPad.classList.add('is-held'); showThumbPosition(); game.focus({ preventScroll: true });
 });
-game.addEventListener('pointermove', e => {
+thumbPad.addEventListener('pointermove', e => {
   if (e.pointerId !== state.touch?.id) return;
-  e.preventDefault(); state.touch.clientX = e.clientX; state.touch.clientY = e.clientY; showFingerTarget();
+  e.preventDefault(); state.touch.clientX = e.clientX; state.touch.clientY = e.clientY; showThumbPosition();
 });
-function releaseFinger(e) {
+function releaseThumb(e) {
   if (e.pointerId !== state.touch?.id) return;
   e.preventDefault?.(); ignoreGameClickUntil = Date.now() + 900; clearTouchInput();
   state.path = []; state.destination = null; marker?.setAttribute('hidden', '');
 }
-for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) game.addEventListener(event, releaseFinger);
+for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) thumbPad.addEventListener(event, releaseThumb);
+thumbPad.addEventListener('contextmenu', e => e.preventDefault());
 game.addEventListener('contextmenu', e => { if (state.touchMode) e.preventDefault(); });
 window.addEventListener('orientationchange', clearInput);
-function fingerMovement() {
-  if (!state.touch || !canSteerWithFinger()) return { x: 0, y: 0 };
-  const matrix = world.getScreenCTM(); if (!matrix) return { x: 0, y: 0 };
-  const actor = state.race ? { x: state.race.player.x - state.race.camera, y: state.race.player.y - state.race.player.z - 40 }
-    : state.adventure ? state.adventure.ship
-    : { x: state.position.x, y: state.position.y - (state.scene === 'painting' ? 0 : state.rocket.riding ? 86 : 36) };
-  return fingerDirection(state.touch, new DOMPoint(actor.x, actor.y).matrixTransform(matrix));
+function thumbMovement() {
+  if (!state.touch || !canUseThumb()) return { x: 0, y: 0 };
+  return thumbDirection(state.touch, state.touch.origin);
 }
 function movementInput() {
   let x = 0, y = 0;
   for (const code of state.keys) { const v = directions.get(code); if (v) { x += v[0]; y += v[1]; } }
   for (const direction of state.pad.values()) { const v = padVectors[direction]; if (v) { x += v[0]; y += v[1]; } }
-  const finger = fingerMovement(); return { x: x + finger.x, y: y + finger.y };
+  const thumb = thumbMovement(); return { x: x + thumb.x, y: y + thumb.y };
 }
 game.addEventListener('keydown', e => {
   if (state.race || state.adventure || state.landing) return;
@@ -1355,6 +1368,7 @@ game.addEventListener('keydown', e => {
 });
 const directions = new Map([['ArrowUp', [0, -1]], ['KeyW', [0, -1]], ['ArrowDown', [0, 1]], ['KeyS', [0, 1]], ['ArrowLeft', [-1, 0]], ['KeyA', [-1, 0]], ['ArrowRight', [1, 0]], ['KeyD', [1, 0]]]);
 window.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && screenMode.active && !modal.open) { e.preventDefault(); if (!e.repeat) void screenMode.leave(); return; }
   if (modal.open || !state.started || state.landing) return;
   if (state.race) {
     if (e.key === 'Escape') { e.preventDefault(); if (!e.repeat) showPanel('bike-pause'); return; }
@@ -1487,7 +1501,7 @@ function frame(time) {
   }
   if (state.race) {
     if (!modal.open && !document.hidden) {
-      const finger = fingerBikeInput(fingerMovement());
+      const finger = thumbBikeInput(thumbMovement());
       if (state.touch) {
         if (finger.lane !== state.touch.laneDirection) { state.touch.laneDirection = finger.lane; state.touch.laneAfter = 0; }
         if (finger.lane && state.race.elapsed >= state.touch.laneAfter) { changeBikeLane(state.race, finger.lane); state.touch.laneAfter = state.race.elapsed + .24; }
@@ -1587,6 +1601,7 @@ function frame(time) {
   requestAnimationFrame(frame);
 }
 $('#game-instructions').textContent = text(state.touchMode ? 'touch_world_keys' : 'world_instructions');
+refreshFullscreenButton();
 renderScene(); new ResizeObserver(resize).observe(game); requestAnimationFrame(frame);
 if (previewMode) {
   const banner = document.createElement('div'); banner.className = 'preview-banner';
