@@ -23,7 +23,7 @@ import { friendsHiddenMarkup, friendsWorldMarkup, friendsCampfireMarkup, friends
 import { BIKE_WIDTH, BIKE_HEIGHT, BIKE_FINISH, BIKE_LEVELS, BIKE_DOOR, BIKE_RETURN, isBikeTrack, touchingBikeDoor, bikeTime, bikeKmh, bikeEncounterCount, createBikeRace, startBikeRace, changeBikeLane, tickBikeRace, cleanBikeScores, addBikeScore } from './bike-race.js';
 import { bikeRaceMarkup, bikeTerrainMarkup, bikeObstaclesMarkup, bikeRiderPose } from './bike-art.js';
 import { movementFacing } from './animal-views.js';
-import { thumbDirection, thumbOffset, thumbBikeInput } from './touch-controls.js';
+import { thumbDirection, thumbOffset, landscapeSize, screenPointInGame } from './touch-controls.js';
 import { createFullscreenMode } from './fullscreen.js';
 
 const previewMode = new URLSearchParams(location.search).get('preview') === '1';
@@ -65,7 +65,7 @@ const state = {
   camera: { x: 800, y: 520 },
   viewport: { w: 1480, h: 850 },
   keys: new Set(), pad: new Map(), path: [], destination: null,
-  touch: null, touchMode: window.matchMedia('(any-pointer: coarse)').matches,
+  touch: null, touchMode: window.matchMedia('(any-pointer: coarse)').matches, landscapeTurn: false, bikeTouch: new Map(),
   near: null, modal: null, playing: false, memberMelody: null, boostMusic: null,
   paint: savedPaint, paintCan: null, paintPage: 0, paintTarget: null,
   studio: null, pictureTouch: false,
@@ -99,7 +99,7 @@ const screenMode = createFullscreenMode(document, active => {
   if (active) document.body.classList.add('game-fullscreen'); else document.body.classList.remove('game-fullscreen');
   refreshFullscreenButton(); resize();
   if (!modal.open) game.focus({ preventScroll: true });
-});
+}, window.screen?.orientation);
 function refreshFullscreenButton() {
   const button = $('#fullscreen-toggle'), label = text(screenMode.active ? 'touch_fullscreen_exit' : 'touch_fullscreen');
   button.setAttribute('aria-pressed', String(screenMode.active)); button.setAttribute('aria-label', label); button.title = label;
@@ -220,7 +220,14 @@ function clearTouchInput() {
   const pad = $('#thumb-pad'); pad.classList.remove('is-held'); $('#thumb-knob').style.transform = 'translate(0px, 0px)';
   if (touch && pad.hasPointerCapture?.(touch.id)) pad.releasePointerCapture(touch.id);
 }
-function clearInput(keepThumb = false) { if (keepThumb !== true) clearTouchInput(); state.keys.clear(); state.pad.clear(); $('#dpad').querySelectorAll('button').forEach(b => b.classList.remove('pressed')); }
+function clearBikeTouchInput() {
+  const held = [...state.bikeTouch]; state.bikeTouch.clear();
+  for (const [id, control] of held) {
+    const button = $('#bike-touch-' + control); button.classList.remove('pressed');
+    if (button.hasPointerCapture?.(id)) button.releasePointerCapture(id);
+  }
+}
+function clearInput(keepThumb = false) { if (keepThumb !== true) clearTouchInput(); clearBikeTouchInput(); state.keys.clear(); state.pad.clear(); $('#dpad').querySelectorAll('button').forEach(b => b.classList.remove('pressed')); }
 function stopWalking(keepThumb = false) { clearInput(keepThumb); state.path = []; state.destination = null; marker?.setAttribute('hidden', ''); }
 function refreshCassettes() {
   if (state.scene === 'radio') for (const slot of slotsOnPage(state.shelfPage)) {
@@ -530,6 +537,7 @@ function renderScene() {
   state.near = null; updateAnimal(); refreshCassettes(); refreshHatEffects(); refreshReceptionEffects(); resize(); updateNear(true);
   player.setAttribute('transform', `translate(${state.position.x} ${state.position.y})`);
   refreshChocolateItems(); refreshFriendsWorld(true); game.classList.toggle('is-bike-race', !!state.race);
+  $('#thumb-pad').hidden = !!state.race; $('#bike-touch-controls').hidden = !state.race;
   bikeTerrainStep = -1; if (state.race) updateBicycleRace();
 }
 function showPanel(id, focusSelector = '') {
@@ -847,9 +855,10 @@ function landRocket() {
 }
 function enterSpaceAdventure() {
   stopWalking(); state.paintTarget = null;
-  const r = game.getBoundingClientRect(), matrix = world.getScreenCTM();
+  const r = gameSize(), matrix = world.getScreenCTM();
   const point = matrix ? new DOMPoint(state.position.x, state.position.y - 86).matrixTransform(matrix) : null;
-  const entry = point ? { x: clamp(point.x - (r.left || 0), 0, r.width), y: clamp(point.y - (r.top || 0), 0, r.height), scale: Math.hypot(matrix.a, matrix.b) || .8 } : null;
+  const local = point ? screenPointInGame(point, game.getBoundingClientRect(), state.landscapeTurn) : null;
+  const entry = point ? { x: clamp(local.x, 0, r.width), y: clamp(local.y, 0, r.height), scale: Math.hypot(matrix.a, matrix.b) || .8 } : null;
   state.adventure = createAdventure(r.width || 1200, r.height || 700, Date.now(), entry, bucketColors(PALETTE).find(color => color.id === state.paintCan)?.color);
   state.adventure.departure = { x: state.position.x, y: state.position.y };
   state.adventure.reduced = state.reduced;
@@ -1295,12 +1304,12 @@ function enableTouchControls() {
 }
 function canUseThumb() {
   return state.started && !modal.open && !document.hidden && !state.landing && !state.friendsExit
-    && (!state.race || state.race.phase === 'racing') && (!state.adventure || state.adventure.phase === 'playing')
+    && !state.race && (!state.adventure || state.adventure.phase === 'playing')
     && (state.scene !== 'chocolate' || state.chocolate.run?.phase === 'search');
 }
 function showThumbPosition() {
   if (!state.touch) return;
-  const offset = thumbOffset(state.touch, state.touch.origin);
+  const offset = thumbOffset(state.touch, state.touch.origin, state.landscapeTurn);
   $('#thumb-knob').style.transform = 'translate(' + offset.x.toFixed(2) + 'px, ' + offset.y.toFixed(2) + 'px)';
 }
 game.addEventListener('pointerdown', e => {
@@ -1313,7 +1322,7 @@ thumbPad.addEventListener('pointerdown', e => {
   enableTouchControls();
   if (!canUseThumb() || state.touch || e.button > 0) return;
   e.preventDefault(); stopWalking();
-  state.touch = { id: e.pointerId, clientX: e.clientX, clientY: e.clientY, origin: { x: e.clientX, y: e.clientY }, laneAfter: 0, laneDirection: 0 };
+  state.touch = { id: e.pointerId, clientX: e.clientX, clientY: e.clientY, origin: { x: e.clientX, y: e.clientY } };
   ignoreGameClickUntil = Date.now() + 900;
   thumbPad.setPointerCapture?.(e.pointerId); thumbPad.classList.add('is-held'); showThumbPosition(); game.focus({ preventScroll: true });
 });
@@ -1329,10 +1338,34 @@ function releaseThumb(e) {
 for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) thumbPad.addEventListener(event, releaseThumb);
 thumbPad.addEventListener('contextmenu', e => e.preventDefault());
 game.addEventListener('contextmenu', e => { if (state.touchMode) e.preventDefault(); });
-window.addEventListener('orientationchange', clearInput);
+window.addEventListener('orientationchange', () => { clearInput(); resize(); });
+window.addEventListener('resize', resize);
 function thumbMovement() {
   if (!state.touch || !canUseThumb()) return { x: 0, y: 0 };
-  return thumbDirection(state.touch, state.touch.origin);
+  return thumbDirection(state.touch, state.touch.origin, state.landscapeTurn);
+}
+for (const control of ['up', 'down', 'gas', 'brake']) {
+  const button = $('#bike-touch-' + control);
+  button.addEventListener('pointerdown', e => {
+    if (state.race?.phase !== 'racing' || modal.open || document.hidden || e.button > 0) return;
+    e.preventDefault(); enableTouchControls(); state.bikeTouch.set(e.pointerId, control);
+    button.setPointerCapture?.(e.pointerId); button.classList.add('pressed');
+    if (control === 'up' || control === 'down') { changeBikeLane(state.race, control === 'up' ? -1 : 1); updateBicycleRace(); }
+    game.focus({ preventScroll: true });
+  });
+  const release = e => {
+    if (state.bikeTouch.get(e.pointerId) !== control) return;
+    state.bikeTouch.delete(e.pointerId);
+    if (![...state.bikeTouch.values()].includes(control)) button.classList.remove('pressed');
+    if (button.hasPointerCapture?.(e.pointerId)) button.releasePointerCapture(e.pointerId);
+  };
+  for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(event, release);
+  button.addEventListener('click', e => {
+    if (e.detail !== 0 || e.pointerType || state.race?.phase !== 'racing' || modal.open || document.hidden) return;
+    if (control === 'up' || control === 'down') { changeBikeLane(state.race, control === 'up' ? -1 : 1); updateBicycleRace(); }
+    else frameBicycleRace(.05, { right: control === 'gas', left: control === 'brake' });
+  });
+  button.addEventListener('contextmenu', e => e.preventDefault());
 }
 function movementInput() {
   let x = 0, y = 0;
@@ -1416,8 +1449,16 @@ function updateNear(force = false) {
     btn.innerHTML = (state.touchMode ? '' : '<kbd aria-hidden="true">↵ / ␣</kbd>') + escape(label); announce(text('action_hint', { aktion: label }));
   }
 }
+function refreshLandscapeLayout() {
+  const turned = !!(screenMode.active && state.touchMode && window.innerHeight > window.innerWidth);
+  if (turned === state.landscapeTurn) return;
+  state.landscapeTurn = turned; clearInput();
+  if (turned) document.body.classList.add('landscape-turn'); else document.body.classList.remove('landscape-turn');
+}
+function gameSize() { return landscapeSize(game.getBoundingClientRect(), state.landscapeTurn); }
 function resize() {
-  const r = game.getBoundingClientRect(); if (!r.width || !r.height) return;
+  refreshLandscapeLayout();
+  const r = gameSize(); if (!r.width || !r.height) return;
   if (state.race) { world.setAttribute('viewBox', `0 0 ${BIKE_WIDTH} ${BIKE_HEIGHT}`); return; }
   if (state.adventure?.phase === 'intro' && state.adventure.departure) {
     const adventure = state.adventure, origin = adventure.departure;
@@ -1425,7 +1466,8 @@ function resize() {
     const matrix = world.getScreenCTM();
     if (matrix) {
       const point = new DOMPoint(origin.x, origin.y - 86).matrixTransform(matrix);
-      adventure.entry = { x: point.x - (r.left || 0), y: point.y - (r.top || 0), scale: Math.hypot(matrix.a, matrix.b) || .8 };
+      const local = screenPointInGame(point, game.getBoundingClientRect(), state.landscapeTurn);
+      adventure.entry = { ...local, scale: Math.hypot(matrix.a, matrix.b) || .8 };
     }
     updateAdventure(); return;
   }
@@ -1501,12 +1543,8 @@ function frame(time) {
   }
   if (state.race) {
     if (!modal.open && !document.hidden) {
-      const finger = thumbBikeInput(thumbMovement());
-      if (state.touch) {
-        if (finger.lane !== state.touch.laneDirection) { state.touch.laneDirection = finger.lane; state.touch.laneAfter = 0; }
-        if (finger.lane && state.race.elapsed >= state.touch.laneAfter) { changeBikeLane(state.race, finger.lane); state.touch.laneAfter = state.race.elapsed + .24; }
-      }
-      const input = { right: finger.right || state.keys.has('ArrowRight') || state.keys.has('KeyD') || [...state.pad.values()].includes('right'), left: finger.left || state.keys.has('ArrowLeft') || state.keys.has('KeyA') || [...state.pad.values()].includes('left') };
+      const held = [...state.bikeTouch.values()];
+      const input = { right: held.includes('gas') || state.keys.has('ArrowRight') || state.keys.has('KeyD') || [...state.pad.values()].includes('right'), left: held.includes('brake') || state.keys.has('ArrowLeft') || state.keys.has('KeyA') || [...state.pad.values()].includes('left') };
       frameBicycleRace(elapsed, input);
     }
     requestAnimationFrame(frame); return;

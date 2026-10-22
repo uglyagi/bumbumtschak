@@ -7,7 +7,7 @@
   <title>Bum Bum Tschak · Deine bunte Musikwelt</title>
   <meta name="description" content="Such dir ein Tier aus und entdecke die bunte Welt von Bum Bum Tschak. Besuche das Kassettenradio, die Konzerttafel und unsere drei Bandfreunde.">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css?v=3f8295350cb83387">
+  <link rel="stylesheet" href="styles.css?v=ec02f8b3fe575705">
 </head>
 <body class="game-hints-off">
   <div class="app">
@@ -51,6 +51,16 @@
           <button data-direction="down" class="pad-down" aria-label="Nach unten laufen">↓</button>
         </div>
         <div id="thumb-pad" class="thumb-pad" role="group" data-copy-aria="touch_thumb" aria-label="Daumensteuerung"><span id="thumb-knob" class="thumb-knob" aria-hidden="true"></span></div>
+        <div id="bike-touch-controls" class="bike-touch-controls" hidden>
+          <div class="bike-steering" role="group" data-copy-aria="touch_bike_steer" aria-label="Spur wechseln">
+            <button id="bike-touch-up" class="bike-touch-button" data-copy-aria="touch_bike_up" aria-label="Eine Spur nach oben"><span aria-hidden="true">↑</span></button>
+            <button id="bike-touch-down" class="bike-touch-button" data-copy-aria="touch_bike_down" aria-label="Eine Spur nach unten"><span aria-hidden="true">↓</span></button>
+          </div>
+          <div class="bike-speed-buttons" role="group" data-copy-aria="touch_bike_speed" aria-label="Gas und Bremse">
+            <button id="bike-touch-gas" class="bike-touch-button bike-gas" data-copy="touch_bike_gas">Gas</button>
+            <button id="bike-touch-brake" class="bike-touch-button bike-brake" data-copy="touch_bike_brake">Bremse</button>
+          </div>
+        </div>
         <button id="interact" class="interact-button" hidden></button>
         <button id="fullscreen-toggle" class="fullscreen-toggle round-button" data-action="fullscreen" data-copy-aria="touch_fullscreen" aria-label="Vollbild öffnen" aria-pressed="false"><svg class="fullscreen-enter" aria-hidden="true" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></svg><svg class="fullscreen-leave" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 8h5V3m13 5h-5V3M8 21v-5H3m13 5v-5h5"/></svg></button>
         <button id="touch-pause" class="touch-pause round-button" data-action="touch-pause" data-copy-aria="touch_pause" aria-label="Spiel pausieren" hidden><span aria-hidden="true">Ⅱ</span></button>
@@ -71,47 +81,47 @@
   <!-- versioned-game-assets -->
   <script type="importmap">{
   "imports": {
-    "./adventure-art.js": "./adventure-art.js?v=3f8295350cb83387",
-    "./animal-defaults.js": "./animal-defaults.js?v=3f8295350cb83387",
-    "./animal-views.js": "./animal-views.js?v=3f8295350cb83387",
-    "./app.js": "./app.js?v=3f8295350cb83387",
-    "./art.js": "./art.js?v=3f8295350cb83387",
-    "./band-defaults.js": "./band-defaults.js?v=3f8295350cb83387",
-    "./bike-art.js": "./bike-art.js?v=3f8295350cb83387",
-    "./bike-race.js": "./bike-race.js?v=3f8295350cb83387",
-    "./chocolate-art.js": "./chocolate-art.js?v=3f8295350cb83387",
-    "./chocolate.js": "./chocolate.js?v=3f8295350cb83387",
-    "./connection.js": "./connection.js?v=3f8295350cb83387",
-    "./content.js": "./content.js?v=3f8295350cb83387",
-    "./copy-defaults.js": "./copy-defaults.js?v=3f8295350cb83387",
-    "./cover-art.js": "./cover-art.js?v=3f8295350cb83387",
-    "./dance-party.js": "./dance-party.js?v=3f8295350cb83387",
-    "./fireworks.js": "./fireworks.js?v=3f8295350cb83387",
-    "./friends-art.js": "./friends-art.js?v=3f8295350cb83387",
-    "./friends-game.js": "./friends-game.js?v=3f8295350cb83387",
-    "./fullscreen.js": "./fullscreen.js?v=3f8295350cb83387",
-    "./game-core.js": "./game-core.js?v=3f8295350cb83387",
-    "./hat-quest.js": "./hat-quest.js?v=3f8295350cb83387",
-    "./painting-studio.js": "./painting-studio.js?v=3f8295350cb83387",
-    "./painting.js": "./painting.js?v=3f8295350cb83387",
-    "./reception.js": "./reception.js?v=3f8295350cb83387",
-    "./rocket-adventure.js": "./rocket-adventure.js?v=3f8295350cb83387",
-    "./rocket-wreckage.js": "./rocket-wreckage.js?v=3f8295350cb83387",
-    "./room-art.js": "./room-art.js?v=3f8295350cb83387",
-    "./rooms.js": "./rooms.js?v=3f8295350cb83387",
-    "./site-config.js": "./site-config.js?v=3f8295350cb83387",
-    "./sky-world.js": "./sky-world.js?v=3f8295350cb83387",
-    "./social.js": "./social.js?v=3f8295350cb83387",
-    "./solar-system.js": "./solar-system.js?v=3f8295350cb83387",
-    "./space-art.js": "./space-art.js?v=3f8295350cb83387",
-    "./sun-holiday.js": "./sun-holiday.js?v=3f8295350cb83387",
-    "./toolbox.js": "./toolbox.js?v=3f8295350cb83387",
-    "./touch-controls.js": "./touch-controls.js?v=3f8295350cb83387",
-    "./utils.js": "./utils.js?v=3f8295350cb83387",
-    "./verwaltung/drafts.js": "./verwaltung/drafts.js?v=3f8295350cb83387"
+    "./adventure-art.js": "./adventure-art.js?v=ec02f8b3fe575705",
+    "./animal-defaults.js": "./animal-defaults.js?v=ec02f8b3fe575705",
+    "./animal-views.js": "./animal-views.js?v=ec02f8b3fe575705",
+    "./app.js": "./app.js?v=ec02f8b3fe575705",
+    "./art.js": "./art.js?v=ec02f8b3fe575705",
+    "./band-defaults.js": "./band-defaults.js?v=ec02f8b3fe575705",
+    "./bike-art.js": "./bike-art.js?v=ec02f8b3fe575705",
+    "./bike-race.js": "./bike-race.js?v=ec02f8b3fe575705",
+    "./chocolate-art.js": "./chocolate-art.js?v=ec02f8b3fe575705",
+    "./chocolate.js": "./chocolate.js?v=ec02f8b3fe575705",
+    "./connection.js": "./connection.js?v=ec02f8b3fe575705",
+    "./content.js": "./content.js?v=ec02f8b3fe575705",
+    "./copy-defaults.js": "./copy-defaults.js?v=ec02f8b3fe575705",
+    "./cover-art.js": "./cover-art.js?v=ec02f8b3fe575705",
+    "./dance-party.js": "./dance-party.js?v=ec02f8b3fe575705",
+    "./fireworks.js": "./fireworks.js?v=ec02f8b3fe575705",
+    "./friends-art.js": "./friends-art.js?v=ec02f8b3fe575705",
+    "./friends-game.js": "./friends-game.js?v=ec02f8b3fe575705",
+    "./fullscreen.js": "./fullscreen.js?v=ec02f8b3fe575705",
+    "./game-core.js": "./game-core.js?v=ec02f8b3fe575705",
+    "./hat-quest.js": "./hat-quest.js?v=ec02f8b3fe575705",
+    "./painting-studio.js": "./painting-studio.js?v=ec02f8b3fe575705",
+    "./painting.js": "./painting.js?v=ec02f8b3fe575705",
+    "./reception.js": "./reception.js?v=ec02f8b3fe575705",
+    "./rocket-adventure.js": "./rocket-adventure.js?v=ec02f8b3fe575705",
+    "./rocket-wreckage.js": "./rocket-wreckage.js?v=ec02f8b3fe575705",
+    "./room-art.js": "./room-art.js?v=ec02f8b3fe575705",
+    "./rooms.js": "./rooms.js?v=ec02f8b3fe575705",
+    "./site-config.js": "./site-config.js?v=ec02f8b3fe575705",
+    "./sky-world.js": "./sky-world.js?v=ec02f8b3fe575705",
+    "./social.js": "./social.js?v=ec02f8b3fe575705",
+    "./solar-system.js": "./solar-system.js?v=ec02f8b3fe575705",
+    "./space-art.js": "./space-art.js?v=ec02f8b3fe575705",
+    "./sun-holiday.js": "./sun-holiday.js?v=ec02f8b3fe575705",
+    "./toolbox.js": "./toolbox.js?v=ec02f8b3fe575705",
+    "./touch-controls.js": "./touch-controls.js?v=ec02f8b3fe575705",
+    "./utils.js": "./utils.js?v=ec02f8b3fe575705",
+    "./verwaltung/drafts.js": "./verwaltung/drafts.js?v=ec02f8b3fe575705"
   }
 }</script>
-  <script type="module" src="app.js?v=3f8295350cb83387"></script>
+  <script type="module" src="app.js?v=ec02f8b3fe575705"></script>
   <!-- /versioned-game-assets -->
 </body>
 </html>

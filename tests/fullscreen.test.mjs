@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createFullscreenMode } from '../fullscreen.js';
 
-function harness(kind = 'standard') {
+function harness(kind = 'standard', orientation = null) {
   const listeners = new Map(), changes = [], calls = [];
   const doc = { documentElement: {}, addEventListener: (type, fn) => listeners.set(type, fn) };
   const dispatch = type => listeners.get(type)?.();
@@ -16,7 +16,7 @@ function harness(kind = 'standard') {
     root.webkitRequestFullscreen = function () { calls.push(['enter', this]); doc.webkitFullscreenElement = root; dispatch('webkitfullscreenchange'); };
     doc.webkitExitFullscreen = function () { calls.push(['exit', this]); doc.webkitFullscreenElement = null; dispatch('webkitfullscreenchange'); };
   }
-  return { doc, root, calls, changes, dispatch, mode: createFullscreenMode(doc, active => changes.push(active)) };
+  return { doc, root, calls, changes, dispatch, mode: createFullscreenMode(doc, active => changes.push(active), orientation) };
 }
 
 test('native fullscreen uses the whole document so dialogs and touch controls stay inside it', async () => {
@@ -54,4 +54,22 @@ test('leaving while a native request is pending cannot reopen fullscreen afterwa
   h.root.requestFullscreen = () => new Promise(resolve => { finish = () => { h.doc.fullscreenElement = h.root; h.dispatch('fullscreenchange'); resolve(); }; });
   const opening = h.mode.toggle(); assert(h.mode.active); await h.mode.leave(); assert.equal(h.mode.active, false);
   finish(); await opening; assert.equal(h.mode.active, false); assert.equal(h.doc.fullscreenElement, null);
+});
+
+
+test('entering fullscreen locks landscape after the native request and leaving unlocks it',async()=>{
+ const events=[],orientation={lock:async mode=>events.push('lock:'+mode),unlock:()=>events.push('unlock')};const h=harness('standard',orientation);
+ const enter=h.root.requestFullscreen;h.root.requestFullscreen=function(options){events.push('enter');return enter.call(this,options);};
+ await h.mode.toggle();assert.deepEqual(events,['enter','lock:landscape']);assert(h.mode.active);
+ h.doc.fullscreenElement=null;h.dispatch('fullscreenchange');assert.deepEqual(events,['enter','lock:landscape','unlock']);assert.equal(h.mode.active,false);
+});
+
+test('a rejected orientation lock leaves the layout fallback available',async()=>{
+ let unlocks=0;const h=harness('missing',{lock:()=>Promise.reject(new Error('not supported')),unlock:()=>unlocks++});
+ await h.mode.toggle();assert(h.mode.active);await h.mode.leave();assert.equal(h.mode.active,false);assert.equal(unlocks,0);
+});
+
+test('an orientation lock which finishes after leaving is released immediately',async()=>{
+ let finish,unlocks=0;const h=harness('missing',{lock:()=>new Promise(resolve=>{finish=resolve;}),unlock:()=>unlocks++});
+ const opening=h.mode.toggle();await h.mode.leave();finish();await opening;assert.equal(h.mode.active,false);assert.equal(unlocks,1);
 });

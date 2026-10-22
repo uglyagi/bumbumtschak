@@ -127,10 +127,10 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null, d
     fetch: async () => ({ ok: false }), clearTimeout() {}, setTimeout: () => 1,
     ResizeObserver: class { observe() {} }, requestAnimationFrame() {},
   });
-  const app = await new vm.Script(`(async () => {${source.replace(/^import .*;\n/gm, '')}\nreturn {state, enterRoom, leaveRoom, showPanel, closePanel, goToStation, frame, resize, renderPanel, loadRecording, checkWorldTouch, currentInteraction};})()`).runInContext(context);
+  const app = await new vm.Script(`(async () => {${source.replace(/^import .*;\n/gm, '')}\nreturn {state, enterRoom, leaveRoom, showPanel, closePanel, goToStation, frame, resize, renderScene, renderPanel, loadRecording, checkWorldTouch, currentInteraction};})()`).runInContext(context);
   const event = (key, code, target, repeat = false) => ({ key, code, target, repeat, prevented: false, stopped: false, preventDefault() { this.prevented = true; }, stopPropagation() { this.stopped = true; } });
   function press(handlers, e) { for (const cb of handlers.get('keydown') || []) cb(e); return e; }
-  return { ...app, opened, stored, get, game, modal, modalContent, Element, event, press, documentHandlers, windowHandlers, doc };
+  return { ...app, window: context.window, opened, stored, get, game, modal, modalContent, Element, event, press, documentHandlers, windowHandlers, doc };
 }
 
 function flyIntoSky(h, key = 'Enter', code = 'Enter', clock = 1000) {
@@ -1641,7 +1641,7 @@ for(const [width,height,scale]of [[390,700,.55],[1024,768,.9],[844,390,.7]]){
  for(const cb of h.game.handlers.get('pointerdown')||[])cb({pointerType:'touch',clientX:250,clientY:200});
  assert.equal(h.state.touch,null,'touching the scenery cannot start movement');
  const before={...h.state.position},down=startThumb(h);assert(down.prevented);assert(h.get('#thumb-pad').hasPointerCapture(1));h.frame(time+=16);assert.deepEqual({...h.state.position},before,'resting the thumb is neutral');
- moveThumb(h,4,0);for(let i=0;i<5;i++)h.frame(time+=16);assert(h.state.position.x>before.x);assert.equal(h.state.position.y,before.y);assert.equal(h.state.facing,'right');
+ moveThumb(h,4,0);h.frame(time+=16);assert.deepEqual({...h.state.position},before,'small thumb tremors stay in the neutral zone');moveThumb(h,12,0);for(let i=0;i<5;i++)h.frame(time+=16);assert(h.state.position.x>before.x);assert.equal(h.state.position.y,before.y);assert.equal(h.state.facing,'right');
  startThumb(h,-8,0,2);releaseThumb(h,'pointerup',2);assert.equal(h.state.touch.id,1,'a second finger cannot steal the platform');
  moveThumb(h,-8,-8);const turned={...h.state.position};h.frame(time+=16);assert(h.state.position.x<turned.x && h.state.position.y<turned.y);assert.equal(h.state.facing,'left');
  releaseThumb(h);const stopped={...h.state.position};assert.equal(h.state.touch,null);assert(!h.get('#thumb-pad').hasPointerCapture(1));assert(!h.get('#thumb-pad').classList.contains('is-held'));assert.equal(h.get('#thumb-knob').style.transform,'translate(0px, 0px)');
@@ -1655,7 +1655,7 @@ for(const [width,height,scale]of [[390,700,.55],[1024,768,.9],[844,390,.7]]){
   const still={...h.state.position};h.frame(time+=16);assert.equal(h.state.touch,null,interruption);assert.deepEqual({...h.state.position},still,interruption+' must stop walking');
  }
 }
-console.log('PASS: the fixed thumb pad works with four-pixel movements on phone, tablet and landscape screens, is independent of the camera, is neutral on contact, follows diagonals, ignores a second finger and stops on release, cancellation, lost capture, blur, rotation, backgrounding or menus.');
+console.log('PASS: the fixed thumb pad ignores tiny movements and works with deliberate thumb movements on phone, tablet and landscape screens, is independent of the camera, is neutral on contact, follows diagonals, ignores a second finger and stops on release, cancellation, lost capture, blur, rotation, backgrounding or menus.');
 
 {
  const h=await harness(false,'dog');let time=1000;h.state.position={x:1050,y:850};h.frame(time);assert(!h.state.touchMode);
@@ -1685,20 +1685,39 @@ console.log('PASS: keyboard controls remain available after using the thumb pad;
 }
 console.log('PASS: the thumb pad steers the rocket upwards into the space game, stops manual flight on release, preserves scripted transitions and works with pause/resume.');
 
+function bikeTouchEvent(h,control,type,pointerId=11) {
+ const button=h.get('#bike-touch-'+control),event={pointerId,pointerType:'touch',button:0,target:button,preventDefault(){}};
+ for(const cb of button.handlers.get(type)||[])cb(event);return button;
+}
 {
  const track=content.TRACKS.find(t=>t.id==='fahrradfahren'),oldSrc=track.src;track.src='uploads/cycling.mp3';
  try{
   const h=await harness(false,'monkey',null,false,null,null,null,null,null,true);let time=1000;h.enterRoom('radio');h.state.tapes.loaded=track.id;h.loadRecording();h.state.position={...bike.BIKE_DOOR};h.frame(time);
-  assert(h.modalContent.innerHTML.includes('Steuerfläche links unten'));new h.Element('easy','button',{bikeLevel:'leicht'}).click();const race=h.state.race;race.stones=[];race.ramps=[];race.riders.slice(1).forEach(r=>{r.departed=true;r.active=false;});assert(!h.get('#touch-pause').hidden);
-  startThumb(h,8,0);for(let i=0;i<60;i++)h.frame(time+=16);assert(race.player.speed>80);const lane=race.player.lane;moveThumb(h,8,-8);h.frame(time+=16);assert.equal(race.player.lane,lane-1);
-  for(let i=0;i<4;i++)h.frame(time+=16);assert.equal(race.player.lane,lane-1);for(let i=0;i<40;i++)h.frame(time+=16);assert.equal(race.player.lane,0);
-  moveThumb(h,8,8);h.frame(time+=16);assert.equal(race.player.lane,1);moveThumb(h,-8,0);const fast=race.player.speed;for(let i=0;i<12;i++)h.frame(time+=16);assert(race.player.speed<fast);
-  releaseThumb(h);const coasting=race.player.speed;for(let i=0;i<10;i++)h.frame(time+=16);assert.equal(race.player.speed,coasting);
-  startThumb(h,8,0);new h.Element('pause','button',{action:'touch-pause'}).click();assert.equal(h.state.modal,'bike-pause');assert.equal(h.state.touch,null);
-  const elapsed=race.elapsed;h.frame(time+=100);assert.equal(race.elapsed,elapsed);new h.Element('continue','button',{action:'bike-continue'}).click();h.frame(time+=16);assert.equal(race.player.speed,coasting);
+  assert(h.modalContent.innerHTML.includes('Links unten'));new h.Element('easy','button',{bikeLevel:'leicht'}).click();const race=h.state.race;race.stones=[];race.ramps=[];race.riders.slice(1).forEach(r=>{r.departed=true;r.active=false;});
+  assert(h.get('#thumb-pad').hidden);assert(!h.get('#bike-touch-controls').hidden);startThumb(h,12,0);assert.equal(h.state.touch,null,'the world joystick is disabled while cycling');
+  const gas=bikeTouchEvent(h,'gas','pointerdown');for(let i=0;i<60;i++)h.frame(time+=16);assert(race.player.speed>80);assert(gas.hasPointerCapture(11));
+  const lane=race.player.lane;bikeTouchEvent(h,'up','pointerdown',22);assert.equal(race.player.lane,lane-1);
+  for(let i=0;i<40;i++)h.frame(time+=16);assert.equal(race.player.lane,lane-1,'one steering press selects exactly one lane, even while held');
+  bikeTouchEvent(h,'up','pointerup',22);assert(h.state.bikeTouch.has(11),'releasing a steering finger does not release the gas');assert(!h.get('#bike-touch-up').hasPointerCapture(22));
+  bikeTouchEvent(h,'down','pointerdown',22);assert.equal(race.player.lane,lane);bikeTouchEvent(h,'down','pointerup',22);
+  const fast=race.player.speed;bikeTouchEvent(h,'brake','pointerdown',33);for(let i=0;i<12;i++)h.frame(time+=16);assert(race.player.speed<fast,'braking takes priority when both pedals are held');
+  bikeTouchEvent(h,'gas','pointerup');assert(h.state.bikeTouch.has(33));bikeTouchEvent(h,'brake','pointerup',33);const coasting=race.player.speed;
+  for(let i=0;i<10;i++)h.frame(time+=16);assert.equal(race.player.speed,coasting,'release preserves momentum');
+  bikeTouchEvent(h,'gas','pointerdown');bikeTouchEvent(h,'gas','pointercancel');assert.equal(h.state.bikeTouch.size,0);
+  for(const interrupt of ['blur','orientationchange','visibilitychange','pause']){
+   bikeTouchEvent(h,'gas','pointerdown');bikeTouchEvent(h,'up','pointerdown',22);
+   if(interrupt==='pause')new h.Element('pause','button',{action:'touch-pause'}).click();
+   else if(interrupt==='visibilitychange'){h.doc.hidden=true;for(const cb of h.documentHandlers.get(interrupt)||[])cb({});h.doc.hidden=false;}
+   else for(const cb of h.windowHandlers.get(interrupt)||[])cb({});
+   assert.equal(h.state.bikeTouch.size,0,interrupt);assert(!gas.hasPointerCapture(11));assert(!h.get('#bike-touch-up').hasPointerCapture(22));
+   if(interrupt==='pause'){const elapsed=race.elapsed;h.frame(time+=100);assert.equal(race.elapsed,elapsed);new h.Element('continue','button',{action:'bike-continue'}).click();}
+  }
+  race.player.lane=2;for(const cb of h.get('#bike-touch-up').handlers.get('click')||[])cb({detail:0});assert.equal(race.player.lane,1);
+  for(const cb of h.get('#bike-touch-up').handlers.get('click')||[])cb({detail:1,pointerType:'touch'});assert.equal(race.player.lane,1,'a compatibility click cannot change another lane');
+  new h.Element('exit','button',{action:'bike-exit'}).click();assert(!h.get('#thumb-pad').hidden);assert(h.get('#bike-touch-controls').hidden);
  }finally{track.src=oldSrc;}
 }
-console.log('PASS: small thumb movements control bicycle acceleration, braking and paced lane changes, while release preserves bicycle momentum and pause stays available.');
+console.log('PASS: cycling has independent left-side up/down buttons and right-side gas/brake holds, supports simultaneous steering and throttle, one lane per press, brake priority, coasting, cancellation, pause and keyboard activation without stuck pedals.');
 
 {
  const track={id:'schokolade-touch-test',title:'Schokolade',src:'uploads/chocolate.mp3',image:'assets/hut.png',color:'#b37339',published:true};content.TRACKS.push(track);
@@ -1728,7 +1747,7 @@ console.log('PASS: fullscreen works by its real click handler, clears a held thu
 
 {
  const h=await harness(false,'cat',null,false,null,null,null,null,null,true);let time=1000;h.enterRoom('radio');h.state.position={...rooms.TAPE_SLOTS[0]};h.frame(time);
- startThumb(h,4,0);tapAction(h);assert.equal(h.state.tapes.carrying,content.TRACKS[0].id);assert.equal(h.state.touch?.id,1);assert(h.get('#thumb-pad').hasPointerCapture(1));
+ startThumb(h,12,0);tapAction(h);assert.equal(h.state.tapes.carrying,content.TRACKS[0].id);assert.equal(h.state.touch?.id,1);assert(h.get('#thumb-pad').hasPointerCapture(1));
  const carrying={...h.state.position};h.frame(time+=16);assert(h.state.position.x>carrying.x,'the left thumb keeps working while the right finger takes a cassette');releaseThumb(h);
  h.state.position={...rooms.RADIO};h.frame(time+=16);startThumb(h);tapAction(h);assert.equal(h.state.tapes.loaded,content.TRACKS[0].id);assert.equal(h.state.touch?.id,1);moveThumb(h,0,8);
  h.leaveRoom();assert.equal(h.state.scene,'world');assert.equal(h.state.touch?.id,1);const outside={...h.state.position};h.frame(time+=16);assert(h.state.position.y>outside.y);releaseThumb(h);
@@ -1736,3 +1755,19 @@ console.log('PASS: fullscreen works by its real click handler, clears a held thu
  h.showPanel('help');assert.equal(h.state.touch,null);assert(!h.get('#thumb-pad').hasPointerCapture(1));
 }
 console.log('PASS: a held left thumb remains usable while the right finger takes or inserts a cassette and when crossing room entrances/exits; dialogs still stop the controls.');
+
+
+{
+ const h=await harness(false,'cat',null,false,null,null,null,null,null,true);let time=1000;h.state.position={x:1050,y:850};h.frame(time);
+ h.window.innerWidth=390;h.window.innerHeight=844;h.game.getBoundingClientRect=()=>({left:8,top:20,width:390,height:844});
+ new h.Element('portrait fullscreen','button',{action:'fullscreen'}).click();assert(h.state.landscapeTurn);assert(h.doc.body.classList.contains('landscape-turn'));assert(h.state.viewport.w>h.state.viewport.h);
+ const before={...h.state.position};startThumb(h,0,12);h.frame(time+=16);assert(h.state.position.x>before.x);assert.equal(h.state.position.y,before.y,'a physical vertical gesture maps into landscape horizontal movement');
+ const right={...h.state.position};moveThumb(h,12,0);h.frame(time+=16);assert(h.state.position.y<right.y);assert.equal(h.state.position.x,right.x);releaseThumb(h);
+ h.state.adventure=adventure.createAdventure(844,390);h.state.adventure.phase='ready';h.state.scene='space';h.renderScene();h.showPanel('space-launch');new h.Element('easy','button',{difficulty:'leicht'}).click();
+ assert.equal(h.state.adventure.width,844);assert.equal(h.state.adventure.height,390);assert.equal(h.get('#world-svg').getAttribute('viewBox'),'0 0 844 390');
+ const ship={...h.state.adventure.ship};startThumb(h,0,12);h.frame(time+=16);assert(h.state.adventure.ship.x>ship.x);assert.equal(h.state.adventure.ship.y,ship.y);
+ h.window.innerWidth=844;h.window.innerHeight=390;h.game.getBoundingClientRect=()=>({left:8,top:20,width:844,height:390});for(const cb of h.windowHandlers.get('resize')||[])cb({});
+ assert(!h.state.landscapeTurn);assert(!h.doc.body.classList.contains('landscape-turn'));assert.equal(h.state.touch,null);assert.equal(h.state.adventure.width,844);assert.equal(h.state.adventure.height,390);
+ new h.Element('normal view','button',{action:'fullscreen'}).click();assert(!h.doc.body.classList.contains('game-fullscreen'));assert(!h.state.landscapeTurn);
+}
+console.log('PASS: portrait fullscreen presents a landscape game, remaps thumb axes and space dimensions correctly, switches cleanly after physical rotation and restores the normal view on exit.');
