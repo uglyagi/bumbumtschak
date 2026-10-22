@@ -23,11 +23,12 @@ const friendsArt = await import(new URL(`friends-art.${extension}`, root));
 const bike = await import(new URL(`bike-race.${extension}`, root));
 const animalViews = await import(new URL(`animal-views.${extension}`, root));
 const bikeArt = await import(new URL(`bike-art.${extension}`, root));
+const touchControls = await import(new URL(`touch-controls.${extension}`, root));
 
 // Exercise the application's real registered handlers with DOM test doubles.
 // This checks app behavior, not browser rendering or native default actions.
 const source = await fs.readFile(new URL(`app.${extension}`, root), 'utf8');
-async function harness(preview = false, savedAnimal = '', savedDrawing = null, damaged = false, savedHat = null, savedChocolates = null, savedFriendCamp = null, savedBikes = null, savedBikeScores = null) {
+async function harness(preview = false, savedAnimal = '', savedDrawing = null, damaged = false, savedHat = null, savedChocolates = null, savedFriendCamp = null, savedBikes = null, savedBikeScores = null, touchScreen = false) {
   const opened = [];
   const stored = new Map(savedAnimal ? [['bbt-animal', savedAnimal]] : []);
   if (savedDrawing) stored.set(preview ? 'bbt-paint-preview' : 'bbt-paint-world', JSON.stringify(savedDrawing));
@@ -44,6 +45,7 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null, d
     constructor(name = '', tag = 'div', dataset = {}) {
       this.name = name; this.tag = tag; this.dataset = dataset;
       this.handlers = new Map(); this.attrs = new Map(); this.writes = new Map(); this.style = {};
+      this.captures = new Set();
       this.hidden = false; this.open = false; this.innerHTML = ''; this.clicks = 0;
       this.parentElement = { setAttribute() {} };
       const classes = new Set();
@@ -79,6 +81,9 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null, d
     getBoundingClientRect() { return { width: 1200, height: 700 }; }
     getScreenCTM() { return { a: 1, b: 0, c: 0, d: 1, e: 0, f: 0, inverse: () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 }) }; }
     getClientRects() { return [{}]; }
+    setPointerCapture(id) { this.captures.add(id); }
+    hasPointerCapture(id) { return this.captures.has(id); }
+    releasePointerCapture(id) { this.captures.delete(id); for (const cb of this.handlers.get('lostpointercapture') || []) cb({ pointerId: id }); }
     showModal() { this.open = true; }
     close() { if (!this.open) return; this.open = false; for (const cb of this.handlers.get('close') || []) cb({}); }
     matches(selector) { return selector === 'input[type=range]' && this.tag === 'input'; }
@@ -106,13 +111,14 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null, d
   function get(name) { if (!nodes.has(name)) nodes.set(name, new Element(name)); return nodes.get(name); }
   Object.assign(doc, { querySelector: get, querySelectorAll: () => [], addEventListener: (n, cb) => add(documentHandlers, n, cb) });
   doc.createElement = tag => new Element(tag);
-  doc.body = { prepend() {}, classList: { add() {} } };
+  const bodyClasses = new Set();
+  doc.body = { prepend() {}, classList: { add: (...names) => names.forEach(name => bodyClasses.add(name)), remove: name => bodyClasses.delete(name), contains: name => bodyClasses.has(name) } };
   const game = get('#game'), modal = get('#modal'), modalContent = get('#modal-content'), audio = get('#audio');
   for (const node of [audio, get('#member-audio'), get('#camp-audio'), get('#bike-audio')]) Object.assign(node, { paused: true, ended: false, currentTime: 0, pause() { this.paused = true; }, play() { this.paused = false; this.ended = false; return Promise.resolve(); }, load() {} });
   const context = vm.createContext({
-    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky, ...dance, ...studio, ...adventure, ...adventureArt, ...toolbox, ...wreckage, ...holiday, ...hats, ...reception, ...chocolate, ...chocolateArt, ...friends, ...friendsArt, ...bike, ...bikeArt, ...animalViews,
+    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky, ...dance, ...studio, ...adventure, ...adventureArt, ...toolbox, ...wreckage, ...holiday, ...hats, ...reception, ...chocolate, ...chocolateArt, ...friends, ...friendsArt, ...bike, ...bikeArt, ...animalViews, ...touchControls,
     loadContent: async () => ({ ok: true }), document: doc,
-    window: { innerWidth: 1200, matchMedia: () => ({ matches: false }), addEventListener: (n, cb) => add(windowHandlers, n, cb), open(...args) { opened.push(args); } },
+    window: { innerWidth: 1200, matchMedia: query => ({ matches: touchScreen && query === '(any-pointer: coarse)' }), addEventListener: (n, cb) => add(windowHandlers, n, cb), open(...args) { opened.push(args); } },
     location: { search: preview ? '?preview=1' : '' }, localStorage: { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value) },
     URLSearchParams, URL, Intl, console,
     DOMPoint: class { constructor(x = 0, y = 0) { this.x = x; this.y = y; } matrixTransform(m) { return { x: m.a * this.x + m.c * this.y + m.e, y: m.b * this.x + m.d * this.y + m.f }; } },
@@ -1612,3 +1618,107 @@ console.log('PASS: actual race input keeps its speed on release, animates separa
  assert(h.game.innerHTML.includes('id="bum-planet-crop"'));assert(h.game.innerHTML.includes('id="adventure-course" opacity="1"'));
 }
 console.log('PASS: resizing during the vertical departure preserves the old space background and upright rocket until one cut to the resized horizontal starting scene.');
+
+function fingerEvent(h,type,clientX,clientY,pointerId=1,pointerType='touch') {
+ const event={clientX,clientY,pointerId,pointerType,button:0,target:h.game,prevented:false,preventDefault(){this.prevented=true;}};
+ for(const callback of h.game.handlers.get(type)||[])callback(event);
+ return event;
+}
+function tapAction(h) { for(const callback of h.get('#interact').handlers.get('click')||[])callback({target:h.get('#interact')}); }
+const identityMatrix=()=>({a:1,b:0,c:0,d:1,e:0,f:0,inverse(){return this;}});
+for(const [width,height,scale]of [[390,700,.55],[1024,768,.9],[844,390,.7]]){
+ const h=await harness(false,'cat',null,false,null,null,null,null,null,true);let time=1000;
+ h.state.position={x:1050,y:850};h.game.getBoundingClientRect=()=>({width,height,left:8,top:64});
+ const matrix={a:scale,b:0,c:0,d:scale,e:8+width/2-1050*scale,f:64+height/2-814*scale};
+ h.get('#world-svg').getScreenCTM=()=>matrix;h.frame(time);const centre={x:8+width/2,y:64+height/2};
+ assert(h.state.touchMode && h.doc.body.classList.contains('touch-controls'));
+ let callout=false;for(const cb of h.game.handlers.get('contextmenu')||[])cb({preventDefault(){callout=true;}});assert(callout,'holding a finger must not open the image context menu');
+ assert(h.get('#game-instructions').textContent.includes('Finger'));
+ const down=fingerEvent(h,'pointerdown',centre.x+95,centre.y);assert(down.prevented);assert(h.game.hasPointerCapture(1));assert(!h.get('#touch-target').hidden);
+ const before={...h.state.position};for(let i=0;i<5;i++)h.frame(time+=16);assert(h.state.position.x>before.x);assert.equal(h.state.position.y,before.y);assert.equal(h.state.facing,'right');
+ fingerEvent(h,'pointerdown',centre.x-95,centre.y,2);fingerEvent(h,'pointermove',centre.x-95,centre.y,2);fingerEvent(h,'pointerup',centre.x-95,centre.y,2);
+ assert.equal(h.state.touch.id,1,'a second finger cannot steal or end the held movement');
+ fingerEvent(h,'pointermove',centre.x-95,centre.y-90);const turned={...h.state.position};h.frame(time+=16);
+ assert(h.state.position.x<turned.x && h.state.position.y<turned.y);assert.equal(h.state.facing,'left');
+ fingerEvent(h,'pointerup',centre.x-95,centre.y-90);const stopped={...h.state.position};
+ assert.equal(h.state.touch,null);assert(!h.game.hasPointerCapture(1));assert(h.get('#touch-target').hidden);
+ for(const callback of h.game.handlers.get('click')||[])callback({pointerType:'touch',target:h.game,clientX:centre.x+100,clientY:centre.y});
+ for(let i=0;i<12;i++)h.frame(time+=16);assert.deepEqual({...h.state.position},stopped);assert.equal(h.state.path.length,0,'release cannot create a click-to-walk destination');
+ for(const interruption of ['pointercancel','lostpointercapture','blur','orientationchange','visibilitychange','menu']){
+  fingerEvent(h,'pointerdown',centre.x+95,centre.y);h.frame(time+=16);
+  if(interruption==='pointercancel'||interruption==='lostpointercapture')fingerEvent(h,interruption,centre.x+95,centre.y);
+  else if(interruption==='menu'){h.showPanel('help');h.closePanel();}
+  else if(interruption==='visibilitychange'){h.doc.hidden=true;for(const cb of h.documentHandlers.get(interruption)||[])cb({});h.doc.hidden=false;}
+  else for(const cb of h.windowHandlers.get(interruption)||[])cb({});
+  const still={...h.state.position};h.frame(time+=16);assert.equal(h.state.touch,null,interruption);assert.deepEqual({...h.state.position},still,interruption+' must stop walking');
+ }
+}
+console.log('PASS: phone, tablet and landscape gestures respect SVG scale and screen offsets, turn immediately, ignore a second finger, stop on release without click-to-walk and clear on cancellation, lost capture, blur, rotation, backgrounding and menus.');
+
+{
+ const h=await harness(false,'dog');let time=1000;h.state.position={x:1050,y:850};h.frame(time);
+ assert(!h.state.touchMode);fingerEvent(h,'pointerdown',1170,814,1,'pen');assert(h.state.touchMode);h.frame(time+=16);assert(h.state.position.x>1050);
+ fingerEvent(h,'pointerup',1170,814,1,'pen');fingerEvent(h,'pointerdown',1170,814,2,'mouse');
+ h.state.keys.add('ArrowUp');const old={...h.state.position};h.frame(time+=16);assert(h.state.position.y<old.y,'keyboard remains usable after touch or pen');h.state.keys.clear();
+ h.enterRoom('radio');h.state.position={...rooms.TAPE_SLOTS[0]};h.frame(time+=16);assert(!h.get('#interact').hidden);
+ assert(!h.get('#interact').innerHTML.includes('<kbd'));tapAction(h);assert.equal(h.state.tapes.carrying,content.TRACKS[0].id);
+ h.state.position={...rooms.RADIO};h.frame(time+=16);tapAction(h);assert.equal(h.state.tapes.loaded,content.TRACKS[0].id);assert.equal(h.state.tapes.carrying,null);
+ h.leaveRoom();h.state.position={x:1050,y:850};h.frame(time+=16);assert(h.get('#interact').hidden,'empty ground offers no action');
+ h.enterRoom('wardrobe');h.state.position={...painting.paintSlots(content.PALETTE).find(c=>c.id==='red')};h.frame(time+=16);tapAction(h);assert.equal(h.state.paintCan,'red');h.leaveRoom();
+ const surface=painting.BUCKET_SURFACES.find(s=>s.bucket);h.state.position={...surface.walk};h.frame(time+=16);
+ assert.equal(h.currentInteraction()?.kind,'paint');assert(!h.get('#interact').hidden);assert.equal(h.get('#interact').innerHTML,'Anmalen');assert.equal(h.state.paint[surface.id],undefined);
+ tapAction(h);assert.equal(h.state.paint[surface.id],'#ff3935');
+ h.enterRoom('wardrobe');h.state.position={...rooms.PICTURE_SPOT};h.frame(time+=16);assert.equal(h.state.scene,'painting');
+ h.state.position={...studio.studioColors(content.PALETTE).find(c=>c.id==='blue')};h.frame(time+=16);assert(!h.get('#interact').hidden);assert.equal(h.get('#interact').innerHTML,'Farbe nehmen');tapAction(h);assert.equal(h.state.studio.color,'blue');
+ h.state.position={x:300,y:400};h.frame(time+=16);const target=h.currentInteraction();assert.equal(target?.kind,'studio-paint');assert(!h.get('#interact').hidden);tapAction(h);assert.equal(h.state.paint[target.id],content.PALETTE.find(c=>c.id==='blue').color);
+ const brush={...h.state.position};fingerEvent(h,'pointerdown',brush.x+100,brush.y);h.frame(time+=16);assert(h.state.position.x>brush.x);fingerEvent(h,'pointerup',brush.x+100,brush.y);
+}
+console.log('PASS: touch or pen activates the new controls on a hybrid computer, preserves keyboard movement, takes and inserts a cassette, offers no action on empty ground, and confirms bucket painting, palette colours and brush painting with the touch action button.');
+
+{
+ const h=await harness(false,'horse',null,false,null,null,null,null,null,true);let time=1000;h.frame(time);h.state.position={...h.state.rocket.position};h.frame(time+=16);tapAction(h);assert(h.state.rocket.riding);
+ h.get('#world-svg').getScreenCTM=()=>({a:1,b:0,c:0,d:1,e:300-h.state.position.x,f:350-(h.state.position.y-86)});
+ fingerEvent(h,'pointerdown',300,150);for(let i=0;i<60;i++)h.frame(time+=16);assert(h.state.rocket.airborne);const flying={...h.state.position};fingerEvent(h,'pointerup',300,150);h.frame(time+=16);assert.deepEqual({...h.state.position},flying);
+ fingerEvent(h,'pointerdown',300,150);while(!h.state.adventure && time<13000)h.frame(time+=16);assert(h.state.adventure);assert.equal(h.state.touch,null,'the automatic departure clears the flight finger');
+ fingerEvent(h,'pointerdown',300,150);assert.equal(h.state.touch,null,'a scripted departure cannot be steered');
+ while(h.state.adventure.phase==='intro')h.frame(time+=16);assert(h.modal.open);h.get('#world-svg').getScreenCTM=identityMatrix;
+ new h.Element('easy space','button',{difficulty:'leicht'}).click();assert.equal(h.state.adventure.phase,'playing');assert(!h.get('#touch-pause').hidden);
+ const ship={...h.state.adventure.ship};fingerEvent(h,'pointerdown',ship.x+100,ship.y-90);for(let i=0;i<5;i++)h.frame(time+=16);assert(h.state.adventure.ship.x>ship.x && h.state.adventure.ship.y<ship.y);
+ fingerEvent(h,'pointerup',ship.x+100,ship.y-90);const released={...h.state.adventure.ship},progress=h.state.adventure.progress;h.frame(time+=16);assert.deepEqual({...h.state.adventure.ship},released);assert(h.state.adventure.progress>progress,'the course keeps scrolling without manual steering');
+ fingerEvent(h,'pointerdown',released.x+100,released.y);new h.Element('touch pause','button',{action:'touch-pause'}).click();assert.equal(h.state.modal,'space-pause');assert.equal(h.state.touch,null);
+ const paused={...h.state.adventure.ship};h.frame(time+=100);assert.deepEqual({...h.state.adventure.ship},paused);new h.Element('continue','button',{action:'space-continue'}).click();h.frame(time+=16);assert.deepEqual({...h.state.adventure.ship},paused);
+}
+console.log('PASS: the rocket boards by touch action, flies and stops under a held finger, clears controls for the scripted transition, flies in the space game and pauses/resumes by touch without stuck steering.');
+
+{
+ const track=content.TRACKS.find(t=>t.id==='fahrradfahren'),oldSrc=track.src;track.src='uploads/cycling.mp3';
+ try{
+  const h=await harness(false,'monkey',null,false,null,null,null,null,null,true);let time=1000;h.enterRoom('radio');h.state.tapes.loaded=track.id;h.loadRecording();h.state.position={...bike.BIKE_DOOR};h.frame(time);
+  assert(h.modalContent.innerHTML.includes('Finger rechts vom Rad'));new h.Element('easy','button',{bikeLevel:'leicht'}).click();
+  const race=h.state.race;race.stones=[];race.ramps=[];race.riders.slice(1).forEach(r=>{r.departed=true;r.active=false;});assert(!h.get('#touch-pause').hidden);
+  fingerEvent(h,'pointerdown',700,race.player.y-40);for(let i=0;i<60;i++)h.frame(time+=16);assert(race.player.speed>80);
+  const lane=race.player.lane;fingerEvent(h,'pointermove',700,300);h.frame(time+=16);assert.equal(race.player.lane,lane-1);
+  for(let i=0;i<4;i++)h.frame(time+=16);assert.equal(race.player.lane,lane-1,'a held finger does not cross all lanes in one frame');
+  for(let i=0;i<40;i++)h.frame(time+=16);assert.equal(race.player.lane,0);
+  fingerEvent(h,'pointermove',700,550);h.frame(time+=16);assert.equal(race.player.lane,1,'moving the finger down reverses steering immediately');
+  fingerEvent(h,'pointermove',50,race.player.y-40);const fast=race.player.speed;for(let i=0;i<12;i++)h.frame(time+=16);assert(race.player.speed<fast);
+  fingerEvent(h,'pointerup',50,400);const coasting=race.player.speed;for(let i=0;i<10;i++)h.frame(time+=16);assert.equal(race.player.speed,coasting,'the bicycle still coasts when steering is released');
+  fingerEvent(h,'pointerdown',700,400);new h.Element('pause','button',{action:'touch-pause'}).click();assert.equal(h.state.modal,'bike-pause');assert.equal(h.state.touch,null);
+  const elapsed=race.elapsed;h.frame(time+=100);assert.equal(race.elapsed,elapsed);new h.Element('continue','button',{action:'bike-continue'}).click();h.frame(time+=16);assert.equal(race.player.speed,coasting);
+ }finally{track.src=oldSrc;}
+}
+console.log('PASS: cycling uses finger throttle/braking and controlled lane changes, keeps coasting on release and has a working touch pause button.');
+
+{
+ const track={id:'schokolade-touch-test',title:'Schokolade',src:'uploads/chocolate.mp3',image:'assets/hut.png',color:'#b37339',published:true};content.TRACKS.push(track);
+ try{
+  const h=await harness(false,'cat',null,false,null,null,null,null,null,true);let time=1000;h.enterRoom('radio');h.state.tapes.loaded=track.id;h.loadRecording();h.state.position={...chocolate.CHOCOLATE_DOOR};h.frame(time);
+  assert.equal(h.state.scene,'chocolate');const start={...h.state.position};
+  const destination=[{x:start.x+40,y:start.y},{x:start.x-40,y:start.y},{x:start.x,y:start.y-40},{x:start.x,y:start.y+40}].find(p=>core.canStand(p,'chocolate'));
+  assert(destination);const dx=Math.sign(destination.x-start.x),dy=Math.sign(destination.y-start.y);
+  fingerEvent(h,'pointerdown',start.x+dx*100,start.y-36+dy*100);for(let i=0;i<5;i++)h.frame(time+=16);
+  assert(Math.hypot(h.state.position.x-start.x,h.state.position.y-start.y)>1);fingerEvent(h,'pointerup',start.x+dx*100,start.y-36+dy*100);
+  const stopped={...h.state.position};for(let i=0;i<5;i++)h.frame(time+=16);assert.deepEqual({...h.state.position},stopped);assert.equal(h.state.chocolate.run.phase,'search');
+ }finally{content.TRACKS.splice(content.TRACKS.indexOf(track),1);}
+}
+console.log('PASS: the chocolate maze accepts held finger steering and stops exploration immediately on release.');

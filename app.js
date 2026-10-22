@@ -23,6 +23,7 @@ import { friendsHiddenMarkup, friendsWorldMarkup, friendsCampfireMarkup, friends
 import { BIKE_WIDTH, BIKE_HEIGHT, BIKE_FINISH, BIKE_LEVELS, BIKE_DOOR, BIKE_RETURN, isBikeTrack, touchingBikeDoor, bikeTime, bikeKmh, bikeEncounterCount, createBikeRace, startBikeRace, changeBikeLane, tickBikeRace, cleanBikeScores, addBikeScore } from './bike-race.js';
 import { bikeRaceMarkup, bikeTerrainMarkup, bikeObstaclesMarkup, bikeRiderPose } from './bike-art.js';
 import { movementFacing } from './animal-views.js';
+import { fingerDirection, fingerBikeInput } from './touch-controls.js';
 
 const previewMode = new URLSearchParams(location.search).get('preview') === '1';
 const contentStatus = await loadContent(previewMode);
@@ -63,6 +64,7 @@ const state = {
   camera: { x: 800, y: 520 },
   viewport: { w: 1480, h: 850 },
   keys: new Set(), pad: new Map(), path: [], destination: null,
+  touch: null, touchMode: window.matchMedia('(any-pointer: coarse)').matches,
   near: null, modal: null, playing: false, memberMelody: null, boostMusic: null,
   paint: savedPaint, paintCan: null, paintPage: 0, paintTarget: null,
   studio: null, pictureTouch: false,
@@ -89,6 +91,8 @@ document.title = text('page_title');
 document.querySelector('meta[name=description]')?.setAttribute('content', text('page_description'));
 audio.volume = state.volume;
 let previousFocus = null, toastTimer, lastTime = 0, stuckTime = 0, paintPreview = null, memberRequest = 0, discoFrame = null, friendsRenderKey = '', friendsEffectFrame = -1, bikeTerrainStep = -1;
+let ignoreGameClickUntil = 0;
+if (state.touchMode) document.body.classList.add('touch-controls');
 
 function announce(message) { $('#announcement').textContent = message; }
 function toast(message) { clearTimeout(toastTimer); const el = $('#toast'); el.textContent = message; el.hidden = false; toastTimer = setTimeout(() => { el.hidden = true; }, 3500); }
@@ -193,14 +197,18 @@ function bicyclePanel(id) {
   const result = won ? '<div class="bike-results"><strong>' + T('bike_result', { stufe: level, zeit: bikeTime(race.elapsed), anzahl: race.falls, spruenge: race.jumps }) + '</strong></div>'
     + (race.saved ? '<p role="status">' + T('bike_saved') + '</p>' : '<div class="bike-score-entry"><label for="bike-racer-name">' + T('bike_name') + '<input id="bike-racer-name" maxlength="18" autocomplete="off" value="' + escape(storage.get('bike-name', '')) + '"></label><button type="button" class="primary-button" data-action="bike-save">' + T('bike_save') + '</button></div>') + board : '';
   return '<div class="modal-wrap bike-dialog"><div class="modal-kicker">' + T('bike_title') + (pause ? ' · ' + escape(level) : '') + '</div><h2 id="modal-title">' + T(won ? 'bike_win' : pause ? 'bike_pause' : 'bike_ready') + '</h2>'
-    + (!won ? '<p class="modal-intro editable-prose">' + T('bike_keys') + '</p>' : '') + result + choices
+    + (!won ? '<p class="modal-intro editable-prose">' + T(state.touchMode ? 'touch_bike_keys' : 'bike_keys') + '</p>' : '') + result + choices
     + (pause ? '<div class="modal-actions"><button class="primary-button" data-action="bike-continue">' + T('bike_continue') + '</button><button class="secondary-button" data-action="bike-exit">' + T('bike_back') + '</button></div>' : '') + '</div>';
 }
 function pausePanel() {
   const options = [['map', 'map_open'], ['characters', 'pause_character'], ['radio', 'pause_radio'], ['concerts', 'pause_concerts'], ['panda', 'pause_band'], ['social', 'pause_social'], ['grownups', 'nav_grownups'], ['help', 'help_open']];
   return wrap(`${icon('map')} ${T('pause_kicker')}`, text('pause_title'), `<p class="modal-intro editable-prose">${T('pause_intro')}</p><div class="map-grid"><button class="map-destination" data-action="close"><span class="destination-dot">↩</span><strong>${T('pause_continue')}</strong></button>${options.map(([id, key]) => `<button class="map-destination" data-open="${id}"><strong>${T(key)}</strong></button>`).join('')}</div>`);
 }
-function clearInput() { state.keys.clear(); state.pad.clear(); $('#dpad').querySelectorAll('button').forEach(b => b.classList.remove('pressed')); }
+function clearTouchInput() {
+  const touch = state.touch; state.touch = null; $('#touch-target').hidden = true;
+  if (touch && game.hasPointerCapture?.(touch.id)) game.releasePointerCapture(touch.id);
+}
+function clearInput() { clearTouchInput(); state.keys.clear(); state.pad.clear(); $('#dpad').querySelectorAll('button').forEach(b => b.classList.remove('pressed')); }
 function stopWalking() { clearInput(); state.path = []; state.destination = null; marker?.setAttribute('hidden', ''); }
 function refreshCassettes() {
   if (state.scene === 'radio') for (const slot of slotsOnPage(state.shelfPage)) {
@@ -462,9 +470,7 @@ function frameChocolate(dt) {
     state.position = next.position; walking = Math.hypot(old.x - next.position.x, old.y - next.position.y) > .05;
     if (next.done) { finishChocolateExit(); return; }
   } else if (state.chocolate.active) {
-    let dx = 0, dy = 0;
-    for (const code of state.keys) { const direction = directions.get(code); if (direction) { dx += direction[0]; dy += direction[1]; } }
-    for (const direction of state.pad.values()) { const vector = padVectors[direction]; dx += vector[0]; dy += vector[1]; }
+    let { x: dx, y: dy } = movementInput();
     if (!dx && !dy && state.path.length) {
       while (state.path.length && Math.hypot(state.path[0].x - state.position.x, state.path[0].y - state.position.y) < 2) state.path.shift();
       if (state.path.length) { dx = state.path[0].x - state.position.x; dy = state.path[0].y - state.position.y; }
@@ -506,6 +512,7 @@ function renderScene() {
   $('.wayfinder').hidden = state.scene !== 'world' || state.rocket.riding;
   $('.exit-room').hidden = !!state.landing || state.adventure?.phase === 'intro' || !state.race && state.scene === 'world' && !state.rocket.riding;
   $('.exit-room').textContent = text(state.race ? 'bike_back' : state.adventure?.sunTime != null ? 'adventure_back' : state.scene === 'chocolate' ? 'choco_back' : state.scene === 'painting' ? 'studio_close' : state.rocket.riding ? state.rocket.airborne ? 'rocket_land_button' : 'rocket_exit' : 'exit_button');
+  $('#touch-pause').hidden = !(state.race?.phase === 'racing' || state.adventure?.phase === 'playing');
   game.classList.toggle('in-room', !outsideScene(state.scene));
   player.toggleAttribute('hidden', state.rocket.riding || !!state.race);
   state.near = null; updateAnimal(); refreshCassettes(); refreshHatEffects(); refreshReceptionEffects(); resize(); updateNear(true);
@@ -1099,6 +1106,11 @@ document.addEventListener('click', e => {
     playAdventure(); return;
   }
   if (btn.dataset.bikeLevel) { launchBicycleRace(btn.dataset.bikeLevel); return; }
+  if (action === 'touch-pause') {
+    if (state.race?.phase === 'racing') showPanel('bike-pause');
+    else if (state.adventure?.phase === 'playing') showPanel('space-pause');
+    return;
+  }
   if (action === 'bike-world' && state.race?.phase === 'finished') { exitBicycleRace(true); return; }
   if (action === 'bike-exit') { exitBicycleRace(); return; }
   if (action === 'bike-continue') { closePanel(); return; }
@@ -1238,6 +1250,7 @@ function activateHatTarget(id, walkOnly = false) {
   else navigateTo(spot.x, spot.y);
 }
 game.addEventListener('click', e => {
+  if (e.pointerType === 'touch' || e.pointerType === 'pen' || e.sourceCapabilities?.firesTouchEvents || Date.now() < ignoreGameClickUntil) return;
   if (modal.open || !state.started || state.race || state.adventure || state.landing) return;
   if (state.scene === 'painting') {
     const matrix = world.getScreenCTM(); if (!matrix) return;
@@ -1261,6 +1274,58 @@ function walkToPointer(event) {
   const matrix = world.getScreenCTM(); if (!matrix) return;
   const point = new DOMPoint(event.clientX, event.clientY).matrixTransform(matrix.inverse());
   navigateTo(point.x, point.y);
+}
+function enableTouchControls() {
+  if (state.touchMode) return;
+  state.touchMode = true; document.body.classList.add('touch-controls'); updateNear(true);
+  $('#game-instructions').textContent = text('touch_world_keys');
+}
+function canSteerWithFinger() {
+  return state.started && !modal.open && !document.hidden && !state.landing && !state.friendsExit
+    && (!state.race || state.race.phase === 'racing') && (!state.adventure || state.adventure.phase === 'playing')
+    && (state.scene !== 'chocolate' || state.chocolate.run?.phase === 'search');
+}
+function showFingerTarget() {
+  if (!state.touch) return;
+  const rect = game.getBoundingClientRect(), target = $('#touch-target');
+  target.style.left = (state.touch.clientX - (rect.left || 0)) + 'px';
+  target.style.top = (state.touch.clientY - (rect.top || 0)) + 'px'; target.hidden = false;
+}
+game.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'mouse') { ignoreGameClickUntil = 0; return; }
+  if (!['touch', 'pen'].includes(e.pointerType)) return;
+  enableTouchControls();
+  if (!canSteerWithFinger() || state.touch || e.button > 0) return;
+  e.preventDefault(); stopWalking();
+  state.touch = { id: e.pointerId, clientX: e.clientX, clientY: e.clientY, laneAfter: 0, laneDirection: 0 };
+  ignoreGameClickUntil = Date.now() + 900;
+  game.setPointerCapture?.(e.pointerId); showFingerTarget(); game.focus({ preventScroll: true });
+});
+game.addEventListener('pointermove', e => {
+  if (e.pointerId !== state.touch?.id) return;
+  e.preventDefault(); state.touch.clientX = e.clientX; state.touch.clientY = e.clientY; showFingerTarget();
+});
+function releaseFinger(e) {
+  if (e.pointerId !== state.touch?.id) return;
+  e.preventDefault?.(); ignoreGameClickUntil = Date.now() + 900; clearTouchInput();
+  state.path = []; state.destination = null; marker?.setAttribute('hidden', '');
+}
+for (const event of ['pointerup', 'pointercancel', 'lostpointercapture']) game.addEventListener(event, releaseFinger);
+game.addEventListener('contextmenu', e => { if (state.touchMode) e.preventDefault(); });
+window.addEventListener('orientationchange', clearInput);
+function fingerMovement() {
+  if (!state.touch || !canSteerWithFinger()) return { x: 0, y: 0 };
+  const matrix = world.getScreenCTM(); if (!matrix) return { x: 0, y: 0 };
+  const actor = state.race ? { x: state.race.player.x - state.race.camera, y: state.race.player.y - state.race.player.z - 40 }
+    : state.adventure ? state.adventure.ship
+    : { x: state.position.x, y: state.position.y - (state.scene === 'painting' ? 0 : state.rocket.riding ? 86 : 36) };
+  return fingerDirection(state.touch, new DOMPoint(actor.x, actor.y).matrixTransform(matrix));
+}
+function movementInput() {
+  let x = 0, y = 0;
+  for (const code of state.keys) { const v = directions.get(code); if (v) { x += v[0]; y += v[1]; } }
+  for (const direction of state.pad.values()) { const v = padVectors[direction]; if (v) { x += v[0]; y += v[1]; } }
+  const finger = fingerMovement(); return { x: x + finger.x, y: y + finger.y };
 }
 game.addEventListener('keydown', e => {
   if (state.race || state.adventure || state.landing) return;
@@ -1325,16 +1390,16 @@ $('#dpad').querySelectorAll('button').forEach(btn => {
   btn.addEventListener('pointerup', release); btn.addEventListener('pointercancel', release); btn.addEventListener('lostpointercapture', release);
   btn.addEventListener('click', e => { if (e.detail === 0 && state.started && !modal.open && !state.landing) { const [dx, dy] = padVectors[btn.dataset.direction]; if (state.race?.phase === 'racing') { if (dy) changeBikeLane(state.race, dy); else frameBicycleRace(.05, { right: dx > 0, left: dx < 0 }); } else if (state.adventure?.phase === 'playing') { const event = tickAdventure(state.adventure, .05, dx, dy); updateAdventure(); finishAdventureTick(event); } else if (!state.adventure && !state.race) navigateTo(state.position.x + dx * 28, state.position.y + dy * 28); } });
 });
-$('#interact').addEventListener('click', () => { if (!['paint', 'paint-hat'].includes(currentInteraction()?.kind)) performInteraction(); });
+$('#interact').addEventListener('click', () => { if (state.touchMode || !['paint', 'paint-hat'].includes(currentInteraction()?.kind)) performInteraction(); });
 function updateNear(force = false) {
   const near = currentInteraction();
   refreshPaintPreview(near);
   if (!force && near?.kind === state.near?.kind && near?.id === state.near?.id && near?.slot === state.near?.slot) return;
-  state.near = near; const btn = $('#interact'); btn.hidden = !near || ['paint', 'paint-hat'].includes(near.kind) || state.scene === 'painting';
-  if (['paint', 'paint-hat'].includes(near?.kind)) btn.innerHTML = '';
+  state.near = near; const btn = $('#interact'); btn.hidden = !near || !state.touchMode && (['paint', 'paint-hat'].includes(near.kind) || state.scene === 'painting');
+  if (!state.touchMode && ['paint', 'paint-hat'].includes(near?.kind)) btn.innerHTML = '';
   else if (near) {
-    const label = near.label;
-    btn.innerHTML = `<kbd aria-hidden="true">↵ / ␣</kbd>${escape(label)}`; announce(text('action_hint', { aktion: label }));
+    const label = state.touchMode && ['paint', 'paint-hat', 'studio-paint'].includes(near.kind) ? text('touch_paint') : state.touchMode && near.kind === 'studio-color' ? text('touch_color') : near.label;
+    btn.innerHTML = (state.touchMode ? '' : '<kbd aria-hidden="true">↵ / ␣</kbd>') + escape(label); announce(text('action_hint', { aktion: label }));
   }
 }
 function resize() {
@@ -1422,7 +1487,12 @@ function frame(time) {
   }
   if (state.race) {
     if (!modal.open && !document.hidden) {
-      const input = { right: state.keys.has('ArrowRight') || state.keys.has('KeyD') || [...state.pad.values()].includes('right'), left: state.keys.has('ArrowLeft') || state.keys.has('KeyA') || [...state.pad.values()].includes('left') };
+      const finger = fingerBikeInput(fingerMovement());
+      if (state.touch) {
+        if (finger.lane !== state.touch.laneDirection) { state.touch.laneDirection = finger.lane; state.touch.laneAfter = 0; }
+        if (finger.lane && state.race.elapsed >= state.touch.laneAfter) { changeBikeLane(state.race, finger.lane); state.touch.laneAfter = state.race.elapsed + .24; }
+      }
+      const input = { right: finger.right || state.keys.has('ArrowRight') || state.keys.has('KeyD') || [...state.pad.values()].includes('right'), left: finger.left || state.keys.has('ArrowLeft') || state.keys.has('KeyA') || [...state.pad.values()].includes('left') };
       frameBicycleRace(elapsed, input);
     }
     requestAnimationFrame(frame); return;
@@ -1435,9 +1505,7 @@ function frame(time) {
   }
   if (state.adventure) {
     if (!modal.open && !document.hidden) {
-      let dx = 0, dy = 0;
-      for (const code of state.keys) { const v = directions.get(code); if (v) { dx += v[0]; dy += v[1]; } }
-      for (const direction of state.pad.values()) { const v = padVectors[direction]; dx += v[0]; dy += v[1]; }
+      const { x: dx, y: dy } = movementInput();
       const event = tickAdventure(state.adventure, dt, dx, dy);
       updateAdventure();
       finishAdventureTick(event);
@@ -1466,9 +1534,7 @@ function frame(time) {
   }
   let walking = false;
   if (state.started && !modal.open && !document.hidden) {
-    let dx = 0, dy = 0;
-    for (const code of state.keys) { const v = directions.get(code); if (v) { dx += v[0]; dy += v[1]; } }
-    for (const direction of state.pad.values()) { const v = padVectors[direction]; dx += v[0]; dy += v[1]; }
+    let { x: dx, y: dy } = movementInput();
     if (!dx && !dy && state.path.length) {
       let p = state.path[0];
       if (Math.hypot(p.x - state.position.x, p.y - state.position.y) < 5) { state.path.shift(); p = state.path[0]; }
@@ -1520,6 +1586,7 @@ function frame(time) {
   if (outsideScene(state.scene) && state.rocket.riding) $('#rocket')?.setAttribute('transform', `translate(${state.position.x.toFixed(2)} ${state.position.y.toFixed(2)})`);
   requestAnimationFrame(frame);
 }
+$('#game-instructions').textContent = text(state.touchMode ? 'touch_world_keys' : 'world_instructions');
 renderScene(); new ResizeObserver(resize).observe(game); requestAnimationFrame(frame);
 if (previewMode) {
   const banner = document.createElement('div'); banner.className = 'preview-banner';
