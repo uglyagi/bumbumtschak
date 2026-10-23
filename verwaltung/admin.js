@@ -79,9 +79,13 @@ function toiletEditor() {
   const src=state.document.info.toiletAudio||'';
   return `<article class="card"><h3>Klohäuschen · Geräusch</h3><p class="hint">Dieses Geräusch läuft, wenn die Figur das Klopapier von der Erde mitbringt. Bis zum Ende bleibt sie im Häuschen.</p><label class="upload-button">Audiodatei auswählen<input type="file" accept=".mp3,.wav,.m4a,.ogg" data-upload="toiletAudio" data-effect="toilet"></label><p id="toilet-upload" class="file-hint">MP3 / WAV / M4A / OGG · bis 50 MB</p><div id="toilet-preview">${src?`<audio controls preload="none" src="${esc(fileURL(src))}"></audio>`:''}</div>${field('Audiodatei oder Link', 'info.toiletAudio', src, { max:2048, hint:'Leeren, um das Geräusch zu entfernen.' })}</article>`;
 }
+function campEditor() {
+  const src=state.document.info.campAudio||'';
+  return `<article class="card"><h3>Lagerfeuer · Musik</h3><p class="hint">Diese Aufnahme läuft beim erneuten Aktivieren des freigeschalteten Lagerfeuers. Beim Weggehen blendet sie in fünf Sekunden aus. Ohne Datei bleibt das Lagerfeuer still.</p><label class="upload-button">Audiodatei auswählen<input type="file" accept=".mp3,.wav,.m4a,.ogg" data-upload="campAudio" data-effect="camp"></label><p id="camp-upload" class="file-hint">MP3 / WAV / M4A / OGG · bis 50 MB</p><div id="camp-preview">${src?`<audio controls preload="none" src="${esc(fileURL(src))}"></audio>`:''}</div>${field('Audiodatei oder Link', 'info.campAudio', src, { max:2048, hint:'Leeren, um die Lagerfeuermusik zu entfernen.' })}</article>`;
+}
 function info() {
   const item = state.document.info;
-  return `<div class="section-heading"><div><h2>Das seid ihr.</h2><p>Hier ändert ihr eure Geschichte, die Bandmitglieder und Kontaktdaten. Namen, Ausrufe und Grafiken erscheinen auf der Bühne und in den Gesprächen. Alle weiteren Texte könnt ihr im Bereich „Texte der Homepage“ bearbeiten.</p></div></div><div class="info-stack"><article class="card"><h3>Band & Kontakt</h3><div class="fields">${field('Untertitel der Band', 'info.tagline', item.tagline, { max: 100 })}${field('E-Mail für Booking & Kontakt', 'info.email', item.email, { type: 'email' })}${textarea('Eure Bandgeschichte', 'info.about', item.about, 5, 6000)}</div><p class="hint" style="margin-top:16px">Die E-Mail-Adresse erscheint bei „Kontakt“ und unter „für Eltern und Veranstalter“. Die Bandgeschichte steht bei den Bandmitgliedern. Die Texte von „für Eltern und Veranstalter“ bearbeitet ihr unten separat.</p></article>${toiletEditor()}${textEditor()}${item.members.map(memberEditor).join('')}<article class="card"><h3>Spielfiguren</h3><p class="hint">Hier ändert ihr Namen, Beschreibungen, Akzentfarben und Grafiken der vier Spielfiguren.</p></article>${item.animals.map(animalEditor).join('')}${paletteEditor()}<article class="card"><h3>Kontakt</h3><p class="hint" style="margin-bottom:20px">Diese Links öffnen sich über die Symbole in der Spielwelt. Ein leeres Feld blendet das jeweilige Symbol aus.</p><div class="fields">${item.social.map((network, index) => field(network.label, `info.social.${index}.url`, network.url, { type: 'url', max: 2048 })).join('')}</div></article></div>`;
+  return `<div class="section-heading"><div><h2>Das seid ihr.</h2><p>Hier ändert ihr eure Geschichte, die Bandmitglieder und Kontaktdaten. Namen, Ausrufe und Grafiken erscheinen auf der Bühne und in den Gesprächen. Alle weiteren Texte könnt ihr im Bereich „Texte der Homepage“ bearbeiten.</p></div></div><div class="info-stack"><article class="card"><h3>Band & Kontakt</h3><div class="fields">${field('Untertitel der Band', 'info.tagline', item.tagline, { max: 100 })}${field('E-Mail für Booking & Kontakt', 'info.email', item.email, { type: 'email' })}${textarea('Eure Bandgeschichte', 'info.about', item.about, 5, 6000)}</div><p class="hint" style="margin-top:16px">Die E-Mail-Adresse erscheint bei „Kontakt“ und unter „für Eltern und Veranstalter“. Die Bandgeschichte steht bei den Bandmitgliedern. Die Texte von „für Eltern und Veranstalter“ bearbeitet ihr unten separat.</p></article>${toiletEditor()}${campEditor()}${textEditor()}${item.members.map(memberEditor).join('')}<article class="card"><h3>Spielfiguren</h3><p class="hint">Hier ändert ihr Namen, Beschreibungen, Akzentfarben und Grafiken der vier Spielfiguren.</p></article>${item.animals.map(animalEditor).join('')}${paletteEditor()}<article class="card"><h3>Kontakt</h3><p class="hint" style="margin-bottom:20px">Diese Links öffnen sich über die Symbole in der Spielwelt. Ein leeres Feld blendet das jeweilige Symbol aus.</p><div class="fields">${item.social.map((network, index) => field(network.label, `info.social.${index}.url`, network.url, { type: 'url', max: 2048 })).join('')}</div></article></div>`;
 }
 function render() {
   $('#panel').innerHTML = state.tab === 'concerts' ? concerts() : state.tab === 'music' ? music() : info();
@@ -216,29 +220,29 @@ $('#preview').addEventListener('click', async () => {
 });
 $('#panel').addEventListener('change', async event => {
   const input = event.target; if (!input.dataset.upload || !input.files?.[0] || state.busy) return;
-  const effect = input.dataset.effect === 'toilet';
+  const effect = ['toilet','camp'].includes(input.dataset.effect) ? input.dataset.effect : null;
   const member = input.dataset.member ? state.document.info.members.find(item => item.id === input.dataset.member) : null;
   const animal = input.dataset.animal ? state.document.info.animals.find(item => item.id === input.dataset.animal) : null;
   const track = !member && !animal ? state.document.tracks.find(item => item.id === input.dataset.track) : null;
   const item = effect ? state.document.info : member || animal || track, key = input.dataset.upload;
   if (!item) return;
-  const statusId = effect ? '#toilet-upload' : member ? `#member-upload-${key}-${member.id}` : animal ? `#animal-upload-${key}-${animal.id}` : `#upload-${key}-${track.id}`;
+  const statusId = effect ? `#${effect}-upload` : member ? `#member-upload-${key}-${member.id}` : animal ? `#animal-upload-${key}-${animal.id}` : `#upload-${key}-${track.id}`;
   const indicator = $(statusId), file = input.files[0];
   state.uploads.add(item.id + ':' + key); input.disabled = true; status();
   try {
     const info = validateUpload({ filename: file.name, size: file.size });
-    if (info.kind !== (['src', 'audio', 'toiletAudio'].includes(key) ? 'audio' : 'image')) throw new Error('Bitte das passende Bild- oder Audioformat auswählen.');
+    if (info.kind !== (['src', 'audio', 'toiletAudio', 'campAudio'].includes(key) ? 'audio' : 'image')) throw new Error('Bitte das passende Bild- oder Audioformat auswählen.');
     checkMagic(await file.slice(0, 24).arrayBuffer(), info.mime);
     const path = `uploads/${crypto.randomUUID()}.${info.extension}`;
     state.files.set(path, file); fileURLs.set(path, URL.createObjectURL(file)); item[key] = path; changed();
     indicator.textContent = 'Ausgewählt. Wird beim Veröffentlichen auf GitHub gespeichert.';
-    if(effect) $('#toilet-preview').innerHTML=`<audio controls preload="none" src="${esc(fileURL(path))}"></audio>`;
+    if(effect) $(`#${effect}-preview`).innerHTML=`<audio controls preload="none" src="${esc(fileURL(path))}"></audio>`;
     else if (member && key === 'audio') $(`#member-audio-${member.id}`).innerHTML = `<audio controls preload="none" src="${esc(fileURL(path))}" aria-label="Melodie von ${esc(member.name)} probehören"></audio>`;
     else if (member) $(`#member-cover-${member.id}`).innerHTML = `<img src="${esc(fileURL(path))}" alt="${esc(member.name)}">`;
     else if (animal) $(`#animal-cover-${animal.id}${key === 'image' ? '' : '-' + key}`).innerHTML = `<img src="${esc(fileURL(path))}" alt="${esc(animal.name)}">`;
     else if (key === 'image') $(`#cover-${track.id}`).innerHTML = `<img src="${esc(fileURL(path))}" alt="Cover von ${esc(track.title)}">`;
     else $(`#audio-${track.id}`).innerHTML = `<audio controls preload="none" src="${esc(fileURL(path))}" aria-label="${esc(track.title)} probehören"></audio>`;
-    const fieldPath = effect ? 'info.toiletAudio' : member ? `info.members.${state.document.info.members.indexOf(member)}.${key}` : animal ? `info.animals.${state.document.info.animals.indexOf(animal)}.${key}` : `tracks.${state.document.tracks.indexOf(track)}.${key}`;
+    const fieldPath = effect ? `info.${effect==='camp'?'campAudio':'toiletAudio'}` : member ? `info.members.${state.document.info.members.indexOf(member)}.${key}` : animal ? `info.animals.${state.document.info.animals.indexOf(animal)}.${key}` : `tracks.${state.document.tracks.indexOf(track)}.${key}`;
     const linkInput = [...$('#panel').querySelectorAll('[data-path]')].find(node => node.dataset.path === fieldPath);
     if (linkInput) linkInput.value = path;
   } catch (error) { indicator.textContent = 'Die Datei wurde nicht zugeordnet.'; message(error.message, true); }
@@ -247,6 +251,7 @@ $('#panel').addEventListener('change', async event => {
 
 function normalize(document) {
   document.info.toiletAudio ||= '';
+  document.info.campAudio ||= '';
   document.info.members = bandMembers(document.info.members);
   document.info.texts = normalizeTexts(document.info.texts);
   document.info.animals = playableAnimals(document.info.animals, document.info.texts);

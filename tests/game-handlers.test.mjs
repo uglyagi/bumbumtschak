@@ -1233,7 +1233,7 @@ console.log('PASS: returning from the maze keeps the speaker doorway open, colle
 
 const friendsTrack = content.TRACKS.find(track => track.id === 'freundschaft'), previousFriendsSrc = friendsTrack.src;
 try {
-  friendsTrack.src = 'uploads/beste-freunde.mp3';
+  friendsTrack.src = 'uploads/beste-freunde.mp3';content.INFO.campAudio='uploads/lagerfeuer.mp3';
   const h = await harness(false, 'cat'); h.enterRoom('radio'); h.state.tapes.loaded = friendsTrack.id; h.loadRecording(); h.game.focus(); let clock = 0;
   const step = () => h.frame(++clock * 16);
   assert.equal(h.state.friends.phase, 'meeting'); assert(!h.state.friendsExit);
@@ -1297,15 +1297,15 @@ for (const [key, code, preview] of [['Enter', 'Enter', false], [' ', 'Space', fa
 }
 console.log('PASS: a saved tent works with Enter, Space and Numpad Enter, calls exactly three friends out of Home sweet Home, lights a shared fire after their walk, ignores held or repeated invitations, and restores the home animals after the player leaves.');
 
-const beforeCampSrc = friendsTrack.src;
+const beforeCampSrc = friendsTrack.src, beforeCampAudio=content.INFO.campAudio;
 try {
-  friendsTrack.src = 'uploads/beste-freunde.mp3';
+  friendsTrack.src = 'uploads/beste-freunde.mp3';content.INFO.campAudio='uploads/lagerfeuer.mp3';
   for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'NumpadEnter']]) {
     const h = await harness(false, 'dog', null, false, null, null, { tent: true }); h.game.focus();
     h.state.position = { x: friends.FRIEND_TENT.x, y: friends.FRIEND_TENT.y - 75 };
     h.press(h.windowHandlers, h.event(key, code, h.game));
     const camp = h.get('#camp-audio');
-    assert.equal(camp.src, friendsTrack.src); assert.equal(camp.paused, false); assert(camp.loop); assert(h.get('#audio').paused);
+    assert.equal(camp.src, content.INFO.campAudio); assert.equal(camp.paused, false); assert(camp.loop); assert(h.get('#audio').paused);
     assert.equal(h.state.friends.phase, 'gathering', 'camp music does not restart tag');
     camp.currentTime = 12; h.press(h.windowHandlers, h.event(key, code, h.game, true)); assert.equal(camp.currentTime, 12);
     h.state.viewport = { w: 390, h: 700 };
@@ -1330,7 +1330,7 @@ try {
   h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game)); assert(!h.get('#camp-audio').paused);
   h.state.tapes.loaded = friendsTrack.id; h.loadRecording();
   assert(h.get('#camp-audio').paused); assert.equal(h.state.campMusic, null); assert(h.state.friendsRestartPending); h.enterRoom('radio'); assert.equal(h.state.friends.phase, 'meeting', 'the invitation begins inside the music house');
-} finally { friendsTrack.src = beforeCampSrc; }
+} finally { friendsTrack.src = beforeCampSrc;content.INFO.campAudio=beforeCampAudio; }
 console.log('PASS: Enter, Space and Numpad Enter invite camp friends with Beste Freunde without restarting tag; the whole group stays on screen, leaving fades the music over five seconds and a chosen cassette stops camp music.');
 
 {
@@ -1373,7 +1373,7 @@ console.log('PASS: the boost keeps full speed and volume for 15.65 seconds, fade
 
 const uncutFriendsSrc = friendsTrack.src;
 try {
-  friendsTrack.src = 'uploads/beste-freunde.mp3';
+  friendsTrack.src = 'uploads/beste-freunde.mp3';content.INFO.campAudio='uploads/lagerfeuer.mp3';
   const h = await harness(false, 'cat', null, false, null, null, { tent: true });
   h.state.tapes.loaded = friendsTrack.id; h.loadRecording();
   friends.releaseFriends(h.state.friends);

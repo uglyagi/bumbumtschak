@@ -26,7 +26,7 @@ export const SOCIAL_LINKS = [
 ];
 export const SPOTIFY_ARTIST = { url: 'https://open.spotify.com/intl-de/artist/0Yn4gitKAlqg7kDEBLkXWv', embed: 'https://open.spotify.com/embed/artist/0Yn4gitKAlqg7kDEBLkXWv' };
 export const CONTACT = { email: 'bumbumtschakband@gmail.com' };
-export const INFO = { toiletAudio: '', tagline: 'Die Kinderliederband', about: 'Ein Panda am Schlagzeug, ein Papagei an Bass und Gesang und ein Krokodil an der E-Gitarre: Zusammen sind wir Bum Bum Tschak. Unsere Lieder erzählen vom Tanzen, von Freundschaft, vom Fahrradfahren und von einem Hut, der beim Reiten verloren geht.' };
+export const INFO = { campAudio: '', toiletAudio: '', tagline: 'Die Kinderliederband', about: 'Ein Panda am Schlagzeug, ein Papagei an Bass und Gesang und ein Krokodil an der E-Gitarre: Zusammen sind wir Bum Bum Tschak. Unsere Lieder erzählen vom Tanzen, von Freundschaft, vom Fahrradfahren und von einem Hut, der beim Reiten verloren geht.' };
 export const BAND = DEFAULT_BAND.map(member => ({ ...member }));
 export const ANIMALS = DEFAULT_ANIMALS.map(animal => ({ ...animal }));
 export const PALETTE = DEFAULT_PALETTE.map(color => ({ ...color }));
@@ -42,6 +42,7 @@ export function applyContent(document) {
   for (const animal of ANIMALS) { const saved = animals.find(saved => saved.id === animal.id); Object.assign(animal, saved, Object.fromEntries(ANIMAL_IMAGE_KEYS.map(key => [key, contentAssetURL(saved[key])]))); }
   PALETTE.splice(0, PALETTE.length, ...paletteColors(document.info.palette));
   CONTACT.email = document.info.email || '';
+  INFO.campAudio = contentAssetURL(document.info.campAudio || '');
   INFO.toiletAudio = contentAssetURL(document.info.toiletAudio || '');
   INFO.tagline = document.info.tagline || ''; INFO.about = document.info.about || '';
   const members = bandMembers(document.info.members);

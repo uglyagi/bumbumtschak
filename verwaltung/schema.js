@@ -75,6 +75,7 @@ export function validateContent(input) {
     return { id: unique(color.id), name: str(color.name, 40, 'Farbname', true), color: color.color };
   });
   return { schemaVersion: 1, tracks, concerts, info: {
+    campAudio: url(input.info.campAudio, true),
     toiletAudio: url(input.info.toiletAudio, true),
     tagline: str(input.info.tagline, 100, 'Untertitel'), about: str(input.info.about, 6000, 'Bandgeschichte'), email, texts,
     animals: playableAnimals(input.info.animals, texts).map((animal, index) => ({ id: animal.id, article: DEFAULT_ANIMALS[index].article,

@@ -779,8 +779,8 @@ function stopCampMusic() {
 function startCampMusic() {
   // A playing cassette keeps its own position and volume, even beside the tent.
   if (state.playing && !state.boostMusic && isFriendsTrack(playbackTrack())) return;
-  const track = TRACKS.find(track => isFriendsTrack(track) && validRecording(track));
-  if (!track) return;
+  const track = { id: 'campfire', src: INFO.campAudio };
+  if (!validRecording(track)) return;
   stopCampMusic(); state.boostMusic = null; audio.pause(); audio.loop = false; state.playing = false;
   state.friendsRestartPending = false;
   state.campMusic = { track: track.id, fadeRemaining: null };
