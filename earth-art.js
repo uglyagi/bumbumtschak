@@ -20,30 +20,46 @@ export function earthLandmark(index) {
   ];
   return `<g transform="translate(530 425)" stroke="#687174" stroke-width="2" stroke-linejoin="miter">${bodies[index]}</g><text x="530" y="450" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#515c60" letter-spacing="1.5">${esc(text('earth_'+EARTH_LANDMARKS[index]))}</text>`;
 }
-export function earthChunkRange(earth) { return [Math.floor((earth.position.x-500)/EARTH_SCREEN),Math.floor((earth.position.x+500)/EARTH_SCREEN)]; }
+// Keep one complete neighbour on either side of the camera's current block.
+// A recycled slot is therefore fully offscreen when its contents change.
+export function earthChunkRange(earth) { const center=Math.floor(earth.position.x/EARTH_SCREEN);return [center-1,center+1]; }
+export const earthChunkSlot = chunk => (chunk%3+3)%3;
+export function earthStreetChunkMarkup(earth,chunk) {
+  const index=(chunk%10+10)%10;
+  return `<g transform="translate(${chunk*1000} 0)"><rect x="0" y="0" width="1000" height="660" fill="#e1e3df"/><rect x="0" y="355" width="1000" height="115" fill="#c9ceca"/>${[40,240,760,890].map((x,i)=>`<g fill="#bdc3c1" stroke="#a7afad"><rect x="${x}" y="${255-i%2*40}" width="100" height="170"/>${windows(4,5,x+10,275-i%2*40,22,26)}</g>`).join('')}${earthLandmark(index)}<path d="M0 466h1000v135H0Z" fill="#999fa0"/><path d="M0 466h1000M0 601h1000" stroke="#c3c8c5" stroke-width="6"/><path d="M0 560h1000" stroke="#dadbd3" stroke-width="3" stroke-dasharray="42 42" stroke-dashoffset="${chunk*EARTH_SCREEN%84}"/><rect y="604" width="1000" height="56" fill="#d1d5d0"/><path d="M100 465V339h70M780 465V339h70" fill="none" stroke="#6b7578" stroke-width="5"/><path d="M150 342h32M830 342h32" stroke="#eef0dc" stroke-width="6"/>${index===0?'<g id="earth-parked-rocket" transform="translate(180 500)">'+rocketMarkup({position:{x:0,y:0},riding:true,airborne:true,pilotHidden:earth.phase==='walking',hat:earth.hat,angle:0},earth.pilot||'cat')+'</g>':''}</g>`;
+}
 export function earthStreetMarkup(earth) {
   const [first,last]=earthChunkRange(earth);let out='';
-  for(let chunk=first;chunk<=last;chunk++) {
-    const index=(chunk%10+10)%10;
-    out+=`<g transform="translate(${chunk*1000} 0)"><rect x="0" y="0" width="1000" height="660" fill="#e1e3df"/><rect x="0" y="355" width="1000" height="115" fill="#c9ceca"/>${[40,240,760,910].map((x,i)=>`<g fill="#bdc3c1" stroke="#a7afad"><rect x="${x}" y="${255-i%2*40}" width="100" height="170"/>${windows(4,5,x+10,275-i%2*40,22,26)}</g>`).join('')}${earthLandmark(index)}<path d="M0 466h1000v135H0Z" fill="#999fa0"/><path d="M0 466h1000M0 601h1000" stroke="#c3c8c5" stroke-width="6"/><path d="M0 560h1000" stroke="#dadbd3" stroke-width="3" stroke-dasharray="42 42"/><rect y="604" width="1000" height="56" fill="#d1d5d0"/><path d="M100 465V339h70M780 465V339h70" fill="none" stroke="#6b7578" stroke-width="5"/><path d="M150 342h32M830 342h32" stroke="#eef0dc" stroke-width="6"/>${index===0?'<g id="earth-parked-rocket" transform="translate(180 500)">'+rocketMarkup({position:{x:0,y:0},riding:true,airborne:true,pilotHidden:earth.phase==='walking',hat:earth.hat,angle:0},earth.pilot||'cat')+'</g>':''}</g>`;
+  for(let chunk=first;chunk<=last;chunk++)out+=`<g id="earth-street-slot-${earthChunkSlot(chunk)}" data-earth-chunk="${chunk}">${earthStreetChunkMarkup(earth,chunk)}</g>`;
+  return out;
+}
+export function earthPedestrians(earth,chunk) {
+  // The family has this whole block to itself. Adjacent walkers turn around
+  // before reaching it, so nobody pops away or walks across the stroller.
+  if((chunk%10+10)%10===4)return [];
+  const span=820,period=span*2;
+  return Array.from({length:4},(_,i)=>{
+    const travel=((90+i*217+earth.time*(i%2?-19:23))%period+period)%period;
+    return {id:`earth-person-${chunk}-${i}`,x:chunk*EARTH_SCREEN+90+(travel<=span?travel:period-travel),y:483+i%2*41,phase:earth.time*4+i,coat:i%2?'#95958b':'#77858b',skirt:i===2,scale:.85};
+  });
+}
+export const earthLegPath = phase => { const leg=Math.sin(phase)*7;return `M-5-18 ${-5-leg} 0M5-18 ${5+leg} 0`; };
+function person(x,y,phase=0,coat='#707e83',skirt=false,scale=1,id='') {
+  return `<g ${id?`id="${id}"`:''} transform="translate(${x.toFixed(2)} ${y}) scale(${scale})" fill="${coat}" stroke="#606b6d" stroke-width="2"><ellipse cy="-58" rx="9" ry="11" fill="#b8aca0"/><path d="M-9-45h18l${skirt?'9 29h-36':'3 27h-24'}Z"/><path class="earth-legs" d="${earthLegPath(phase)}" fill="none" stroke-width="4"/><path d="M-10-40l-4 22M10-40l5 22" fill="none" stroke-width="4"/></g>`;
+}
+export function earthPeopleChunkMarkup(earth,chunk) {
+  let out=earthPedestrians(earth,chunk).map(p=>person(p.x,p.y,p.phase,p.coat,p.skirt,p.scale,p.id)).join('');
+  if((chunk%10+10)%10===4) {
+    const p=earthStroller(earth,Math.floor(chunk/10));
+    out+=`<g id="earth-family-${chunk}" transform="translate(${p.x.toFixed(2)} ${p.y})">`
+      +person(-51,0,earth.time*3,'#687984',false,1,`earth-parent-${chunk}-0`)+person(-88,8,earth.time*3+1,'#a09990',true,1,`earth-parent-${chunk}-1`)
+      +'<g stroke="#616c70" stroke-width="3"><path d="m-42-37 16 4 8 26h40" fill="none"/><path d="M-24-26h48q-3 20-21 20t-27-20Z" fill="#929e9e"/><path d="M0-26v-27q25 0 26 27Z" fill="#c1c8c3"/><circle cx="-14" cy="-3" r="7" fill="#657074"/><circle cx="20" cy="-3" r="7" fill="#657074"/></g></g>';
   }
   return out;
 }
-function person(x,y,phase=0,coat='#707e83',skirt=false,scale=1) {
-  const leg=Math.sin(phase)*7;
-  return `<g transform="translate(${x.toFixed(1)} ${y}) scale(${scale})" fill="${coat}" stroke="#606b6d" stroke-width="2"><ellipse cy="-58" rx="9" ry="11" fill="#b8aca0"/><path d="M-9-45h18l${skirt?'9 29h-36':'3 27h-24'}Z"/><path d="M-5-18 ${-5-leg} 0M5-18 ${5+leg} 0M-10-40l-4 22M10-40l5 22" fill="none" stroke-width="4"/></g>`;
-}
 export function earthPeopleMarkup(earth) {
   const [first,last]=earthChunkRange(earth);let out='';
-  for(let chunk=first;chunk<=last;chunk++) {
-    const base=chunk*1000,index=(chunk%10+10)%10;
-    for(let i=0;i<4;i++) { const x=base+((170+i*240+earth.time*(i%2? -19:23))%1000+1000)%1000;out+=person(x,483+i%2*41,earth.time*4+i,i%2?'#95958b':'#77858b',i===2,.85); }
-    if(index===4) {
-      const p=earthStroller(earth,Math.floor(chunk/10));
-      out+=person(p.x-51,p.y,earth.time*3,'#687984')+person(p.x-88,p.y+8,earth.time*3+1,'#a09990',true);
-      out+=`<g transform="translate(${p.x.toFixed(1)} ${p.y})" stroke="#616c70" stroke-width="3"><path d="m-42-37 16 4 8 26h40" fill="none"/><path d="M-24-26h48q-3 20-21 20t-27-20Z" fill="#929e9e"/><path d="M0-26v-27q25 0 26 27Z" fill="#c1c8c3"/><circle cx="-14" cy="-3" r="7" fill="#657074"/><circle cx="20" cy="-3" r="7" fill="#657074"/></g>`;
-    }
-  }
+  for(let chunk=first;chunk<=last;chunk++)out+=`<g id="earth-people-slot-${earthChunkSlot(chunk)}" data-earth-chunk="${chunk}">${earthPeopleChunkMarkup(earth,chunk)}</g>`;
   return out;
 }
 export function toiletPaperMarkup() { return '<g stroke="#101014" stroke-width="2"><path d="M-12-12h22v24H-12Z" fill="#fff"/><ellipse cx="10" rx="7" ry="12" fill="#f8f8f1"/><ellipse cx="10" rx="2.5" ry="5" fill="#aaa99d"/><path d="M-12 10v17l8-3 8 3V10" fill="#fff"/></g>'; }

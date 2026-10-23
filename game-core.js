@@ -10,7 +10,7 @@ export function touchingHomePicture(position) {
     && position.y + 5 >= HOME_PICTURE.y && position.y - 77 <= HOME_PICTURE.y + HOME_PICTURE.h;
 }
 export const OBSTACLES = [
-  { x: -162, y: 380, w: 124, h: 110 },
+  { x: -131, y: 450, w: 73, h: 40 },
   { x: 530, y: 110, w: 555, h: 223 },
   { x: 170, y: 345, w: 270, h: 145 },
   { x: 1150, y: 320, w: 260, h: 170 },

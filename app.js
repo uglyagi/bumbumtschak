@@ -9,7 +9,7 @@ import { adminURL } from './connection.js';
 import { SPACE, ROCKET_SPEED, GROUND_ROCKET, moveRocket, outsideScene, flightScene, spaceViewIsDark } from './sky-world.js';
 import { createParty, syncParty, tickParty, guestPose, guestExitPose, dancePartyMarkup, discoLightPoses, PLAYER_DANCES, playerDancePose, playerDanceMarkup } from './dance-party.js';
 import { studioMarkup, studioInteraction, studioColors, studioPages, STUDIO_CONTROLS, largeSurfaces } from './painting-studio.js';
-import { adventurePlanetPosition, COURSE, resumeFromEarth, createAdventure, startAdventure, resizeAdventure, tickAdventure, FINISH_DISTANCE, landingPose, crashVibration, DIFFICULTIES } from './rocket-adventure.js';
+import { resumeFromEarth, createAdventure, startAdventure, resizeAdventure, tickAdventure, FINISH_DISTANCE, landingPose, crashVibration, DIFFICULTIES } from './rocket-adventure.js';
 import { adventureMarkup, adventureShipPose, adventureCourseOpacity, adventureTrailPath, meteorMarkup } from './adventure-art.js';
 import { toolboxMarkup } from './toolbox.js';
 import { wreckageTransforms, rocketRepairTransforms, rocketRepairOpacity, ROCKET_REPAIR_SECONDS } from './rocket-wreckage.js';
@@ -27,8 +27,8 @@ import { thumbDirection, thumbOffset, landscapeSize, screenPointInGame } from '.
 import { createFullscreenMode } from './fullscreen.js';
 import { createGameDialog } from './game-dialog.js';
 
-import { OUTHOUSE, EARTH_LENGTH, createEarthVisit, earthRocketNear, earthInteraction, releaseEarthPaper, takeEarthPaper, tickEarth, nearOuthouse } from './earth-quest.js';
-import { earthMarkup, earthStreetMarkup, earthPeopleMarkup, earthPaperMarkup, earthChunkRange, toiletPaperMarkup } from './earth-art.js';
+import { OUTHOUSE, EARTH_LENGTH, earthStroller, createEarthVisit, earthRocketNear, earthInteraction, releaseEarthPaper, takeEarthPaper, tickEarth, nearOuthouse } from './earth-quest.js';
+import { earthChunkSlot, earthStreetChunkMarkup, earthPeopleChunkMarkup, earthPedestrians, earthLegPath, earthMarkup, earthPaperMarkup, earthChunkRange, toiletPaperMarkup } from './earth-art.js';
 
 const previewMode = new URLSearchParams(location.search).get('preview') === '1';
 const contentStatus = await loadContent(previewMode);
@@ -950,10 +950,26 @@ function launchFromEarth() {
 }
 function updateEarthView(force = false) {
   const earth = state.earth;if (!earth) return;
-  const range = earthChunkRange(earth).join(':');
-  if (force || earth.renderRange !== range) { $('#earth-street').innerHTML = earthStreetMarkup(earth);earth.renderRange = range; }
-  const frame = Math.floor(earth.time * 15);
-  if (force || earth.renderFrame !== frame) { $('#earth-people').innerHTML = earthPeopleMarkup(earth);$('#earth-paper').innerHTML = earthPaperMarkup(earth);earth.renderFrame = frame; }
+  const [first,last]=earthChunkRange(earth),frame=Math.floor(earth.time*15);
+  for(let chunk=first;chunk<=last;chunk++) {
+    const slot=earthChunkSlot(chunk);
+    for(const [layer,markup] of [['street',earthStreetChunkMarkup],['people',earthPeopleChunkMarkup]]) {
+      const node=$(`#earth-${layer}-slot-${slot}`);
+      if(node&&node.getAttribute('data-earth-chunk')!==String(chunk)) {
+        node.innerHTML=markup(earth,chunk);node.setAttribute('data-earth-chunk',String(chunk));
+      }
+    }
+    for(const p of earthPedestrians(earth,chunk)) {
+      const node=$('#'+p.id);node?.setAttribute('transform',`translate(${p.x.toFixed(2)} ${p.y}) scale(${p.scale})`);
+      if(force||earth.renderFrame!==frame)node?.querySelector('.earth-legs')?.setAttribute('d',earthLegPath(p.phase));
+    }
+    if((chunk%10+10)%10===4) {
+      const p=earthStroller(earth,Math.floor(chunk/10));
+      $('#earth-family-'+chunk)?.setAttribute('transform',`translate(${p.x.toFixed(2)} ${p.y})`);
+      if(force||earth.renderFrame!==frame)for(let i=0;i<2;i++)$('#earth-parent-'+chunk+'-'+i)?.querySelector('.earth-legs')?.setAttribute('d',earthLegPath(earth.time*3+i));
+    }
+  }
+  if(force||earth.renderFrame!==frame){$('#earth-paper').innerHTML=earthPaperMarkup(earth);earth.renderFrame=frame;}
   state.position = earth.position;state.facing = earth.facing;
   player.setAttribute('transform', `translate(${earth.position.x.toFixed(2)} ${earth.position.y.toFixed(2)})`);
   playerUse.setAttribute('href', animalHref(state.animal, wearsHat(state.hat, state.hatActive), earth.facing));
@@ -984,11 +1000,10 @@ function earthPanel() {
 }
 function refreshQuestPaper() {
   const layer=$('#quest-paper');if(!layer)return;
-  if(!state.toiletPaper || state.toilet || state.scene==='painting'){layer.innerHTML='';return;}
-  let p=state.earth?state.earth.position:state.adventure?state.adventure.ship:state.position;
-  if(state.earth&&state.earth.phase!=='walking'){const t=Math.min(1,state.earth.elapsed/1.6),cycle=Math.floor((state.earth.position.x+320)/EARTH_LENGTH);p={x:cycle*EARTH_LENGTH+180,y:430-700*(state.earth.phase==='landing'?(1-t)*(1-t):t*t)};}
-  const y=state.rocket.riding&&!state.adventure?p.y-100:p.y-28;
-  layer.innerHTML=`<g transform="translate(${p.x+28} ${y}) scale(.7)">${toiletPaperMarkup()}</g>`;
+  const aboard = state.earth ? state.earth.phase !== 'walking' : state.rocket.riding || !!state.adventure || !!state.landing;
+  if(!state.toiletPaper || state.toilet || aboard || state.scene==='painting'){layer.innerHTML='';return;}
+  const p=state.earth?state.earth.position:state.position;
+  layer.innerHTML=`<g transform="translate(${p.x+28} ${p.y-28}) scale(.7)">${toiletPaperMarkup()}</g>`;
 }
 function enterOuthouse() {
   if(state.toilet||state.scene!=='world'||state.rocket.riding||friendsBlockBuildings(state.friends))return;
@@ -1092,8 +1107,6 @@ function updateAdventure() {
   $('#adventure-stars')?.setAttribute('transform', `translate(${-adventure.progress * .18 % adventure.width} 0)`);
   $('#adventure-paint-trail')?.setAttribute('d', adventureTrailPath(adventure));
   $('#adventure-meteors').innerHTML = adventure.meteors.map(meteorMarkup).join('');
-  const earth=COURSE.find(p=>p.id==='earth'),p=adventurePlanetPosition(adventure,earth);
-  $('#earth-docking').innerHTML=adventure.earthTouch?`<g transform="translate(${p.x} ${p.y-45})"><rect x="-30" y="-24" width="60" height="32" rx="10" fill="#fff"/><text text-anchor="middle" font-size="21" fill="#101014">${Math.max(1,Math.ceil(3-adventure.earthTouch))}</text></g>`:'';
   refreshQuestPaper();
   $('#adventure-progress')?.setAttribute('width', String(Math.max(110, Math.min(adventure.width - 75, 430)) * (adventure.phase === 'won' ? 1 : Math.min(1, adventure.progress / FINISH_DISTANCE))));
 }

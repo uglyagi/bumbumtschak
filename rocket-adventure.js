@@ -96,16 +96,7 @@ export function tickAdventure(game, seconds, dx = 0, dy = 0) {
   game.ship.x = clamp(game.ship.x + dx / length * 300 * dt, Math.min(65, game.width * .2), Math.max(game.width - 65, game.width * .8));
   game.ship.y = clamp(game.ship.y + dy / length * 300 * dt, Math.min(105, game.height * .3), Math.max(game.height - 55, game.height * .7));
   const speed = game.width < 650 ? 115 : 155;
-  game.time += dt; game.angle = 90;
-  const earth = COURSE.find(planet => planet.id === 'earth'), point = adventurePlanetPosition(game, earth);
-  if (!game.earthVisited && Math.hypot(game.ship.x - point.x, game.ship.y - point.y) <= earth.diameter / 2 + 38) {
-    // Holding contact suspends scrolling, making a deliberate three-second
-    // landing possible even on a small screen. Moving away cancels it.
-    game.earthTouch = (game.earthTouch || 0) + dt;
-    if (game.earthTouch > 3) { game.phase = 'earth'; game.earthVisited = true; return 'earth-land'; }
-    return null;
-  }
-  game.earthTouch = 0; game.progress += speed * dt;
+  game.time += dt; game.progress += speed * dt; game.angle = 90;
   if (game.trailColor) {
     // Keep the line in the scrolling world, sample by distance and bound its cost.
     const point = { x: game.ship.x + game.progress - 62, y: game.ship.y }, last = game.paintTrail.at(-1);
@@ -123,6 +114,12 @@ export function tickAdventure(game, seconds, dx = 0, dy = 0) {
     if (meteorHits(before, { x: meteor.x - game.ship.x, y: meteor.y - game.ship.y }, meteor.radius + 20)) { game.phase = 'crashed'; return 'crash'; }
   }
   game.meteors = game.meteors.filter(m => m.x > -m.radius - 30 && m.x < game.width + m.radius + 30 && m.y > -m.radius - 30 && m.y < game.height + m.radius + 30);
+  const earth = COURSE.find(planet => planet.id === 'earth'), point = adventurePlanetPosition(game, earth);
+  const touchingEarth = !game.earthVisited && Math.hypot(game.ship.x - point.x, game.ship.y - point.y) <= earth.diameter / 2 + 38;
+  game.earthTouch = touchingEarth ? (game.earthTouch || 0) + dt : 0;
+  // A hidden, continuous-contact trigger. Scrolling, steering and meteor
+  // collisions above keep running normally while the player tracks Earth.
+  if (game.earthTouch > 3) { game.phase = 'earth'; game.earthVisited = true; return 'earth-land'; }
   if (game.progress + game.ship.x - game.width * .25 + 42 >= FINISH_DISTANCE) {
     game.phase = 'sun-finale'; game.sunTime = 0; game.sunFrom = { x: game.ship.x / game.width, y: game.ship.y / game.height };
     game.sunMeteors = game.meteors.map(meteor => ({ ...meteor })); game.meteors = [];

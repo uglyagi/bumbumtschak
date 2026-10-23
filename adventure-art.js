@@ -35,7 +35,7 @@ function adventureBackdropMarkup(game, paint = {}) {
       ${COURSE.map(planet => planetMarkup({ ...planet, y: adventurePlanetPosition(game, planet).y })).join('')}
       <g data-planet="sun" transform="translate(${FINISH_DISTANCE + sunRadius} ${h * .5})"><circle r="${sunRadius}" fill="#fff20b" stroke="#101014" stroke-width="6"/><circle r="${sunRadius - 35}" fill="#ffc647"/><path d="M${-sunRadius + 36} -100q-32 100 0 200" fill="none" stroke="#fff7a8" stroke-width="15"/><text x="${-sunRadius + 70}" y="0" fill="#101014" font-size="28" font-weight="900">${esc(text('adventure_sun'))}</text></g>
     </g>
-    <g id="earth-docking" pointer-events="none"></g><g id="adventure-meteors">${(game.sunTime != null ? game.sunMeteors || [] : game.meteors).map(meteorMarkup).join('')}</g>
+    <g id="adventure-meteors">${(game.sunTime != null ? game.sunMeteors || [] : game.meteors).map(meteorMarkup).join('')}</g>
     <g id="adventure-hud" class="adventure-hud" ${['playing', 'sun-finale', 'won'].includes(game.phase) ? '' : 'hidden=""'}><rect x="20" y="17" width="${Math.max(170, Math.min(w - 40, 470))}" height="58" rx="14" fill="#fffcee" stroke="#101014" stroke-width="3"/><text x="36" y="42" font-size="17" font-weight="900">${esc(text('adventure_title'))}</text><rect x="36" y="53" width="${Math.max(110, Math.min(w - 75, 430))}" height="9" rx="4" fill="#d7d3df"/><rect id="adventure-progress" x="36" y="53" width="${Math.max(110, Math.min(w - 75, 430)) * Math.min(1, game.progress / FINISH_DISTANCE)}" height="9" rx="4" fill="#ff87ce"/></g>
 `;
 }

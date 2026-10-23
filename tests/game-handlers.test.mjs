@@ -67,6 +67,7 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null, d
     querySelector(selector) { return get(`${this.name} ${selector}`); }
     get innerHTML() { return this.markup || ''; }
     set innerHTML(value) {
+      this.writes.set('innerHTML',(this.writes.get('innerHTML')||0)+1);
       this.markup = value;
       if (this.name !== '#game') return;
       this.paintNodes = [];
@@ -1887,16 +1888,16 @@ console.log('PASS: hide choice, tree concealment and revealing, loss/retry/exit,
  for(let i=0;i<12&&!h.state.toilet;i++)step();assert(h.state.toilet);h.state.keys.clear();
  for(let i=0;i<40&&!h.modal.open;i++)step();assert.equal(h.state.modal,'toilet-empty');assert(h.modalContent.innerHTML.includes('Ohje... kein Klopapier'));assert.deepEqual({...h.state.position},{...earthQuest.OUTHOUSE.outside});h.closePanel();
  const origin={x:700,y:-5800};h.state.position={...origin};h.state.scene='space';h.state.rocket.riding=true;
- h.state.adventure=adventure.createAdventure(1200,700);adventure.startAdventure(h.state.adventure,'mittel');const earth=adventure.COURSE.find(p=>p.id==='earth');h.state.adventure.progress=earth.x;h.state.adventure.ship=adventure.adventurePlanetPosition(h.state.adventure,earth);h.state.adventure.nextMeteor=Infinity;h.renderScene();
- for(let i=0;i<62&&!h.state.earth;i++)step();assert(h.state.earth);assert.equal(h.state.scene,'earth');assert.equal(h.state.adventure.phase,'earth');
+ h.state.adventure=adventure.createAdventure(1200,700);adventure.startAdventure(h.state.adventure,'mittel');const earth=adventure.COURSE.find(p=>p.id==='earth');h.state.adventure.progress=earth.x-700;h.state.adventure.ship=adventure.adventurePlanetPosition(h.state.adventure,earth);h.state.adventure.nextMeteor=Infinity;h.renderScene();
+ for(let i=0;i<62&&!h.state.earth;i++){h.state.keys.clear();const p=adventure.adventurePlanetPosition(h.state.adventure,earth);if(h.state.adventure.ship.x>p.x)h.state.keys.add('ArrowLeft');step();}h.state.keys.clear();assert(h.state.earth);assert.equal(h.state.scene,'earth');assert.equal(h.state.adventure.phase,'earth');
  for(let i=0;i<40&&h.state.earth.phase!=='walking';i++)step();assert.equal(h.state.earth.phase,'walking');assert(!h.get('#player').attrs.has('hidden'));assert(h.game.innerHTML.includes('earth-street'));
  h.state.earth.position={...earthQuest.earthStroller(h.state.earth)};step();assert.equal(h.currentInteraction()?.kind,'earth-stroller');h.game.focus();h.press(h.windowHandlers,h.event('Enter','Enter',h.game));assert.equal(h.state.earth.paper.phase,'flying');
  for(let i=0;i<22;i++)step();assert.equal(h.state.earth.paper.phase,'ground');h.state.earth.position={x:h.state.earth.paper.x,y:h.state.earth.paper.y};step();
  h.press(h.windowHandlers,h.event(' ','Space',h.game));assert(h.state.toiletPaper);assert.equal(h.stored.get('bbt-toilet-paper'),'1');assert(h.get('#quest-paper').innerHTML.includes('<ellipse'));
- h.state.earth.position={x:215,y:505};step();h.press(h.windowHandlers,h.event('Enter','Enter',h.game));assert.equal(h.state.earth.phase,'launching');
- for(let i=0;i<40&&h.state.earth;i++)step();assert(!h.state.earth);assert.equal(h.state.scene,'space');assert.equal(h.state.adventure.phase,'playing');assert.equal(h.state.adventure.difficulty,'mittel');assert(h.state.adventure.progress>earth.x);assert.deepEqual({...h.state.position},origin);assert(h.state.toiletPaper);
+ h.state.earth.position={x:215,y:505};step();h.press(h.windowHandlers,h.event('Enter','Enter',h.game));assert.equal(h.state.earth.phase,'launching');assert.equal(h.get('#quest-paper').innerHTML,'');
+ for(let i=0;i<40&&h.state.earth;i++)step();assert(!h.state.earth);assert.equal(h.state.scene,'space');assert.equal(h.state.adventure.phase,'playing');assert.equal(h.state.adventure.difficulty,'mittel');assert(h.state.adventure.progress>earth.x);assert.deepEqual({...h.state.position},origin);assert(h.state.toiletPaper);assert.equal(h.get('#quest-paper').innerHTML,'');
  // Return to the outdoor scene with the collected item and enter via walking.
- h.state.adventure=null;h.state.rocket.riding=false;h.state.scene='world';h.state.position={...earthQuest.OUTHOUSE.outside};h.renderScene();
+ h.state.adventure=null;h.state.rocket.riding=false;h.state.scene='world';h.state.position={...earthQuest.OUTHOUSE.outside};h.renderScene();assert(h.get('#quest-paper').innerHTML.includes('<ellipse'));
  const oldAudio=content.INFO.toiletAudio;content.INFO.toiletAudio='uploads/toilet.mp3';
  try {
   h.state.keys.add('ArrowUp');for(let i=0;i<12&&!h.state.toilet;i++)step();h.state.keys.clear();for(let i=0;i<20&&h.state.toilet?.phase!=='using';i++)step();
@@ -1906,3 +1907,18 @@ console.log('PASS: hide choice, tree concealment and revealing, loss/retry/exit,
  } finally {content.INFO.toiletAudio=oldAudio;}
 }
 console.log('PASS: empty outhouse entry/exit, Earth contact landing, fifth-screen stroller, paper pickup with Enter/Space, return flight and audio-length toilet visit work through the live game handlers.');
+
+{
+ const h=await harness(false,'cat');let clock=1000;
+ h.state.scene='earth';h.state.earth=earthQuest.createEarthVisit({x:0,y:-6000});h.state.earth.phase='walking';h.state.position=h.state.earth.position;h.renderScene();
+ for(const boundary of [-1000,0,1000,5000,10000])for(const direction of [-1,1]){
+  h.state.earth.position.x=boundary-direction*2;h.frame(clock+=16);
+  const before=new Map(Array.from({length:3},(_,slot)=>{const n=h.get('#earth-street-slot-'+slot);return [slot,{chunk:Number(n.getAttribute('data-earth-chunk')),writes:n.writes.get('innerHTML')}];}));
+  const rootWrites=h.get('#earth-street').writes.get('innerHTML');h.state.keys.add(direction>0?'ArrowRight':'ArrowLeft');h.frame(clock+=16);h.state.keys.clear();
+  const range=earthArt.earthChunkRange(h.state.earth);let kept=0;
+  for(const [slot,old] of before){const n=h.get('#earth-street-slot-'+slot);if(old.chunk>=range[0]&&old.chunk<=range[1]){assert.equal(n.writes.get('innerHTML'),old.writes);kept++;}}
+  assert.equal(kept,2);assert.equal(h.get('#earth-street').writes.get('innerHTML'),rootWrites,'visible street is never rebuilt');
+  const view=h.get('#world-svg').getAttribute('viewBox').split(' ').map(Number);assert(Math.abs(view[0]-(h.state.earth.position.x-500))<.01);
+ }
+}
+console.log('PASS: crossing Earth street boundaries in either direction retains both visible sections and moves the camera continuously, including the ten-screen repeat.');
