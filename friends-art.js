@@ -1,3 +1,4 @@
+import { FLOWERS, TREES, onPath } from './painting.js';
 import { animalHref } from './hat-quest.js';
 import { FRIEND_CAMP, FRIEND_TENT } from './friends-game.js';
 import { text } from './content.js';
@@ -16,6 +17,10 @@ export function friendsWorldMarkup(friends) {
 // Fixed meadow decoration: no paint targets, interactions or collision areas.
 const campFlowers = '<g id="camp-meadow-flowers" pointer-events="none" aria-hidden="true">' + Array.from({length:120},(_,i)=>{
   const x=590+(i*137%460), y=835+(i*71%195);
+  // Reserve the entire small flower, plus a visible gap around scenery.
+  const occupied=[...TREES.map(([a,b,w,h])=>[a,b,w,h]),...FLOWERS.map(([a,b,,w])=>[a,b,w,w*1.2])];
+  if(occupied.some(([a,b,w,h])=>x+10>a-14 && x-10<a+w+14 && y>b-14 && y-22<b+h+14))return '';
+  for(let dx=-18;dx<=18;dx+=6)for(let dy=-30;dy<=8;dy+=6)if(onPath({x:x+dx,y:y+dy}))return '';
   if((x>FRIEND_TENT.x-94 && x<FRIEND_TENT.x+125 && y>FRIEND_TENT.y-100 && y<FRIEND_TENT.y+16) || Math.hypot((x-FRIEND_CAMP.x)/1.2,y-FRIEND_CAMP.y)<48)return '';
   const color=['#fff20b','#ff87ce','#ff3935','#7d69e8','#1d55ff','#ffffff','#ffad42'][i%7], size=3.2+i%3*.6;
   return `<g transform="translate(${x} ${y})"><path d="M0 0v-9m0 6-4-3" fill="none" stroke="#287c3e" stroke-width="1.3"/><g fill="${color}" stroke="#101014" stroke-width=".65">${Array.from({length:5},(_,p)=>{const a=p*Math.PI*2/5;return `<circle cx="${(Math.cos(a)*size).toFixed(1)}" cy="${(-12+Math.sin(a)*size).toFixed(1)}" r="${size}"/>`;}).join('')}<circle cy="-12" r="2" fill="#fff20b"/></g></g>`;
