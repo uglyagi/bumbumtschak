@@ -60,6 +60,7 @@
     }
   ],
   "info": {
+    "campAudio": "uploads/0e1ef0ac-f716-4af9-ac4f-f545083f4d06.mp3",
     "toiletAudio": "uploads/bca84396-1052-42cb-8dfa-e60d5e6478a3.mp3",
     "tagline": "Die Kinderliederband",
     "about": "Ein Panda am Schlagzeug, ein Papagei an Bass und Gesang und ein Krokodil an der E-Gitarre: Zusammen sind wir Bum Bum Tschak. Unsere Lieder erzählen vom Tanzen, von Freundschaft, vom Fahrradfahren und von einem Hut, der beim Reiten verloren geht.",
@@ -521,7 +522,11 @@
       "earth_pyramids": "Pyramiden von Gizeh",
       "earth_opera": "Opernhaus Sydney",
       "earth_burj": "Burj Khalifa",
-      "earth_pisa": "Schiefer Turm von Pisa"
+      "earth_pisa": "Schiefer Turm von Pisa",
+      "toilet_bubble": "Oje... kein Klopapier",
+      "paper_shelf": "Klopapier",
+      "paper_take": "Klopapier nehmen",
+      "paper_return": "Klopapier zurücklegen"
     },
     "animals": [
       {
