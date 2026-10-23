@@ -48,9 +48,10 @@ export const earthLegPath = phase => { const leg=Math.sin(phase)*7;return `M-5-1
 function person(x,y,phase=0,coat='#707e83',skirt=false,scale=1,id='') {
   return `<g ${id?`id="${id}"`:''} transform="translate(${x.toFixed(2)} ${y}) scale(${scale})" fill="${coat}" stroke="#606b6d" stroke-width="2"><ellipse cy="-58" rx="9" ry="11" fill="#b8aca0"/><path d="M-9-45h18l${skirt?'9 29h-36':'3 27h-24'}Z"/><path class="earth-legs" d="${earthLegPath(phase)}" fill="none" stroke-width="4"/><path d="M-10-40l-4 22M10-40l5 22" fill="none" stroke-width="4"/></g>`;
 }
-export function earthPeopleChunkMarkup(earth,chunk) {
-  let out=earthPedestrians(earth,chunk).map(p=>person(p.x,p.y,p.phase,p.coat,p.skirt,p.scale,p.id)).join('');
-  if((chunk%10+10)%10===4) {
+export function earthPeopleChunkMarkup(earth,chunk,front=false) {
+  const visible=y=>(y>earth.position.y)===front;
+  let out=earthPedestrians(earth,chunk).filter(p=>visible(p.y)).sort((a,b)=>a.y-b.y).map(p=>person(p.x,p.y,p.phase,p.coat,p.skirt,p.scale,p.id)).join('');
+  if((chunk%10+10)%10===4 && visible(508)) {
     const p=earthStroller(earth,Math.floor(chunk/10));
     out+=`<g id="earth-family-${chunk}" transform="translate(${p.x.toFixed(2)} ${p.y})">`
       +person(-51,0,earth.time*3,'#687984',false,1,`earth-parent-${chunk}-0`)+person(-88,8,earth.time*3+1,'#a09990',true,1,`earth-parent-${chunk}-1`)
@@ -58,13 +59,13 @@ export function earthPeopleChunkMarkup(earth,chunk) {
   }
   return out;
 }
-export function earthPeopleMarkup(earth) {
+export function earthPeopleMarkup(earth,front=false) {
   const [first,last]=earthChunkRange(earth);let out='';
-  for(let chunk=first;chunk<=last;chunk++)out+=`<g id="earth-people-slot-${earthChunkSlot(chunk)}" data-earth-chunk="${chunk}">${earthPeopleChunkMarkup(earth,chunk)}</g>`;
+  for(let chunk=first;chunk<=last;chunk++)out+=`<g id="earth-people${front?'-front':''}-slot-${earthChunkSlot(chunk)}" data-earth-chunk="${chunk}">${earthPeopleChunkMarkup(earth,chunk,front)}</g>`;
   return out;
 }
 export function toiletPaperMarkup() { return '<g stroke="#101014" stroke-width="2"><path d="M-12-12h22v24H-12Z" fill="#fff"/><ellipse cx="10" rx="7" ry="12" fill="#f8f8f1"/><ellipse cx="10" rx="2.5" ry="5" fill="#aaa99d"/><path d="M-12 10v17l8-3 8 3V10" fill="#fff"/></g>'; }
 export function earthPaperMarkup(earth) { const p=earth.paper;return p?`<g transform="translate(${p.x.toFixed(2)} ${p.y.toFixed(2)}) rotate(${p.phase==='flying'?p.elapsed*300:12})">${toiletPaperMarkup()}</g>`:''; }
 export function earthMarkup(earth, animal, hat=false) {
-  return `<svg id="world-svg" xmlns="http://www.w3.org/2000/svg" viewBox="${earth.position.x-500} 0 1000 660" font-family="Arial,sans-serif">${defs()}<g id="earth-street">${earthStreetMarkup(earth)}</g><g id="earth-people">${earthPeopleMarkup(earth)}</g><g id="earth-paper">${earthPaperMarkup(earth)}</g><g id="player" transform="translate(${earth.position.x} ${earth.position.y})"><ellipse rx="25" ry="8" fill="#42494b" opacity=".13"/><g id="player-body"><use id="player-use" href="${animalHref(animal,hat,earth.facing)}" x="-34" y="-77" width="68" height="82"/></g></g><g id="destination-marker" hidden=""/></svg>`;
+  return `<svg id="world-svg" xmlns="http://www.w3.org/2000/svg" viewBox="${earth.position.x-500} 0 1000 660" font-family="Arial,sans-serif">${defs()}<g id="earth-street">${earthStreetMarkup(earth)}</g><g id="earth-people">${earthPeopleMarkup(earth)}</g><g id="earth-paper">${earthPaperMarkup(earth)}</g><g id="player" transform="translate(${earth.position.x} ${earth.position.y})"><ellipse rx="25" ry="8" fill="#42494b" opacity=".13"/><g id="player-body"><use id="player-use" href="${animalHref(animal,hat,earth.facing)}" x="-34" y="-77" width="68" height="82"/></g></g><g id="quest-paper" pointer-events="none"></g><g id="earth-people-front">${earthPeopleMarkup(earth,true)}</g><g id="destination-marker" hidden=""/></svg>`;
 }

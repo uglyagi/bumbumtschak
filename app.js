@@ -600,7 +600,7 @@ function renderScene() {
   if(state.scene==='wardrobe' && !state.earth && state.paperUnlocked) artwork=artwork.replace('<g id="player"', `<g id="home-paper-shelf" transform="translate(${PAPER_SHELF.x} ${PAPER_SHELF.y})" stroke="#101014" stroke-width="3"><path d="M-55 0h110v12H-55Z" fill="#d69c5b"/><path d="M-40 12v15m80-15v15"/>${[-28,0,28].map(x=>`<g transform="translate(${x} -24)">${toiletPaperMarkup()}</g>`).join('')}<text y="49" text-anchor="middle" stroke="none" font-size="17">${T('paper_shelf')}</text></g><g id="player"`);
   const markup = colorHatMarkup(artwork.replace('<g id="player"', '<g id="friends-room"></g><g id="player"').replace('<g id="player-body">', playerDanceMarkup() + '<g id="player-body">'), state.hat.color);
   const end = markup.lastIndexOf('</svg>');
-  game.innerHTML = markup.slice(0, end) + '<g id="toilet-bubble" pointer-events="none"></g><g id="quest-paper" pointer-events="none"></g><g id="friends-round" pointer-events="none"></g><g id="hat-effects"></g><g id="reception-effects"></g><g id="chocolate-carry" pointer-events="none" hidden="">' + chocolateBarMarkup() + '</g>' + markup.slice(end);
+  game.innerHTML = markup.slice(0, end) + (state.earth?'':'<g id="quest-paper" pointer-events="none"></g>') + '<g id="toilet-bubble" pointer-events="none"></g><g id="friends-round" pointer-events="none"></g><g id="hat-effects"></g><g id="reception-effects"></g><g id="chocolate-carry" pointer-events="none" hidden="">' + chocolateBarMarkup() + '</g>' + markup.slice(end);
   world = $('#world-svg'); player = $('#player'); playerUse = $('#player-use'); marker = $('#destination-marker');
   game.setAttribute('aria-label', state.earth ? text('earth_title') : state.race ? text('bike_title') : state.adventure?.sunTime != null ? text('sun_holiday_title') : state.scene === 'chocolate' ? text('choco_title') : state.scene === 'painting' ? text('studio_title') : state.scene === 'space' ? text('space_title') : state.scene === 'sky' ? text('sky_title') : state.scene === 'world' ? text('world_title') : ROOMS[state.scene].title);
   $('.wayfinder').hidden = state.scene !== 'world' || state.rocket.riding;
@@ -957,11 +957,11 @@ function updateEarthView(force = false) {
   const earth = state.earth;if (!earth) return;
   const [first,last]=earthChunkRange(earth),frame=Math.floor(earth.time*15);
   for(let chunk=first;chunk<=last;chunk++) {
-    const slot=earthChunkSlot(chunk);
-    for(const [layer,markup] of [['street',earthStreetChunkMarkup],['people',earthPeopleChunkMarkup]]) {
+    const slot=earthChunkSlot(chunk), depth=[483,508,524].filter(y=>earth.position.y>=y).length;
+    for(const [layer,markup] of [['street',earthStreetChunkMarkup],['people',earthPeopleChunkMarkup],['people-front',(e,c)=>earthPeopleChunkMarkup(e,c,true)]]) {
       const node=$(`#earth-${layer}-slot-${slot}`);
-      if(node&&node.getAttribute('data-earth-chunk')!==String(chunk)) {
-        node.innerHTML=markup(earth,chunk);node.setAttribute('data-earth-chunk',String(chunk));
+      if(node&&(node.getAttribute('data-earth-chunk')!==String(chunk) || layer!=='street' && node.getAttribute('data-earth-depth')!==String(depth))) {
+        node.innerHTML=markup(earth,chunk);node.setAttribute('data-earth-chunk',String(chunk));node.setAttribute('data-earth-depth',String(depth));
       }
     }
     for(const p of earthPedestrians(earth,chunk)) {

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { COURSE,createAdventure,startAdventure,tickAdventure,resumeFromEarth,adventurePlanetPosition,FINISH_DISTANCE } from '../rocket-adventure.js';
 import { createEarthVisit,tickEarth,earthStroller,earthInteraction,releaseEarthPaper,takeEarthPaper,EARTH_LENGTH,earthModulo,nearOuthouse,OUTHOUSE } from '../earth-quest.js';
-import { earthMarkup,earthStreetMarkup,earthPeopleMarkup,earthChunkRange,earthChunkSlot,earthPedestrians,EARTH_LANDMARKS } from '../earth-art.js';
+import { earthMarkup,earthStreetMarkup,earthPeopleMarkup,earthPeopleChunkMarkup,earthChunkRange,earthChunkSlot,earthPedestrians,EARTH_LANDMARKS } from '../earth-art.js';
 import { WORLD_SPAWN,planPath,canStand } from '../game-core.js';
 import { worldMarkup } from '../art.js';
 
@@ -30,7 +30,7 @@ test('the street repeats after ten screens, has ten distinct landmarks and peopl
  for(let i=0;i<40;i++)tickEarth(e,.05,0,-1);assert.equal(e.position.y,455);
  for(let i=0;i<40;i++)tickEarth(e,.05,0,1);assert.equal(e.position.y,575);
  e.position={x:530,y:505};assert(earthStreetMarkup(e).includes('Eiffelturm'));e.position.x+=EARTH_LENGTH;assert(earthStreetMarkup(e).includes('Eiffelturm'));assert.equal(earthModulo(e.position.x),530);
- e.position.x=4450;assert(earthStreetMarkup(e).includes('Kolosseum'));assert(earthPeopleMarkup(e).includes('q25 0 26 27'));
+ e.position.x=4450;assert(earthStreetMarkup(e).includes('Kolosseum'));assert((earthPeopleMarkup(e)+earthPeopleMarkup(e,true)).includes('q25 0 26 27'));
  assert(earthMarkup(e,'cat').includes('href="#animal-cat'));assert(!earthStreetMarkup(e).includes('#ff87ce'),'the Earth street has its own restrained palette');
 });
 
@@ -71,4 +71,17 @@ test('pedestrians turn without teleporting and never obscure the family, in any 
   e.time=time;const before=earthPedestrians(e,chunk);e.time+=.016;const after=earthPedestrians(e,chunk);
   before.forEach((p,i)=>assert(Math.abs(p.x-after[i].x)<=23*.016+.00001));
  }
+});
+
+test('Earth pedestrians and the stroller draw in front only when their feet are below the player',()=>{
+ const e=createEarthVisit({x:0,y:0});
+ for(const y of [460,500,530]){
+  e.position.y=y;
+  const back=earthPeopleChunkMarkup(e,0),front=earthPeopleChunkMarkup(e,0,true);
+  for(const p of earthPedestrians(e,0)){
+   const id=`id="${p.id}"`;assert.equal(front.includes(id),p.y>y);assert.equal(back.includes(id),p.y<=y);
+  }
+  assert.equal(earthPeopleChunkMarkup(e,4,true).includes('id="earth-family-4"'),508>y);
+ }
+ const art=earthMarkup(e,'cat');assert(art.indexOf('id="player"')<art.indexOf('id="earth-people-front"'));assert(art.indexOf('id="quest-paper"')<art.indexOf('id="earth-people-front"'));
 });
