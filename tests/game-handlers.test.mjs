@@ -1886,7 +1886,8 @@ console.log('PASS: hide choice, tree concealment and revealing, loss/retry/exit,
  const h=await harness(false,'cat');let clock=1000;const step=()=>h.frame(clock+=50);
  h.state.position={...earthQuest.OUTHOUSE.outside};h.renderScene();h.game.focus();h.state.keys.add('ArrowUp');
  for(let i=0;i<12&&!h.state.toilet;i++)step();assert(h.state.toilet);h.state.keys.clear();
- for(let i=0;i<40&&!h.modal.open;i++)step();assert.equal(h.state.modal,'toilet-empty');assert(h.modalContent.innerHTML.includes('Ohje... kein Klopapier'));assert.deepEqual({...h.state.position},{...earthQuest.OUTHOUSE.outside});h.closePanel();
+ for(let i=0;i<40&&h.state.toilet;i++)step();assert(!h.modal.open);assert(h.state.toiletBubble);assert(h.get('#toilet-bubble').innerHTML.includes('Oje... kein Klopapier'));assert.deepEqual({...h.state.position},{...earthQuest.OUTHOUSE.outside});
+ for(let i=0;i<20;i++)step();assert(h.state.toiletBubble);h.state.keys.add('ArrowRight');step();h.state.keys.clear();assert(!h.state.toiletBubble);assert.equal(h.get('#toilet-bubble').innerHTML,'');
  const origin={x:700,y:-5800};h.state.position={...origin};h.state.scene='space';h.state.rocket.riding=true;
  h.state.adventure=adventure.createAdventure(1200,700);adventure.startAdventure(h.state.adventure,'mittel');const earth=adventure.COURSE.find(p=>p.id==='earth');h.state.adventure.progress=earth.x-700;h.state.adventure.ship={...adventure.adventurePlanetPosition(h.state.adventure,earth),x:920};h.state.adventure.nextMeteor=Infinity;h.renderScene();
  for(let i=0;i<62&&!h.state.earth;i++){h.state.keys.clear();step();}h.state.keys.clear();assert(h.state.earth);assert.equal(h.state.scene,'earth');assert.equal(h.state.adventure.phase,'earth');
@@ -1925,3 +1926,21 @@ console.log('PASS: empty outhouse entry/exit, Earth contact landing, fifth-scree
  }
 }
 console.log('PASS: crossing Earth street boundaries in either direction retains both visible sections and moves the camera continuously, including the ten-screen repeat.');
+
+{
+ const h=await harness(false,'cat');h.state.scene='painting';h.state.studio={color:null,page:0,returnPosition:{x:800,y:700}};h.state.position={x:600,y:500};h.renderScene();
+ for(const pointerType of ['touch','pen']){
+  const color=content.PALETTE[pointerType==='touch'?0:1],target=new h.Element('swatch','g',{studioColor:color.id});let prevented=false;const before={...h.state.position};
+  for(const cb of h.game.handlers.get('pointerdown')||[])cb({pointerType,target,preventDefault(){prevented=true;}});
+  assert(prevented);assert.equal(h.state.studio.color,color.id);assert.deepEqual({...h.state.position},before);assert.deepEqual({...h.state.paint},{});
+ }
+ h.game.focus();startThumb(h,35,0);h.frame(1000);h.frame(1050);releaseThumb(h);assert(h.state.position.x>600);
+}
+
+for(const touch of [false,true]){
+ const h=await harness(false,'cat');h.state.toilet={phase:'using',elapsed:0,hasPaper:true};h.state.position={x:-100,y:500};h.renderScene();h.game.focus();h.frame(1000);
+ if(touch)startThumb(h,35,0);else h.state.keys.add('ArrowRight');
+ h.frame(1050);assert.equal(h.state.toilet.phase,'leaving');assert(h.get('#toilet-audio').paused);
+ if(touch)releaseThumb(h);else h.state.keys.clear();
+ for(let i=0;i<15;i++)h.frame(1100+i*50);assert(!h.state.toilet);assert(!h.modal.open);
+}

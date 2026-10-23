@@ -193,7 +193,6 @@ function helpPanel() {
 }
 function renderPanel(id) {
   if(id==='earth-pause')return earthPanel();
-  if(id==='toilet-empty')return wrap('',text('toilet_empty'),`<div class="modal-actions"><button class="primary-button" data-action="close">${T('toilet_ok')}</button></div>`);
   if(id==='toilet-audio')return wrap('',text('toilet_audio_title'),`<div class="modal-actions"><button class="primary-button" data-action="toilet-play">${T('toilet_audio_play')}</button><button class="secondary-button" data-action="toilet-exit">${T('toilet_exit')}</button></div>`);
   if (id.startsWith('friends-')) return friendsPanel(id);
   if (id === 'dance') return dancePanel();
@@ -601,7 +600,7 @@ function renderScene() {
   if(state.scene==='wardrobe' && !state.earth && state.paperUnlocked) artwork=artwork.replace('<g id="player"', `<g id="home-paper-shelf" transform="translate(${PAPER_SHELF.x} ${PAPER_SHELF.y})" stroke="#101014" stroke-width="3"><path d="M-55 0h110v12H-55Z" fill="#d69c5b"/><path d="M-40 12v15m80-15v15"/>${[-28,0,28].map(x=>`<g transform="translate(${x} -24)">${toiletPaperMarkup()}</g>`).join('')}<text y="49" text-anchor="middle" stroke="none" font-size="17">${T('paper_shelf')}</text></g><g id="player"`);
   const markup = colorHatMarkup(artwork.replace('<g id="player"', '<g id="friends-room"></g><g id="player"').replace('<g id="player-body">', playerDanceMarkup() + '<g id="player-body">'), state.hat.color);
   const end = markup.lastIndexOf('</svg>');
-  game.innerHTML = markup.slice(0, end) + '<g id="quest-paper" pointer-events="none"></g><g id="friends-round" pointer-events="none"></g><g id="hat-effects"></g><g id="reception-effects"></g><g id="chocolate-carry" pointer-events="none" hidden="">' + chocolateBarMarkup() + '</g>' + markup.slice(end);
+  game.innerHTML = markup.slice(0, end) + '<g id="toilet-bubble" pointer-events="none"></g><g id="quest-paper" pointer-events="none"></g><g id="friends-round" pointer-events="none"></g><g id="hat-effects"></g><g id="reception-effects"></g><g id="chocolate-carry" pointer-events="none" hidden="">' + chocolateBarMarkup() + '</g>' + markup.slice(end);
   world = $('#world-svg'); player = $('#player'); playerUse = $('#player-use'); marker = $('#destination-marker');
   game.setAttribute('aria-label', state.earth ? text('earth_title') : state.race ? text('bike_title') : state.adventure?.sunTime != null ? text('sun_holiday_title') : state.scene === 'chocolate' ? text('choco_title') : state.scene === 'painting' ? text('studio_title') : state.scene === 'space' ? text('space_title') : state.scene === 'sky' ? text('sky_title') : state.scene === 'world' ? text('world_title') : ROOMS[state.scene].title);
   $('.wayfinder').hidden = state.scene !== 'world' || state.rocket.riding;
@@ -1004,7 +1003,17 @@ function frameEarth(dt) {
 function earthPanel() {
   return wrap(icon('map'),text('earth_title'),`<p class="modal-intro">${T('earth_intro')}</p><div class="modal-actions"><button class="primary-button" data-action="close">${T('earth_continue')}</button><button class="secondary-button" data-action="earth-return">${T('earth_return')}</button></div>`);
 }
+function refreshToiletBubble() {
+  const bubble=state.toiletBubble, layer=$('#toilet-bubble');if(!layer)return;
+  if(!bubble){if(layer.innerHTML)layer.innerHTML='';return;}
+  if(state.scene!==bubble.scene || state.toilet || state.rocket.riding || Math.hypot(state.position.x-bubble.x,state.position.y-bubble.y)>.5){state.toiletBubble=null;layer.innerHTML='';return;}
+  if(layer.innerHTML)return;
+  const lines=[];for(const word of text('toilet_bubble').split(/\s+/)){if(!lines.length || (lines.at(-1)+' '+word).length>23)lines.push(word);else lines[lines.length-1]+=' '+word;}
+  const height=28+lines.length*24;
+  layer.innerHTML=`<g transform="translate(${bubble.x+18} ${bubble.y-95-height})"><path d="M18 0h210q18 0 18 18v${height-36}q0 18-18 18H35L-12 ${height+25}l16-30Q0 ${height} 0 ${height-18}V18Q0 0 18 0Z" fill="#fff" stroke="#101014" stroke-width="3" stroke-linejoin="round"/><text x="123" y="29" text-anchor="middle" fill="#101014" font-size="19" font-weight="800">${lines.map((line,i)=>`<tspan x="123" dy="${i?24:0}">${escape(line)}</tspan>`).join('')}</text></g>`;
+}
 function refreshQuestPaper() {
+  refreshToiletBubble();
   const layer=$('#quest-paper');if(!layer)return;
   const aboard = state.earth ? state.earth.phase !== 'walking' : state.rocket.riding || !!state.adventure || !!state.landing;
   if(!state.toiletPaper || state.toilet || aboard || state.scene==='painting'){layer.innerHTML='';return;}
@@ -1029,6 +1038,10 @@ function playToiletAudio() {
 }
 function tickOuthouse(dt) {
   const toilet=state.toilet;if(!toilet||modal.open||document.hidden)return;
+  const thumb=thumbMovement(), held=[...state.pad.values()];
+  const moving=thumb.x || thumb.y || [...state.keys].some(key=>directions.has(key)) || held.length;
+  if(!moving)toilet.exitArmed=true;
+  if(moving && toilet.exitArmed && ['using','empty'].includes(toilet.phase))leaveOuthouse();
   toilet.elapsed+=dt;
   if(toilet.phase==='entering') {
     const t=Math.min(1,toilet.elapsed/.5);state.position={x:OUTHOUSE.x,y:toilet.from.y+(OUTHOUSE.y-20-toilet.from.y)*t};
@@ -1040,7 +1053,7 @@ function tickOuthouse(dt) {
   else if(toilet.phase==='using'&&toilet.silent&&toilet.elapsed>2.5)leaveOuthouse();
   else if(toilet.phase==='leaving') {
     const t=Math.min(1,toilet.elapsed/.6);state.position={x:OUTHOUSE.x,y:OUTHOUSE.y-20+(OUTHOUSE.outside.y-OUTHOUSE.y+20)*t};
-    if(t===1){state.toilet=null;state.position={...OUTHOUSE.outside};player.removeAttribute('hidden');if(!toilet.hasPaper)showPanel('toilet-empty');updateNear(true);}
+    if(t===1){state.toilet=null;state.position={...OUTHOUSE.outside};player.removeAttribute('hidden');if(!toilet.hasPaper){state.toiletBubble={...state.position,scene:state.scene};announce(text('toilet_bubble'));}updateNear(true);}
   }
   player.setAttribute('transform',`translate(${state.position.x} ${state.position.y})`);
   player.toggleAttribute('hidden',['using','empty'].includes(state.toilet?.phase));
@@ -1523,7 +1536,7 @@ function enableTouchControls() {
   $('#game-instructions').textContent = text('touch_world_keys');
 }
 function canUseThumb() {
-  return state.started && !modal.open && !document.hidden && !state.landing && !state.toilet && !state.friendsExit && !friendsPlayerLocked(state.friends)
+  return state.started && !modal.open && !document.hidden && !state.landing && (!state.toilet || ['using','empty'].includes(state.toilet.phase)) && !state.friendsExit && !friendsPlayerLocked(state.friends)
     && !state.race && (!state.adventure || state.adventure.phase === 'playing' || state.earth?.phase === 'walking')
     && (state.scene !== 'chocolate' || state.chocolate.run?.phase === 'search');
 }
@@ -1536,6 +1549,11 @@ game.addEventListener('pointerdown', e => {
   if (e.pointerType === 'mouse') { ignoreGameClickUntil = 0; return; }
   if (!['touch', 'pen'].includes(e.pointerType)) return;
   enableTouchControls(); ignoreGameClickUntil = Date.now() + 900;
+  if(state.scene==='painting' && state.started && !modal.open){
+    const swatch=e.target?.closest('[data-studio-color]');
+    const color=swatch && studioColors(PALETTE,state.studio.page).find(c=>c.id===swatch.dataset.studioColor);
+    if(color){e.preventDefault();state.studio.color=color.id;clearPaintPreview();renderScene();game.focus({preventScroll:true});}
+  }
 });
 const thumbPad = $('#thumb-pad');
 thumbPad.addEventListener('pointerdown', e => {
