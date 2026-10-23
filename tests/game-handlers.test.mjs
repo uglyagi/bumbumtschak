@@ -1814,3 +1814,29 @@ try {
  }
 }finally{dancingTrack.src=originalDanceAudio;}
 console.log('PASS: every original avatar can choose moonwalk, robot and party by keyboard/touch, keeps its hat, stops dancing on movement or song ending, and retains the existing three disco guests.');
+
+for(const [width,height] of [[390,844],[844,390],[932,430]]) {
+ const h=await harness(false,'cat');h.window.innerWidth=width;h.window.innerHeight=height;
+ h.game.getBoundingClientRect=()=>({left:0,top:0,width,height});h.resize();const original={...h.state.viewport};
+ startThumb(h);releaseThumb(h);assert(h.state.touchMode,'first touch also activates the phone camera');
+ assertClose(h.state.viewport.w,original.w/.75);assertClose(h.state.viewport.h,original.h/.75);
+ const view=h.get('#world-svg').getAttribute('viewBox').split(' ').map(Number);
+ assert(Math.abs(view[2]-original.w/.75)<.01 && Math.abs(view[3]-original.h/.75)<.01);
+ assert(view[0]>=core.WORLD.left && view[0]+view[2]<=core.WORLD.right+.01);
+ h.state.scene='sky';h.resize();assertClose(h.state.viewport.w,original.w/.75);
+ h.state.scene='radio';h.resize();assertClose(h.state.viewport.w,original.w,'rooms keep their established camera framing');
+}
+{
+ const h=await harness(false,'cat',null,false,null,null,null,null,null,true);h.window.innerWidth=390;h.window.innerHeight=844;
+ h.game.getBoundingClientRect=()=>({left:0,top:0,width:390,height:844});new h.Element('fullscreen','button',{action:'fullscreen'}).click();
+ assert(h.state.landscapeTurn);const turned={...h.state.viewport};
+ h.window.innerWidth=844;h.window.innerHeight=390;h.game.getBoundingClientRect=()=>({left:0,top:0,width:844,height:390});h.resize();
+ assert(!h.state.landscapeTurn);assertClose(h.state.viewport.w,turned.w);assertClose(h.state.viewport.h,turned.h);
+ h.state.touchMode=false;h.resize();assertClose(h.state.viewport.w/turned.w,.75,'the phone uses exactly 75% of the former scale in fullscreen');
+}
+{
+ const h=await harness(false,'cat');h.window.innerWidth=1024;h.window.innerHeight=768;
+ h.game.getBoundingClientRect=()=>({left:0,top:0,width:1024,height:768});h.resize();const original={...h.state.viewport};h.state.touchMode=true;h.resize();
+ assertClose(h.state.viewport.w,original.w);assertClose(h.state.viewport.h,original.h,'larger tablets retain their current framing');
+}
+console.log('PASS: smartphones show the outdoor world and sky at 75% scale in portrait, landscape and rotated fullscreen, including on first touch; world bounds, rooms and larger tablet framing are preserved.');

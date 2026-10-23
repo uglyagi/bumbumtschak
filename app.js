@@ -1338,7 +1338,7 @@ function walkToPointer(event) {
 }
 function enableTouchControls() {
   if (state.touchMode) return;
-  state.touchMode = true; document.body.classList.add('touch-controls'); updateNear(true);
+  state.touchMode = true; document.body.classList.add('touch-controls'); resize(); updateNear(true);
   $('#game-instructions').textContent = text('touch_world_keys');
 }
 function canUseThumb() {
@@ -1524,6 +1524,9 @@ function resize() {
   }
   let w = clamp(r.width * 1.24, 600, 1520), h = w / (r.width / r.height);
   if (h > 1050) { h = 1050; w = h * r.width / r.height; }
+  // A phone shows the same world at 75% scale in either orientation.
+  const phone = state.touchMode && Math.min(window.innerWidth || r.width, window.innerHeight || r.height) <= 600;
+  if (phone && outsideScene(state.scene)) { w /= .75; h /= .75; }
   state.viewport = { w, h }; updateCamera(1, true);
 }
 function updateCamera(dt, snap = false) {
