@@ -83,7 +83,7 @@ export function worldMarkup(paint = {}, painting = false, scene = 'world', rocke
   const activeGround = scene === 'world' && !rocket.riding && !snapshot;
   const station = (id, label, content) => stationMarkup(id, label, content, activeGround);
   const flowers = FLOWERS;
-  const grass = [[175, 690], [480, 700], [1420, 520], [380, 230], [1170, 975], [650, 780], [890, 985], [1100, 265], [210, 1010], [-160, 490], [-100, 870], [1705, 625], [1730, 980]];
+  const grass = [[175, 690], [480, 700], [1420, 520], [380, 230], [1170, 975], [650, 780], [890, 985], [1100, 265], [210, 1010], [-160, 490], [-100, 870], [1705, 625]];
   return `<svg id="world-svg" xmlns="http://www.w3.org/2000/svg" viewBox="60 120 1480 850" font-family="Trebuchet MS, Arial, sans-serif" aria-hidden="false" aria-label="${escape(text('world_title'))}" preserveAspectRatio="xMidYMid meet">
     ${defs()}
     <rect x="${WORLD.left}" y="${SKY.top}" width="${WORLD.width}" height="${WORLD.height - SKY.top}" ${P('sky', SKY.color)}/>
