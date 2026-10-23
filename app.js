@@ -438,7 +438,7 @@ function refreshFriendsWorld(force = false) {
   const roundLayer = $('#friends-round');
   if (roundLayer) roundLayer.innerHTML = friendsRoundMarkup(friends, state.position, state.animal, state.scene);
   player.toggleAttribute('hidden', state.rocket.riding || !!state.race || !!friends.hidden);
-  if (friends.phase === 'countdown') { state.facing = 'front'; playerUse.setAttribute('href', animalHref(state.animal, wearsHat(state.hat, state.hatActive), 'front')); }
+  if (['countdown','building','camping'].includes(friends.phase)) { state.facing = 'front'; playerUse.setAttribute('href', animalHref(state.animal, wearsHat(state.hat, state.hatActive), 'front')); }
   if (!['world', 'radio'].includes(state.scene)) return;
   const key = state.scene + ':' + friends.phase + ':' + !!friends.hidden + ':' + friends.unlocked + ':' + friends.actors.map(actor => actor.id + '-' + actor.status).join(',');
   if (force || key !== friendsRenderKey) {
@@ -455,7 +455,7 @@ function refreshFriendsWorld(force = false) {
     const node = $('#friend-' + actor.id), transform = 'translate(' + actor.position.x.toFixed(2) + ' ' + actor.position.y.toFixed(2) + ')';
     if (node?.getAttribute('transform') !== transform) node?.setAttribute('transform', transform);
     node?.classList.toggle('is-walking', actor.walking && !state.reduced);
-    node?.querySelector('use')?.setAttribute('href', animalHref(actor.id, false, actor.facing));
+    node?.querySelector('use')?.setAttribute('href', animalHref(actor.id, false, actor.status === 'camping' ? 'front' : actor.facing));
   }
   $('#friend-tent-fabric')?.setAttribute('transform', 'scale(1 ' + (friends.phase === 'building' ? Math.max(.03, friends.campBuild) : 1).toFixed(3) + ')');
   const fire = friends.phase === 'camping' || friends.phase === 'building' && friends.campBuild > .65;
