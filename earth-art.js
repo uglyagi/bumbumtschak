@@ -1,3 +1,4 @@
+import { landmarkDetails, countryScenery } from './earth-details.js';
 import { defs, rocketMarkup } from './art.js';
 import { animalHref } from './hat-quest.js';
 import { text } from './content.js';
@@ -18,7 +19,7 @@ export function earthLandmark(index) {
     '<path d="M-59 0v-105h15v-82h13v-67h12v-58h12v-63h14v63h12v58h12v67h13v82h15V0Z" fill="#a4afb2"/><path d="M0-375v-43M-8-300V0M8-300V0M-28-183V0M28-183V0M-42-80h84M-31-150h62M-19-220h38" fill="none" stroke="#6c777d"/>',
     '<g transform="rotate(6 0 0)"><path d="M-53 0v-212q53-20 106 0V0Z" fill="#d2d2c9"/>'+Array.from({length:6},(_,i)=>`<path d="M-58 ${-12-i*33}h116v-9H-58Z" fill="#b0b4af"/>`+windows(5,1,-43,-34-i*33,19)).join('')+'<path d="M-40-221v-25h80v25Z" fill="#d2d2c9"/></g>'
   ];
-  return `<g transform="translate(530 425)" stroke="#687174" stroke-width="2" stroke-linejoin="miter">${bodies[index]}</g><text x="530" y="450" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#515c60" letter-spacing="1.5">${esc(text('earth_'+EARTH_LANDMARKS[index]))}</text>`;
+  return `<g transform="translate(530 425)" stroke="#687174" stroke-width="1.1" stroke-linejoin="miter">${bodies[index]}${landmarkDetails(index)}</g><text x="530" y="450" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#515c60" letter-spacing="1.5">${esc(text('earth_'+EARTH_LANDMARKS[index]))}</text>`;
 }
 // Keep one complete neighbour on either side of the camera's current block.
 // A recycled slot is therefore fully offscreen when its contents change.
@@ -26,7 +27,7 @@ export function earthChunkRange(earth) { const center=Math.floor(earth.position.
 export const earthChunkSlot = chunk => (chunk%3+3)%3;
 export function earthStreetChunkMarkup(earth,chunk) {
   const index=(chunk%10+10)%10;
-  return `<g transform="translate(${chunk*1000} 0)"><rect x="0" y="0" width="1000" height="660" fill="#e1e3df"/><rect x="0" y="355" width="1000" height="115" fill="#c9ceca"/>${[40,240,760,890].map((x,i)=>`<g fill="#bdc3c1" stroke="#a7afad"><rect x="${x}" y="${255-i%2*40}" width="100" height="170"/>${windows(4,5,x+10,275-i%2*40,22,26)}</g>`).join('')}${earthLandmark(index)}<path d="M0 466h1000v135H0Z" fill="#999fa0"/><path d="M0 466h1000M0 601h1000" stroke="#c3c8c5" stroke-width="6"/><path d="M0 560h1000" stroke="#dadbd3" stroke-width="3" stroke-dasharray="42 42" stroke-dashoffset="${chunk*EARTH_SCREEN%84}"/><rect y="604" width="1000" height="56" fill="#d1d5d0"/><path d="M100 465V339h70M780 465V339h70" fill="none" stroke="#6b7578" stroke-width="5"/><path d="M150 342h32M830 342h32" stroke="#eef0dc" stroke-width="6"/>${index===0?'<g id="earth-parked-rocket" transform="translate(180 500)">'+rocketMarkup({position:{x:0,y:0},riding:true,airborne:true,pilotHidden:earth.phase==='walking',hat:earth.hat,angle:0},earth.pilot||'cat')+'</g>':''}</g>`;
+  return `<g transform="translate(${chunk*1000} 0)"><rect x="0" y="0" width="1000" height="660" fill="#e1e3df"/><rect x="0" y="355" width="1000" height="115" fill="#c9ceca"/>${countryScenery(index)}${earthLandmark(index)}<path d="M0 466h1000v135H0Z" fill="#999fa0"/><path d="M0 466h1000M0 601h1000" stroke="#c3c8c5" stroke-width="6"/><path d="M0 560h1000" stroke="#dadbd3" stroke-width="3" stroke-dasharray="42 42" stroke-dashoffset="${chunk*EARTH_SCREEN%84}"/><rect y="604" width="1000" height="56" fill="#d1d5d0"/><path d="M100 465V339h70M780 465V339h70" fill="none" stroke="#6b7578" stroke-width="5"/><path d="M150 342h32M830 342h32" stroke="#eef0dc" stroke-width="6"/>${index===0?'<g id="earth-parked-rocket" transform="translate(180 500)">'+rocketMarkup({position:{x:0,y:0},riding:true,airborne:true,pilotHidden:earth.phase==='walking',hat:earth.hat,angle:0},earth.pilot||'cat')+'</g>':''}</g>`;
 }
 export function earthStreetMarkup(earth) {
   const [first,last]=earthChunkRange(earth);let out='';

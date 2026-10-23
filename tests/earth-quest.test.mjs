@@ -6,22 +6,21 @@ import { earthMarkup,earthStreetMarkup,earthPeopleMarkup,earthChunkRange,earthCh
 import { WORLD_SPAWN,planPath,canStand } from '../game-core.js';
 import { worldMarkup } from '../art.js';
 
-test('the hidden Earth landing requires tracking a moving planet continuously, without pausing scrolling or meteors',()=>{
+test('the secret landing requires a precise complete passage with no steering input',()=>{
  for(const [width,height] of [[1200,700],[844,390],[390,844]]) {
-  const g=createAdventure(width,height);startAdventure(g,'leicht');const earth=COURSE.find(p=>p.id==='earth');g.nextMeteor=Infinity;
-  const place=()=>{g.ship.x=width-65;g.progress=width*.25+earth.x-g.ship.x-55;g.ship.y=adventurePlanetPosition(g,earth).y;};
-  const track=()=>{const point=adventurePlanetPosition(g,earth);return tickAdventure(g,.05,g.ship.x>point.x?-1:0,0);};
-  place();const progress=g.progress;g.meteors=[{id:1,x:0,y:20,radius:5,vx:17,vy:0,angle:0,spin:0}];
-  for(let i=0;i<40;i++)assert.equal(track(),null);
-  assert(g.progress>progress+200);assert(g.meteors[0].x>30);assert(g.earthTouch>1.9);
-  for(let i=0;i<12;i++)tickAdventure(g,.05,0,1);assert.equal(g.earthTouch,0);
-  place();for(let i=0;i<60;i++)track();assert.equal(g.phase,'playing');assert.equal(track(),'earth-land');assert.equal(g.phase,'earth');
-  const oldTime=g.time;resumeFromEarth(g);assert.equal(g.phase,'playing');assert(g.progress>earth.x);assert(g.progress<FINISH_DISTANCE);assert.equal(g.time,oldTime);assert(g.earthVisited);assert(g.nextMeteor>g.time);
-  g.progress=earth.x;g.ship=adventurePlanetPosition(g,earth);tickAdventure(g,.05);assert.equal(g.earthTouch,0);
+  const earth=COURSE.find(p=>p.id==='earth');
+  const setup=(offset=0)=>{const g=createAdventure(width,height);startAdventure(g,'leicht');g.nextMeteor=Infinity;g.progress=earth.x-80;g.ship={x:width*.25,y:adventurePlanetPosition(g,earth).y+offset};return g;};
+  const g=setup();const progress=g.progress;let event;
+  for(let i=0;i<40&&g.phase==='playing';i++)event=tickAdventure(g,.05);
+  assert.equal(event,'earth-land');assert(g.progress>progress);resumeFromEarth(g);assert(g.earthVisited);assert.equal(g.phase,'playing');
+  for(const offset of [8,-8,25]){const miss=setup(offset);for(let i=0;i<40;i++)tickAdventure(miss,.05);assert.equal(miss.phase,'playing');}
+  for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1],[.01,0]]) {
+   const moved=setup();while(!moved.earthPass)tickAdventure(moved,.01);
+   tickAdventure(moved,.01,dx,dy);for(let i=0;i<80;i++)tickAdventure(moved,.05);
+   assert.equal(moved.phase,'playing','any steering during passage cancels landing');
+  }
+  const collision=setup();collision.meteors=[{id:2,...collision.ship,radius:20,vx:0,vy:0,angle:0,spin:0}];assert.equal(tickAdventure(collision,.05),'crash');
  }
- const g=createAdventure(1200,700);startAdventure(g);g.nextMeteor=Infinity;const earth=COURSE.find(p=>p.id==='earth');g.progress=earth.x;g.ship=adventurePlanetPosition(g,earth);
- for(let i=0;i<90;i++)tickAdventure(g,.05);assert.equal(g.phase,'playing','a simple fly-by does not reveal the hidden landing');assert.equal(g.earthTouch,0);
- g.progress=earth.x;g.ship=adventurePlanetPosition(g,earth);g.earthTouch=2.9;g.meteors=[{id:2,...g.ship,radius:20,vx:0,vy:0,angle:0,spin:0}];assert.equal(tickAdventure(g,.05),'crash','planet contact does not disable collision hazards');
 });
 
 test('the street repeats after ten screens, has ten distinct landmarks and people, and keeps the player on the road',()=>{

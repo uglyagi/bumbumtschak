@@ -3,7 +3,7 @@ export const EARTH_SCREEN = 1000;
 export const EARTH_LENGTH = EARTH_SCREEN * 10;
 export const EARTH_SPEED = 245;
 export const earthModulo = x => (x % EARTH_LENGTH + EARTH_LENGTH) % EARTH_LENGTH;
-export const nearOuthouse = p => Math.abs(p.x - OUTHOUSE.x) < 15 && p.y >= 510 && p.y <= 532;
+export const nearOuthouse = p => Math.abs(p.x - OUTHOUSE.x) < 22 && p.y >= 508 && p.y <= 535;
 export function createEarthVisit(origin) {
   return { phase: 'landing', elapsed: 0, time: 0, position: { x: 215, y: 505 }, origin: { ...origin }, paper: null, paperTaken: false, facing: 'front', walking: false, target: null };
 }

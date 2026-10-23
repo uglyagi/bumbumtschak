@@ -190,14 +190,14 @@ test('each band member can upload, preview, publish and remove an independent me
 test('each directional image uploads, previews and publishes independently, and originals restore all views',async()=>{
  const h=await harness();await h.login();await h.click(h.get('#tab-info'));
  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aOv0AAAAASUVORK5CYII=','base64');
- const originalFront=h.state.document.info.animals[0].image,paths=new Map();
+ const originalFront=h.state.document.info.animals[0].image,originalViews={...h.repo.document().info.animals[0]},paths=new Map();
  for(const key of ['imageRight','imageBack']){
   assert(h.get('#panel').innerHTML.includes('info.animals.0.'+key));
   const input=new h.Element(key,{upload:key,animal:'cat'});input.files=[new File([png],key+'.png',{type:'image/png'})];
   await h.fire('#panel','change',input);
   const path=h.state.document.info.animals[0][key];paths.set(key,path);
   assert(path.startsWith('uploads/'));assert(fileReferences(h.state.document).has(path));assert(h.get('#animal-cover-cat-'+key).innerHTML.includes('blob:'));
-  assert.equal(h.state.document.info.animals[0].image,originalFront);assert.equal(h.repo.document().info.animals[0][key],undefined);
+  assert.equal(h.state.document.info.animals[0].image,originalFront);assert.equal(h.repo.document().info.animals[0][key],originalViews[key]);
  }
  assert(await h.save());assert.equal(h.draft().files.length,2);assert(await h.save(true));
  for(const [key,path]of paths){assert.equal(h.repo.document().info.animals[0][key],path);assert.deepEqual(h.repo.blobs.get(h.repo.currentTree().get(path)),png);}

@@ -1888,12 +1888,12 @@ console.log('PASS: hide choice, tree concealment and revealing, loss/retry/exit,
  for(let i=0;i<12&&!h.state.toilet;i++)step();assert(h.state.toilet);h.state.keys.clear();
  for(let i=0;i<40&&!h.modal.open;i++)step();assert.equal(h.state.modal,'toilet-empty');assert(h.modalContent.innerHTML.includes('Ohje... kein Klopapier'));assert.deepEqual({...h.state.position},{...earthQuest.OUTHOUSE.outside});h.closePanel();
  const origin={x:700,y:-5800};h.state.position={...origin};h.state.scene='space';h.state.rocket.riding=true;
- h.state.adventure=adventure.createAdventure(1200,700);adventure.startAdventure(h.state.adventure,'mittel');const earth=adventure.COURSE.find(p=>p.id==='earth');h.state.adventure.progress=earth.x-700;h.state.adventure.ship=adventure.adventurePlanetPosition(h.state.adventure,earth);h.state.adventure.nextMeteor=Infinity;h.renderScene();
- for(let i=0;i<62&&!h.state.earth;i++){h.state.keys.clear();const p=adventure.adventurePlanetPosition(h.state.adventure,earth);if(h.state.adventure.ship.x>p.x)h.state.keys.add('ArrowLeft');step();}h.state.keys.clear();assert(h.state.earth);assert.equal(h.state.scene,'earth');assert.equal(h.state.adventure.phase,'earth');
+ h.state.adventure=adventure.createAdventure(1200,700);adventure.startAdventure(h.state.adventure,'mittel');const earth=adventure.COURSE.find(p=>p.id==='earth');h.state.adventure.progress=earth.x-700;h.state.adventure.ship={...adventure.adventurePlanetPosition(h.state.adventure,earth),x:920};h.state.adventure.nextMeteor=Infinity;h.renderScene();
+ for(let i=0;i<62&&!h.state.earth;i++){h.state.keys.clear();step();}h.state.keys.clear();assert(h.state.earth);assert.equal(h.state.scene,'earth');assert.equal(h.state.adventure.phase,'earth');
  for(let i=0;i<40&&h.state.earth.phase!=='walking';i++)step();assert.equal(h.state.earth.phase,'walking');assert(!h.get('#player').attrs.has('hidden'));assert(h.game.innerHTML.includes('earth-street'));
  h.state.earth.position={...earthQuest.earthStroller(h.state.earth)};step();assert.equal(h.currentInteraction()?.kind,'earth-stroller');h.game.focus();h.press(h.windowHandlers,h.event('Enter','Enter',h.game));assert.equal(h.state.earth.paper.phase,'flying');
  for(let i=0;i<22;i++)step();assert.equal(h.state.earth.paper.phase,'ground');h.state.earth.position={x:h.state.earth.paper.x,y:h.state.earth.paper.y};step();
- h.press(h.windowHandlers,h.event(' ','Space',h.game));assert(h.state.toiletPaper);assert.equal(h.stored.get('bbt-toilet-paper'),'1');assert(h.get('#quest-paper').innerHTML.includes('<ellipse'));
+ h.press(h.windowHandlers,h.event(' ','Space',h.game));assert(h.state.toiletPaper);assert.equal(h.stored.get('bbt-toilet-paper'),'1');assert(h.state.paperUnlocked);assert.equal(h.stored.get('bbt-toilet-paper-unlocked'),'1');assert(h.get('#quest-paper').innerHTML.includes('<ellipse'));
  h.state.earth.position={x:215,y:505};step();h.press(h.windowHandlers,h.event('Enter','Enter',h.game));assert.equal(h.state.earth.phase,'launching');assert.equal(h.get('#quest-paper').innerHTML,'');
  for(let i=0;i<40&&h.state.earth;i++)step();assert(!h.state.earth);assert.equal(h.state.scene,'space');assert.equal(h.state.adventure.phase,'playing');assert.equal(h.state.adventure.difficulty,'mittel');assert(h.state.adventure.progress>earth.x);assert.deepEqual({...h.state.position},origin);assert(h.state.toiletPaper);assert.equal(h.get('#quest-paper').innerHTML,'');
  // Return to the outdoor scene with the collected item and enter via walking.
@@ -1904,6 +1904,9 @@ console.log('PASS: hide choice, tree concealment and revealing, loss/retry/exit,
   assert.equal(h.state.toilet.phase,'using');assert(h.get('#player').attrs.has('hidden'));assert.equal(h.get('#toilet-audio').src,'uploads/toilet.mp3');assert(!h.get('#toilet-audio').paused);assert(!h.state.toiletPaper);assert.equal(h.stored.get('bbt-toilet-paper'),'0');
   for(let i=0;i<80;i++)step();assert.equal(h.state.toilet.phase,'using','the figure stays inside throughout the audio');
   for(const cb of h.get('#toilet-audio').handlers.get('ended'))cb({});for(let i=0;i<15;i++)step();assert(!h.state.toilet);assert(!h.get('#player').attrs.has('hidden'));assert(!h.modal.open);
+  h.state.scene='wardrobe';h.state.position={x:420,y:820};h.renderScene();assert(h.game.innerHTML.includes('home-paper-shelf'));assert.equal(h.currentInteraction()?.kind,'home-paper');h.game.focus();
+  h.press(h.windowHandlers,h.event('Enter','Enter',h.game));assert(h.state.toiletPaper);
+  h.press(h.windowHandlers,h.event(' ','Space',h.game));assert(!h.state.toiletPaper);assert(h.state.paperUnlocked);
  } finally {content.INFO.toiletAudio=oldAudio;}
 }
 console.log('PASS: empty outhouse entry/exit, Earth contact landing, fifth-screen stroller, paper pickup with Enter/Space, return flight and audio-length toilet visit work through the live game handlers.');

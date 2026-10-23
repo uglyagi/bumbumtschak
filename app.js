@@ -49,7 +49,10 @@ const savedRocketDamage = storage.get(rocketStorageKey, '0') === '1';
 const savedDifficulty = storage.get('adventure-difficulty', 'leicht');
 const hatStorageKey = previewMode ? 'hat-preview' : 'hat-world';
 const chocolateStorageKey = previewMode ? 'chocolate-preview' : 'chocolate-world';
+const paperUnlockedKey = previewMode ? 'toilet-paper-unlocked-preview' : 'toilet-paper-unlocked';
+const PAPER_SHELF = { x: 420, y: 820 };
 const toiletStorageKey = previewMode ? 'toilet-paper-preview' : 'toilet-paper';
+if(storage.get(toiletStorageKey,'0')==='1')storage.set(paperUnlockedKey,'1');
 const friendsStorageKey = previewMode ? 'friends-preview' : 'friends-world';
 const bikeScoreKey = previewMode ? 'bike-tour-scores-preview' : 'bike-tour-scores-world';
 let savedBikeScores = null;
@@ -78,6 +81,7 @@ const state = {
   adventure: null, landing: null, toolbox: false, homeReturns: [],
   race: null, bikeScores: cleanBikeScores(savedBikeScores), bikeDoor: false, bikeMusic: null,
   party: createParty(), playerDance: { style: null, elapsed: 0 }, chocolate: createChocolate(savedChocolates),
+  paperUnlocked: storage.get(paperUnlockedKey, '0') === '1' || storage.get(toiletStorageKey, '0') === '1',
   earth: null, toilet: null, toiletPaper: storage.get(toiletStorageKey, '0') === '1',
   friends: createFriends(savedFriendCamp), friendsRestartPending: false, friendsExit: null, campMusic: null,
   hat: createHatQuest(savedHat), hatActive: false, hatRestartPending: false,
@@ -594,6 +598,7 @@ function renderScene() {
   clearPaintPreview();
   const hat = wearsHat(state.hat, state.hatActive);
   let artwork = state.earth ? earthMarkup(state.earth,state.animal,hat) : state.race ? bikeRaceMarkup(state.race, state.animal, state.paint, hat, state.reduced) : state.adventure ? adventureMarkup(state.adventure, state.animal, state.paint, hat) : state.scene === 'chocolate' ? chocolateMazeMarkup(state.chocolate.run) : state.scene === 'painting' ? studioMarkup(state.paint, PALETTE, state.studio) : outsideScene(state.scene) ? worldMarkup(state.paint, !!state.paintCan, state.scene, { ...state.rocket, hat }, state.animal) : roomMarkup(state.scene, state.shelfPage, state.tapes, state.animal, { can: state.paintCan, page: state.paintPage, world: state.paint, toolbox: state.toolbox, returns: state.homeReturns, hat: state.hat, away: awayAnimals(), chocolate: state.chocolate, bikeDoor: state.bikeDoor });
+  if(state.scene==='wardrobe' && !state.earth && state.paperUnlocked) artwork=artwork.replace('<g id="player"', `<g id="home-paper-shelf" transform="translate(${PAPER_SHELF.x} ${PAPER_SHELF.y})" stroke="#101014" stroke-width="3"><path d="M-55 0h110v12H-55Z" fill="#d69c5b"/><path d="M-40 12v15m80-15v15"/>${[-28,0,28].map(x=>`<g transform="translate(${x} -24)">${toiletPaperMarkup()}</g>`).join('')}<text y="49" text-anchor="middle" stroke="none" font-size="17">${T('paper_shelf')}</text></g><g id="player"`);
   const markup = colorHatMarkup(artwork.replace('<g id="player"', '<g id="friends-room"></g><g id="player"').replace('<g id="player-body">', playerDanceMarkup() + '<g id="player-body">'), state.hat.color);
   const end = markup.lastIndexOf('</svg>');
   game.innerHTML = markup.slice(0, end) + '<g id="quest-paper" pointer-events="none"></g><g id="friends-round" pointer-events="none"></g><g id="hat-effects"></g><g id="reception-effects"></g><g id="chocolate-carry" pointer-events="none" hidden="">' + chocolateBarMarkup() + '</g>' + markup.slice(end);
@@ -888,6 +893,7 @@ function currentInteraction() {
   if (friendsHidingRound(state.friends)) return state.friends.hidden || friendHideSpot(state.position, state.rocket.position) ? { id: 'friends-hide', kind: 'friends-hide', label: text(state.friends.hidden ? 'friends_unhide' : 'friends_hide') } : null;
   if (state.chocolate.carrying && state.scene !== 'painting' && !state.rocket.riding && state.chocolate.run?.phase !== 'leaving') return { id: 'eat-chocolate', kind: 'eat-chocolate', label: text('choco_eat') };
   if (state.scene === 'chocolate') return null;
+  if(state.scene==='wardrobe' && state.paperUnlocked && Math.hypot(state.position.x-PAPER_SHELF.x,state.position.y-PAPER_SHELF.y)<70) return {id:'home-paper',kind:'home-paper',label:text(state.toiletPaper?'paper_return':'paper_take')};
   if (state.scene === 'wardrobe' && state.chocolate.unlocked && Math.hypot(state.position.x - CHOCOLATE_DRAWER.x, state.position.y - CHOCOLATE_DRAWER.y) < 75) return { ...CHOCOLATE_DRAWER, kind: 'take-chocolate', label: text('choco_take') };
   if (state.scene === 'painting') {
     const interaction = studioInteraction(state.position, PALETTE, state.studio.page), matrix = world.getScreenCTM();
@@ -1203,9 +1209,10 @@ function performInteraction() {
   if (state.scene === 'painting') { studioAction(near); return; }
   stopWalking(true);
   if (near.kind === 'take-chocolate') { if (takeChocolate(state.chocolate)) { renderScene(); announce(text('choco_taken')); } return; }
+  if(near.kind==='home-paper'){state.toiletPaper=!state.toiletPaper;storage.set(toiletStorageKey,state.toiletPaper?'1':'0');refreshQuestPaper();updateNear(true);return;}
   if(near.kind==='earth-launch'){launchFromEarth();return;}
   if(near.kind==='earth-stroller'){releaseEarthPaper(state.earth);updateEarthView(true);return;}
-  if(near.kind==='earth-paper'){if(takeEarthPaper(state.earth)){state.toiletPaper=true;storage.set(toiletStorageKey,'1');updateEarthView(true);}return;}
+  if(near.kind==='earth-paper'){if(takeEarthPaper(state.earth)){state.toiletPaper=true;state.paperUnlocked=true;storage.set(paperUnlockedKey,'1');storage.set(toiletStorageKey,'1');updateEarthView(true);}return;}
   if(near.kind==='toilet-exit'){leaveOuthouse();return;}
   if (near.kind === 'friends-hide') { toggleFriendsHide(state.friends, state.position, state.rocket.position); stopWalking(); refreshFriendsWorld(); updateNear(true); return; }
   if (near.kind === 'friends-camp') { inviteFriends(); return; }
