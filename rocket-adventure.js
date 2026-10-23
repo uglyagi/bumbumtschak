@@ -39,7 +39,7 @@ export function startAdventure(game, difficulty = game.difficulty) {
   game.phase = 'playing'; game.time = 0; game.progress = 0; game.meteors = []; game.nextMeteor = DIFFICULTIES[game.difficulty].first; game.meteorId = 0; game.angle = 90;
   game.ship = { x: game.width * .25, y: game.height * .5 };
   game.paintTrail = game.trailColor ? [{ x: game.ship.x - 62, y: game.ship.y }] : [];
-  game.sunTime = null; game.sunFrom = null; game.sunMeteors = [];
+  game.sunTime = null; game.sunFrom = null; game.sunMeteors = []; game.earthTouch = 0; game.earthVisited = false;
 }
 export function resizeAdventure(game, width, height) {
   for (const point of game.paintTrail) { point.x = game.progress + (point.x - game.progress) * width / game.width; point.y *= height / game.height; }
@@ -47,6 +47,17 @@ export function resizeAdventure(game, width, height) {
   game.entry.x *= width / game.width; game.entry.y *= height / game.height;
   for (const meteor of [...game.meteors, ...(game.sunMeteors || [])]) { meteor.x *= width / game.width; meteor.y *= height / game.height; }
   game.width = width; game.height = height;
+}
+export function adventurePlanetPosition(game, planet) {
+  const h = game.height, diameter = planet.diameter;
+  return { x: game.width * .25 + planet.x - game.progress, y: h < diameter + 110 ? h / 2 : Math.max(diameter / 2 + 55, Math.min(h - diameter / 2 - 55, h * planet.height)) };
+}
+export function resumeFromEarth(game) {
+  const earth = COURSE.find(p => p.id === 'earth');
+  game.phase = 'playing'; game.earthTouch = 0; game.earthVisited = true;
+  game.ship = { x: game.width * .25, y: adventurePlanetPosition(game, earth).y };
+  game.progress = earth.x + earth.diameter / 2 + 95;
+  game.meteors = []; game.nextMeteor = game.time + 2; game.paintTrail = [];
 }
 export function meteorHits(from, to, radius) {
   const dx = to.x - from.x, dy = to.y - from.y;
@@ -85,7 +96,16 @@ export function tickAdventure(game, seconds, dx = 0, dy = 0) {
   game.ship.x = clamp(game.ship.x + dx / length * 300 * dt, Math.min(65, game.width * .2), Math.max(game.width - 65, game.width * .8));
   game.ship.y = clamp(game.ship.y + dy / length * 300 * dt, Math.min(105, game.height * .3), Math.max(game.height - 55, game.height * .7));
   const speed = game.width < 650 ? 115 : 155;
-  game.time += dt; game.progress += speed * dt; game.angle = 90;
+  game.time += dt; game.angle = 90;
+  const earth = COURSE.find(planet => planet.id === 'earth'), point = adventurePlanetPosition(game, earth);
+  if (!game.earthVisited && Math.hypot(game.ship.x - point.x, game.ship.y - point.y) <= earth.diameter / 2 + 38) {
+    // Holding contact suspends scrolling, making a deliberate three-second
+    // landing possible even on a small screen. Moving away cancels it.
+    game.earthTouch = (game.earthTouch || 0) + dt;
+    if (game.earthTouch > 3) { game.phase = 'earth'; game.earthVisited = true; return 'earth-land'; }
+    return null;
+  }
+  game.earthTouch = 0; game.progress += speed * dt;
   if (game.trailColor) {
     // Keep the line in the scrolling world, sample by distance and bound its cost.
     const point = { x: game.ship.x + game.progress - 62, y: game.ship.y }, last = game.paintTrail.at(-1);

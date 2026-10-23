@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { COURSE, ADVENTURE_PLANETS, SUN_DIAMETER, FINISH_DISTANCE, createAdventure, startAdventure, resizeAdventure, tickAdventure, meteorHits, landingPose, SUN_HOLIDAY_DURATION, INTRO_DURATION, INTRO_DEPARTURE_DURATION } from '../rocket-adventure.js';
+import { resumeFromEarth, COURSE, ADVENTURE_PLANETS, SUN_DIAMETER, FINISH_DISTANCE, createAdventure, startAdventure, resizeAdventure, tickAdventure, meteorHits, landingPose, SUN_HOLIDAY_DURATION, INTRO_DURATION, INTRO_DEPARTURE_DURATION } from '../rocket-adventure.js';
 import { CSS_PIXELS_PER_CM } from '../solar-system.js';
 import { GROUND_ROCKET } from '../sky-world.js';
 import { adventureMarkup, adventureShipPose, adventureCourseOpacity, adventureTrailPath, meteorMarkup } from '../adventure-art.js';
@@ -67,6 +67,7 @@ test('the full course is survivable by steering and ends on the Sun, with a safe
       if (clearance > best) { best = clearance; chosen = [dx, dy]; }
     }
     tickAdventure(game, .016, ...chosen);
+    if(game.phase==='earth')resumeFromEarth(game);
     for (const planet of COURSE) if (game.progress > planet.x) passed.add(planet.id);
   }
   assert.equal(game.phase, 'sun-finale'); assert.equal(passed.size, 8);

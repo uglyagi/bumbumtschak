@@ -205,3 +205,12 @@ test('each directional image uploads, previews and publishes independently, and 
  await h.click(new h.Element('reset cat',{resetAnimal:'cat'}));
  for(const key of ANIMAL_IMAGE_KEYS)assert.equal(h.state.document.info.animals[0][key],DEFAULT_ANIMALS[0][key]);
 });
+
+test('the outhouse audio uploads, previews, saves and publishes with its file reference', async()=>{
+ const h=await harness();await h.login();await h.click(h.get('#tab-info'));
+ assert(h.get('#panel').innerHTML.includes('data-effect="toilet"'));assert(h.get('#panel').innerHTML.includes('info.toiletAudio'));
+ const bytes=new Uint8Array(80);bytes.set(new TextEncoder().encode('ID3'));
+ const input=new h.Element('outhouse audio',{upload:'toiletAudio',effect:'toilet'});input.files=[new File([bytes],'klo.mp3',{type:'audio/mpeg'})];
+ await h.fire('#panel','change',input);const path=h.state.document.info.toiletAudio;assert(path.startsWith('uploads/'));assert(fileReferences(h.state.document).has(path));assert(h.get('#toilet-preview').innerHTML.includes('<audio controls'));
+ assert(await h.save());assert(h.draft().files.some(f=>f.path===path));assert(await h.save(true));assert.equal(h.repo.document().info.toiletAudio,path);assert.deepEqual(h.repo.blobs.get(h.repo.currentTree().get(path)),Buffer.from(bytes));
+});

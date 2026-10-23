@@ -18,6 +18,8 @@ const hats = await import(new URL(`hat-quest.${extension}`, root));
 const reception = await import(new URL(`reception.${extension}`, root));
 const chocolate = await import(new URL(`chocolate.${extension}`, root));
 const chocolateArt = await import(new URL(`chocolate-art.${extension}`, root));
+const earthQuest = await import(new URL(`earth-quest.${extension}`, root));
+const earthArt = await import(new URL(`earth-art.${extension}`, root));
 const friends = await import(new URL(`friends-game.${extension}`, root));
 const friendsArt = await import(new URL(`friends-art.${extension}`, root));
 const bike = await import(new URL(`bike-race.${extension}`, root));
@@ -118,9 +120,9 @@ async function harness(preview = false, savedAnimal = '', savedDrawing = null, d
   doc.body = { prepend() {}, classList: { add: (...names) => names.forEach(name => bodyClasses.add(name)), remove: name => bodyClasses.delete(name), contains: name => bodyClasses.has(name) } };
   doc.documentElement = new Element('html', 'html');
   const game = get('#game'), modal = get('#modal'), modalContent = get('#modal-content'), audio = get('#audio');
-  for (const node of [audio, get('#member-audio'), get('#camp-audio'), get('#bike-audio')]) Object.assign(node, { paused: true, ended: false, currentTime: 0, pause() { this.paused = true; }, play() { this.paused = false; this.ended = false; return Promise.resolve(); }, load() {} });
+  for (const node of [audio, get('#member-audio'), get('#camp-audio'), get('#bike-audio'), get('#toilet-audio')]) Object.assign(node, { paused: true, ended: false, currentTime: 0, pause() { this.paused = true; }, play() { this.paused = false; this.ended = false; return Promise.resolve(); }, load() {} });
   const context = vm.createContext({
-    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky, ...dance, ...studio, ...adventure, ...adventureArt, ...toolbox, ...wreckage, ...holiday, ...hats, ...reception, ...chocolate, ...chocolateArt, ...friends, ...friendsArt, ...bike, ...bikeArt, ...animalViews, ...touchControls, ...fullscreen, ...gameDialog,
+    ...core, ...content, ...art, ...roomArt, ...rooms, ...social, ...painting, ...connection, ...sky, ...dance, ...studio, ...adventure, ...adventureArt, ...toolbox, ...wreckage, ...holiday, ...hats, ...reception, ...chocolate, ...chocolateArt, ...earthQuest, ...earthArt, ...friends, ...friendsArt, ...bike, ...bikeArt, ...animalViews, ...touchControls, ...fullscreen, ...gameDialog,
     loadContent: async () => ({ ok: true }), document: doc,
     window: { innerWidth: 1200, matchMedia: query => ({ matches: touchScreen && query === '(any-pointer: coarse)' }), addEventListener: (n, cb) => add(windowHandlers, n, cb), open(...args) { opened.push(args); } },
     location: { search: preview ? '?preview=1' : '' }, localStorage: { getItem: key => stored.get(key) ?? null, setItem: (key, value) => stored.set(key, value) },
@@ -1878,3 +1880,29 @@ try {
  const h=await harness(false,'cat');h.enterRoom('radio');h.state.tapes.loaded=friendsTrack.id;h.loadRecording();assert.equal(h.state.friends.phase,'meeting');h.state.tapes.loaded=null;h.loadRecording();assert.equal(h.state.friends.phase,'idle');assert(!h.state.friendsExit);
 } finally {friendsTrack.src=previousFriendsSrc;}
 console.log('PASS: hide choice, tree concealment and revealing, loss/retry/exit, building lock and eye-cover countdown work with Enter/Space/Numpad Enter while preserving fullscreen; ejecting cancels an unfinished invitation.');
+
+{
+ const h=await harness(false,'cat');let clock=1000;const step=()=>h.frame(clock+=50);
+ h.state.position={...earthQuest.OUTHOUSE.outside};h.renderScene();h.game.focus();h.state.keys.add('ArrowUp');
+ for(let i=0;i<12&&!h.state.toilet;i++)step();assert(h.state.toilet);h.state.keys.clear();
+ for(let i=0;i<40&&!h.modal.open;i++)step();assert.equal(h.state.modal,'toilet-empty');assert(h.modalContent.innerHTML.includes('Ohje... kein Klopapier'));assert.deepEqual({...h.state.position},{...earthQuest.OUTHOUSE.outside});h.closePanel();
+ const origin={x:700,y:-5800};h.state.position={...origin};h.state.scene='space';h.state.rocket.riding=true;
+ h.state.adventure=adventure.createAdventure(1200,700);adventure.startAdventure(h.state.adventure,'mittel');const earth=adventure.COURSE.find(p=>p.id==='earth');h.state.adventure.progress=earth.x;h.state.adventure.ship=adventure.adventurePlanetPosition(h.state.adventure,earth);h.state.adventure.nextMeteor=Infinity;h.renderScene();
+ for(let i=0;i<62&&!h.state.earth;i++)step();assert(h.state.earth);assert.equal(h.state.scene,'earth');assert.equal(h.state.adventure.phase,'earth');
+ for(let i=0;i<40&&h.state.earth.phase!=='walking';i++)step();assert.equal(h.state.earth.phase,'walking');assert(!h.get('#player').attrs.has('hidden'));assert(h.game.innerHTML.includes('earth-street'));
+ h.state.earth.position={...earthQuest.earthStroller(h.state.earth)};step();assert.equal(h.currentInteraction()?.kind,'earth-stroller');h.game.focus();h.press(h.windowHandlers,h.event('Enter','Enter',h.game));assert.equal(h.state.earth.paper.phase,'flying');
+ for(let i=0;i<22;i++)step();assert.equal(h.state.earth.paper.phase,'ground');h.state.earth.position={x:h.state.earth.paper.x,y:h.state.earth.paper.y};step();
+ h.press(h.windowHandlers,h.event(' ','Space',h.game));assert(h.state.toiletPaper);assert.equal(h.stored.get('bbt-toilet-paper'),'1');assert(h.get('#quest-paper').innerHTML.includes('<ellipse'));
+ h.state.earth.position={x:215,y:505};step();h.press(h.windowHandlers,h.event('Enter','Enter',h.game));assert.equal(h.state.earth.phase,'launching');
+ for(let i=0;i<40&&h.state.earth;i++)step();assert(!h.state.earth);assert.equal(h.state.scene,'space');assert.equal(h.state.adventure.phase,'playing');assert.equal(h.state.adventure.difficulty,'mittel');assert(h.state.adventure.progress>earth.x);assert.deepEqual({...h.state.position},origin);assert(h.state.toiletPaper);
+ // Return to the outdoor scene with the collected item and enter via walking.
+ h.state.adventure=null;h.state.rocket.riding=false;h.state.scene='world';h.state.position={...earthQuest.OUTHOUSE.outside};h.renderScene();
+ const oldAudio=content.INFO.toiletAudio;content.INFO.toiletAudio='uploads/toilet.mp3';
+ try {
+  h.state.keys.add('ArrowUp');for(let i=0;i<12&&!h.state.toilet;i++)step();h.state.keys.clear();for(let i=0;i<20&&h.state.toilet?.phase!=='using';i++)step();
+  assert.equal(h.state.toilet.phase,'using');assert(h.get('#player').attrs.has('hidden'));assert.equal(h.get('#toilet-audio').src,'uploads/toilet.mp3');assert(!h.get('#toilet-audio').paused);assert(!h.state.toiletPaper);assert.equal(h.stored.get('bbt-toilet-paper'),'0');
+  for(let i=0;i<80;i++)step();assert.equal(h.state.toilet.phase,'using','the figure stays inside throughout the audio');
+  for(const cb of h.get('#toilet-audio').handlers.get('ended'))cb({});for(let i=0;i<15;i++)step();assert(!h.state.toilet);assert(!h.get('#player').attrs.has('hidden'));assert(!h.modal.open);
+ } finally {content.INFO.toiletAudio=oldAudio;}
+}
+console.log('PASS: empty outhouse entry/exit, Earth contact landing, fifth-screen stroller, paper pickup with Enter/Space, return flight and audio-length toilet visit work through the live game handlers.');

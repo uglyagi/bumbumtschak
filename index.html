@@ -7,7 +7,7 @@
   <title>Bum Bum Tschak · Deine bunte Musikwelt</title>
   <meta name="description" content="Such dir ein Tier aus und entdecke die bunte Welt von Bum Bum Tschak. Besuche das Kassettenradio, die Konzerttafel und unsere drei Bandfreunde.">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css?v=418295d5c8f6750e">
+  <link rel="stylesheet" href="styles.css?v=59849d1e82bbd538">
 </head>
 <body class="game-hints-off">
   <div class="app">
@@ -78,53 +78,56 @@
   <audio id="audio" preload="none"></audio>
   <audio id="member-audio" preload="none"></audio>
   <audio id="camp-audio" preload="none"></audio>
+  <audio id="toilet-audio" preload="none"></audio>
   <audio id="bike-audio" preload="none"></audio>
   <noscript><div class="no-script"><h1>Bum Bum Tschak</h1><p>Der Panda spielt Schlagzeug, der Papagei Bass und singt, und das Krokodil spielt E-Gitarre.</p><p>Für die begehbare Musikwelt bitte JavaScript aktivieren.</p><p>Unsere Lieder: Hut, Tanzen, Freundschaft und Fahrradfahren.</p></div></noscript>
   <!-- versioned-game-assets -->
   <script type="importmap">{
   "imports": {
-    "./adventure-art.js": "./adventure-art.js?v=418295d5c8f6750e",
-    "./animal-defaults.js": "./animal-defaults.js?v=418295d5c8f6750e",
-    "./animal-views.js": "./animal-views.js?v=418295d5c8f6750e",
-    "./app.js": "./app.js?v=418295d5c8f6750e",
-    "./art.js": "./art.js?v=418295d5c8f6750e",
-    "./band-defaults.js": "./band-defaults.js?v=418295d5c8f6750e",
-    "./bike-art.js": "./bike-art.js?v=418295d5c8f6750e",
-    "./bike-race.js": "./bike-race.js?v=418295d5c8f6750e",
-    "./chocolate-art.js": "./chocolate-art.js?v=418295d5c8f6750e",
-    "./chocolate.js": "./chocolate.js?v=418295d5c8f6750e",
-    "./connection.js": "./connection.js?v=418295d5c8f6750e",
-    "./content.js": "./content.js?v=418295d5c8f6750e",
-    "./copy-defaults.js": "./copy-defaults.js?v=418295d5c8f6750e",
-    "./cover-art.js": "./cover-art.js?v=418295d5c8f6750e",
-    "./dance-party.js": "./dance-party.js?v=418295d5c8f6750e",
-    "./fireworks.js": "./fireworks.js?v=418295d5c8f6750e",
-    "./friends-art.js": "./friends-art.js?v=418295d5c8f6750e",
-    "./friends-game.js": "./friends-game.js?v=418295d5c8f6750e",
-    "./fullscreen.js": "./fullscreen.js?v=418295d5c8f6750e",
-    "./game-core.js": "./game-core.js?v=418295d5c8f6750e",
-    "./game-dialog.js": "./game-dialog.js?v=418295d5c8f6750e",
-    "./hat-quest.js": "./hat-quest.js?v=418295d5c8f6750e",
-    "./painting-studio.js": "./painting-studio.js?v=418295d5c8f6750e",
-    "./painting.js": "./painting.js?v=418295d5c8f6750e",
-    "./reception.js": "./reception.js?v=418295d5c8f6750e",
-    "./rocket-adventure.js": "./rocket-adventure.js?v=418295d5c8f6750e",
-    "./rocket-wreckage.js": "./rocket-wreckage.js?v=418295d5c8f6750e",
-    "./room-art.js": "./room-art.js?v=418295d5c8f6750e",
-    "./rooms.js": "./rooms.js?v=418295d5c8f6750e",
-    "./site-config.js": "./site-config.js?v=418295d5c8f6750e",
-    "./sky-world.js": "./sky-world.js?v=418295d5c8f6750e",
-    "./social.js": "./social.js?v=418295d5c8f6750e",
-    "./solar-system.js": "./solar-system.js?v=418295d5c8f6750e",
-    "./space-art.js": "./space-art.js?v=418295d5c8f6750e",
-    "./sun-holiday.js": "./sun-holiday.js?v=418295d5c8f6750e",
-    "./toolbox.js": "./toolbox.js?v=418295d5c8f6750e",
-    "./touch-controls.js": "./touch-controls.js?v=418295d5c8f6750e",
-    "./utils.js": "./utils.js?v=418295d5c8f6750e",
-    "./verwaltung/drafts.js": "./verwaltung/drafts.js?v=418295d5c8f6750e"
+    "./adventure-art.js": "./adventure-art.js?v=59849d1e82bbd538",
+    "./animal-defaults.js": "./animal-defaults.js?v=59849d1e82bbd538",
+    "./animal-views.js": "./animal-views.js?v=59849d1e82bbd538",
+    "./app.js": "./app.js?v=59849d1e82bbd538",
+    "./art.js": "./art.js?v=59849d1e82bbd538",
+    "./band-defaults.js": "./band-defaults.js?v=59849d1e82bbd538",
+    "./bike-art.js": "./bike-art.js?v=59849d1e82bbd538",
+    "./bike-race.js": "./bike-race.js?v=59849d1e82bbd538",
+    "./chocolate-art.js": "./chocolate-art.js?v=59849d1e82bbd538",
+    "./chocolate.js": "./chocolate.js?v=59849d1e82bbd538",
+    "./connection.js": "./connection.js?v=59849d1e82bbd538",
+    "./content.js": "./content.js?v=59849d1e82bbd538",
+    "./copy-defaults.js": "./copy-defaults.js?v=59849d1e82bbd538",
+    "./cover-art.js": "./cover-art.js?v=59849d1e82bbd538",
+    "./dance-party.js": "./dance-party.js?v=59849d1e82bbd538",
+    "./earth-art.js": "./earth-art.js?v=59849d1e82bbd538",
+    "./earth-quest.js": "./earth-quest.js?v=59849d1e82bbd538",
+    "./fireworks.js": "./fireworks.js?v=59849d1e82bbd538",
+    "./friends-art.js": "./friends-art.js?v=59849d1e82bbd538",
+    "./friends-game.js": "./friends-game.js?v=59849d1e82bbd538",
+    "./fullscreen.js": "./fullscreen.js?v=59849d1e82bbd538",
+    "./game-core.js": "./game-core.js?v=59849d1e82bbd538",
+    "./game-dialog.js": "./game-dialog.js?v=59849d1e82bbd538",
+    "./hat-quest.js": "./hat-quest.js?v=59849d1e82bbd538",
+    "./painting-studio.js": "./painting-studio.js?v=59849d1e82bbd538",
+    "./painting.js": "./painting.js?v=59849d1e82bbd538",
+    "./reception.js": "./reception.js?v=59849d1e82bbd538",
+    "./rocket-adventure.js": "./rocket-adventure.js?v=59849d1e82bbd538",
+    "./rocket-wreckage.js": "./rocket-wreckage.js?v=59849d1e82bbd538",
+    "./room-art.js": "./room-art.js?v=59849d1e82bbd538",
+    "./rooms.js": "./rooms.js?v=59849d1e82bbd538",
+    "./site-config.js": "./site-config.js?v=59849d1e82bbd538",
+    "./sky-world.js": "./sky-world.js?v=59849d1e82bbd538",
+    "./social.js": "./social.js?v=59849d1e82bbd538",
+    "./solar-system.js": "./solar-system.js?v=59849d1e82bbd538",
+    "./space-art.js": "./space-art.js?v=59849d1e82bbd538",
+    "./sun-holiday.js": "./sun-holiday.js?v=59849d1e82bbd538",
+    "./toolbox.js": "./toolbox.js?v=59849d1e82bbd538",
+    "./touch-controls.js": "./touch-controls.js?v=59849d1e82bbd538",
+    "./utils.js": "./utils.js?v=59849d1e82bbd538",
+    "./verwaltung/drafts.js": "./verwaltung/drafts.js?v=59849d1e82bbd538"
   }
 }</script>
-  <script type="module" src="app.js?v=418295d5c8f6750e"></script>
+  <script type="module" src="app.js?v=59849d1e82bbd538"></script>
   <!-- /versioned-game-assets -->
 </body>
 </html>

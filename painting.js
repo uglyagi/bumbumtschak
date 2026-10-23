@@ -57,7 +57,7 @@ export const FLOWERS = [
   [245, 165, '#fff20b', 30], [430, 100, '#ff87ce', 28], [505, 390, '#fff20b', 28],
   [665, 540, '#ff87ce', 32], [1115, 735, '#fff20b', 32], [1145, 940, '#ff87ce', 30],
   [185, 825, '#fff20b', 28], [1460, 425, '#ff87ce', 32],
-  [-170, 370, '#fff20b', 35], [-160, 770, '#ff87ce', 34], [1710, 360, '#ff87ce', 35], [1690, 875, '#fff20b', 38],
+  [-180, 290, '#fff20b', 35], [-160, 770, '#ff87ce', 34], [1710, 360, '#ff87ce', 35], [1690, 875, '#fff20b', 38],
 ].map(([x, y, color, size]) => {
   const larger = Math.round(size * 1.25), extra = larger - size;
   return [x - extra / 2, y - extra * 1.2, color, larger];
