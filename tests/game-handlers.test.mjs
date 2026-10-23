@@ -1233,12 +1233,21 @@ try {
   friendsTrack.src = 'uploads/beste-freunde.mp3';
   const h = await harness(false, 'cat'); h.enterRoom('radio'); h.state.tapes.loaded = friendsTrack.id; h.loadRecording(); h.game.focus(); let clock = 0;
   const step = () => h.frame(++clock * 16);
-  assert.equal(h.state.friends.phase, 'chasing'); assert(h.state.friendsExit); assert(h.get('#toast').textContent.includes('Fangenspielen'));
+  assert.equal(h.state.friends.phase, 'meeting'); assert(!h.state.friendsExit);
+  assert(h.get('#friends-room').innerHTML.includes('friend-dog'));
+  const meetingLimit = clock + 1500; while (!h.modal.open && clock < meetingLimit) step();
+  assert.equal(h.state.modal, 'friends-choice'); assert(h.modalContent.innerHTML.includes('FANGENSPIELEN'));
+  new h.Element('catch', 'button', {friendsMode:'catch'}).click();
+  assert(h.state.friendsExit); assert.equal(h.state.friends.phase, 'leaving');
   assert.equal(h.state.friends.actors.length, 3); assert(!h.state.friends.actors.some(actor => actor.id === h.state.animal));
   const exitLimit = clock + 700;
   while (h.state.scene === 'radio' && clock < exitLimit) step();
   assert.equal(h.state.scene, 'world'); assert.equal(h.state.friendsExit, null); assert(!h.modal.open);
-  assert(h.get('#friends-hidden').innerHTML.includes('href="#animal-dog"'));
+  assert.equal(h.state.friends.phase, 'countdown');
+  const countOrigin={...h.state.position}; h.state.keys.add('ArrowRight');
+  const countLimit=clock+700; while(h.state.friends.phase==='countdown' && clock<countLimit) step();
+  h.state.keys.clear(); assert(Math.hypot(h.state.position.x-countOrigin.x,h.state.position.y-countOrigin.y)<4);
+  assert.equal(h.state.friends.phase,'chasing'); assert(h.get('#friends-hidden').innerHTML.includes('href="#animal-dog'));
   assert.equal(h.enterRoom('wardrobe'), false); assert.equal(h.state.scene, 'world', 'Home sweet Home stays closed during tag');
   const first = h.state.friends.actors[0]; h.state.position = { x: first.position.x, y: first.position.y + 100 }; step();
   assert.equal(first.status, 'running'); const before = { ...first.position }; step(); assert(Math.hypot(first.position.x - before.x, first.position.y - before.y) > 0);
@@ -1261,7 +1270,8 @@ try {
   h.enterRoom('wardrobe'); assert.equal((h.game.innerHTML.match(/id="home-animal-/g) || []).length, 3); h.leaveRoom();
   h.get('#audio').ended = true; h.get('#audio').paused = true; for (const cb of h.get('#audio').handlers.get('ended')) cb({});
   await h.get('#audio').play(); for (const cb of h.get('#audio').handlers.get('play')) cb({});
-  assert.equal(h.state.friends.phase, 'chasing'); assert.equal(h.state.friends.caught.length, 0); assert(h.state.friends.unlocked);
+  assert.equal(h.state.friends.phase, 'idle'); assert(h.state.friendsRestartPending); h.enterRoom('radio');
+  assert.equal(h.state.friends.phase, 'meeting'); assert.equal(h.state.friends.caught.length, 0); assert(h.state.friends.unlocked);
 } finally { friendsTrack.src = previousFriendsSrc; }
 console.log('PASS: Beste Freunde shows the invitation, walks the player out through the Music House exit, hides the three other animals behind trees, reveals and catches by touch, preserves a paused chase, shows confetti, walks everyone to the water, builds and saves the tent, lights the fire, sends friends home when walking away and starts a new chase on replay.');
 
@@ -1316,7 +1326,7 @@ try {
   h.state.position = { x: friends.FRIEND_TENT.x, y: friends.FRIEND_TENT.y - 75 }; h.game.focus();
   h.press(h.windowHandlers, h.event('Enter', 'Enter', h.game)); assert(!h.get('#camp-audio').paused);
   h.state.tapes.loaded = friendsTrack.id; h.loadRecording();
-  assert(h.get('#camp-audio').paused); assert.equal(h.state.campMusic, null); assert.equal(h.state.friends.phase, 'chasing', 'a deliberate cassette insertion can still start a new chase');
+  assert(h.get('#camp-audio').paused); assert.equal(h.state.campMusic, null); assert(h.state.friendsRestartPending); h.enterRoom('radio'); assert.equal(h.state.friends.phase, 'meeting', 'the invitation begins inside the music house');
 } finally { friendsTrack.src = beforeCampSrc; }
 console.log('PASS: Enter, Space and Numpad Enter invite camp friends with Beste Freunde without restarting tag; the whole group stays on screen, leaving fades the music over five seconds and a chosen cassette stops camp music.');
 
@@ -1806,14 +1816,15 @@ try {
   assert.notEqual(h.get('#player-dance-motion').getAttribute('transform'),first);assert.deepEqual({...h.state.position},origin,'dancing never changes collision coordinates');
   new h.Element('choose dance','button',{action:'dance-picker'}).click();const elapsed=h.state.playerDance.elapsed;h.frame(1340);assert.equal(h.state.playerDance.elapsed,elapsed,'opening a menu freezes the selected dance');
   new h.Element('robot','button',{danceStyle:'robot'}).click();assert.equal(h.state.playerDance.style,'robot');assert.equal(h.get('#player-dance-upper-use').getAttribute('href'),'#dressed-'+id);
-  h.press(h.windowHandlers,h.event('ArrowRight','ArrowRight',h.game));h.frame(1360);h.state.keys.clear();assert.equal(h.state.playerDance.style,null);assert(!h.get('#player-use').attrs.has('hidden'));
+  h.press(h.windowHandlers,h.event('ArrowRight','ArrowRight',h.game));h.frame(1360);h.state.keys.clear();assert.equal(h.state.playerDance.style,'robot');assert(!h.get('#player-use').attrs.has('hidden'));
+  h.frame(1380);assert.equal(h.state.playerDance.style,'robot');assert(h.get('#player-use').attrs.has('hidden'));assert(!h.get('#player-dance').attrs.has('hidden'));
   new h.Element('choose again','button',{action:'dance-picker'}).click();new h.Element('party','button',{danceStyle:'party'}).click();assert.equal(h.state.playerDance.style,'party');
   new h.Element('choose stop','button',{action:'dance-picker'}).click();new h.Element('stop','button',{danceStyle:'stop'}).click();assert.equal(h.state.playerDance.style,null);assert(!h.modal.open);
   new h.Element('choose before end','button',{action:'dance-picker'}).click();h.get('#audio').ended=true;for(const cb of h.get('#audio').handlers.get('ended')||[])cb({});assert(!h.modal.open);assert(h.get('#dance-toggle').hidden);assert.equal(h.state.playerDance.style,null);
   h.loadRecording();new h.Element('choose restarted','button',{action:'dance-picker'}).click();new h.Element('moonwalk again','button',{danceStyle:'moonwalk'}).click();h.leaveRoom();assert(h.get('#dance-toggle').hidden);assert.equal(h.state.playerDance.style,null);
  }
 }finally{dancingTrack.src=originalDanceAudio;}
-console.log('PASS: every original avatar can choose moonwalk, robot and party by keyboard/touch, keeps its hat, stops dancing on movement or song ending, and retains the existing three disco guests.');
+console.log('PASS: every original avatar can choose moonwalk, robot and party by keyboard/touch, keeps its hat, pauses dancing on movement, resumes when stopping, and stops on song ending, and retains the existing three disco guests.');
 
 for(const [width,height] of [[390,844],[844,390],[932,430]]) {
  const h=await harness(false,'cat');h.window.innerWidth=width;h.window.innerHeight=height;
@@ -1824,7 +1835,8 @@ for(const [width,height] of [[390,844],[844,390],[932,430]]) {
  assert(Math.abs(view[2]-original.w/.75)<.01 && Math.abs(view[3]-original.h/.75)<.01);
  assert(view[0]>=core.WORLD.left && view[0]+view[2]<=core.WORLD.right+.01);
  h.state.scene='sky';h.resize();assertClose(h.state.viewport.w,original.w/.75);
- h.state.scene='radio';h.resize();assertClose(h.state.viewport.w,original.w,'rooms keep their established camera framing');
+ for(const scene of ['radio','concerts','wardrobe']) { h.state.scene=scene;h.resize();assertClose(h.state.viewport.w,original.w/.75,'houses match the outdoor phone scale'); }
+ h.state.scene='social'; h.state.touchMode=false; h.resize(); const contact={...h.state.viewport};h.state.touchMode=true;h.resize(); assertClose(h.state.viewport.w,contact.w/.75);assertClose(h.state.viewport.h,contact.h/.75);
 }
 {
  const h=await harness(false,'cat',null,false,null,null,null,null,null,true);h.window.innerWidth=390;h.window.innerHeight=844;
@@ -1839,4 +1851,30 @@ for(const [width,height] of [[390,844],[844,390],[932,430]]) {
  h.game.getBoundingClientRect=()=>({left:0,top:0,width:1024,height:768});h.resize();const original={...h.state.viewport};h.state.touchMode=true;h.resize();
  assertClose(h.state.viewport.w,original.w);assertClose(h.state.viewport.h,original.h,'larger tablets retain their current framing');
 }
-console.log('PASS: smartphones show the outdoor world and sky at 75% scale in portrait, landscape and rotated fullscreen, including on first touch; world bounds, rooms and larger tablet framing are preserved.');
+console.log('PASS: smartphones show the outdoor world and sky at 75% scale in portrait, landscape and rotated fullscreen, including on first touch; houses use the same phone zoom while world bounds and larger tablet framing are preserved.');
+
+try {
+ friendsTrack.src='uploads/freunde.mp3';
+ for(const [key,code] of [['Enter','Enter'],[' ','Space'],['Enter','NumpadEnter']]) {
+  const h=await harness(false,'cat',null,false,null,null,null,null,null,true);let clock=1000;const step=()=>h.frame(clock+=50);
+  new h.Element('fullscreen','button',{action:'fullscreen'}).click();const screen=h.doc.fullscreenElement;
+  h.enterRoom('radio');h.state.position={x:800,y:550};h.state.tapes.loaded=friendsTrack.id;h.loadRecording();
+  for(let i=0;i<300&&!h.modal.open;i++)step();assert.equal(h.state.modal,'friends-choice');assert.equal(h.doc.fullscreenElement,screen);
+  const hide=new h.Element('hide','button',{friendsMode:'hide'});h.press(h.documentHandlers,h.event(key,code,hide));
+  assert(!h.modal.open);assert.equal(h.state.friends.mode,'hide');
+  for(let i=0;i<300&&h.state.scene==='radio';i++)step();assert.equal(h.state.scene,'world');assert.equal(h.state.friends.phase,'hide-countdown');
+  assert.equal(h.enterRoom('wardrobe'),false);h.state.position={x:550,y:960};h.game.focus();
+  assert.equal(h.currentInteraction()?.kind,'friends-hide');h.press(h.windowHandlers,h.event(key,code,h.game));assert(h.state.friends.hidden);assert(h.get('#player').attrs.has('hidden'));assert(h.get('#friends-hidden').innerHTML.includes('opacity=".65"'));
+  h.press(h.windowHandlers,h.event(key,code,h.game));assert(!h.state.friends.hidden);
+  for (const cb of h.get('#interact').handlers.get('click') || []) cb({});
+  assert(h.state.friends.hidden,'the touch action button also hides the player');
+  h.state.keys.add('ArrowRight');step();h.state.keys.clear();assert(!h.state.friends.hidden);
+  for(let i=0;i<220&&h.state.friends.phase==='hide-countdown';i++)step();assert.equal(h.state.friends.phase,'hiding');
+  h.state.friends.actors[0].position={...h.state.position};step();assert.equal(h.state.modal,'friends-hide-lost');assert.equal(h.doc.fullscreenElement,screen);
+  new h.Element('retry catch','button',{friendsMode:'catch'}).click();assert.equal(h.state.friends.phase,'countdown');assert(!h.modal.open);
+  const p={...h.state.position};h.state.keys.add('ArrowRight');step();h.state.keys.clear();assert.deepEqual({...h.state.position},p);assert(h.get('#friends-round').innerHTML.includes('<ellipse'));
+  h.state.friends.phase='hide-won';h.showPanel('friends-hide-won');new h.Element('leave','button',{action:'friends-stop'}).click();assert.equal(h.state.friends.phase,'idle');assert(!h.modal.open);assert.equal(h.doc.fullscreenElement,screen);assert(!h.get('#player').attrs.has('hidden'));
+ }
+ const h=await harness(false,'cat');h.enterRoom('radio');h.state.tapes.loaded=friendsTrack.id;h.loadRecording();assert.equal(h.state.friends.phase,'meeting');h.state.tapes.loaded=null;h.loadRecording();assert.equal(h.state.friends.phase,'idle');assert(!h.state.friendsExit);
+} finally {friendsTrack.src=previousFriendsSrc;}
+console.log('PASS: hide choice, tree concealment and revealing, loss/retry/exit, building lock and eye-cover countdown work with Enter/Space/Numpad Enter while preserving fullscreen; ejecting cancels an unfinished invitation.');

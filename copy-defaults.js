@@ -2607,13 +2607,14 @@ COPY_GROUPS.push({
   id: 'player-dances', label: 'Tanzen: Tanzwahl', fields: [
     { key: 'dance_choose', label: 'Knopf zur Tanzwahl', value: 'Tanz wählen', max: 100 },
     { key: 'dance_title', label: 'Überschrift der Tanzwahl', value: 'Wie möchtest du tanzen?', max: 180 },
-    { key: 'dance_intro', label: 'Erklärung der Tanzwahl', value: 'Wähle einen Tanz für dein Tier. Sobald du mit den Richtungstasten oder der Daumensteuerung losläufst, hört es wieder auf zu tanzen.', max: 700 },
+    { key: 'dance_intro', label: 'Erklärung der Tanzwahl', value: 'Wähle einen Tanz für dein Tier. Beim Laufen macht es eine Tanzpause. Sobald du stehen bleibst, tanzt es weiter – solange Tanzen läuft.', max: 700, previousValues: ['Wähle einen Tanz für dein Tier. Sobald du mit den Richtungstasten oder der Daumensteuerung losläufst, hört es wieder auf zu tanzen.'] },
     { key: 'dance_party', label: 'Normaler Tanz', value: 'Partytanz', max: 100 },
     { key: 'dance_moonwalk', label: 'Moonwalk', value: 'Moonwalk', max: 100 },
     { key: 'dance_robot', label: 'Robotdance', value: 'Robotdance', max: 100 },
     { key: 'dance_stop', label: 'Tanz beenden', value: 'Tanzpause', max: 100 },
   ],
 });
+COPY_GROUPS.push({id: 'friends-modes', label: 'Freunde: Fangen und Verstecken', fields: [{"key": "friends_choice", "label": "FANGENSPIELEN", "value": "FANGENSPIELEN", "max": 1200}, {"key": "friends_modes_intro", "label": "friends_modes_intro", "value": "FANGEN: Deine Freunde laufen voraus. Du zählst bis zehn und fängst sie. VERSTECKEN: Du hast zehn Sekunden Vorsprung. Halte dich danach 45 Sekunden vor dem schnelleren Fänger versteckt. Hinter einem Baum versteckst du dich mit Enter, Leertaste oder der Aktionstaste. Beim Laufen kommst du hervor. Sieht dich der Fänger beim Verstecken, kennt er dein Versteck.", "max": 1200}, {"key": "friends_mode_catch", "label": "FANGEN", "value": "FANGEN", "max": 1200}, {"key": "friends_mode_hide", "label": "VERSTECKEN", "value": "VERSTECKEN", "max": 1200}, {"key": "friends_hide_won", "label": "Gut versteckt!", "value": "Gut versteckt!", "max": 1200}, {"key": "friends_hide_lost", "label": "Gefangen!", "value": "Gefangen!", "max": 1200}, {"key": "friends_hide_result", "label": "friends_hide_result", "value": "Noch eine Runde? Du kannst wieder fangen oder dich verstecken.", "max": 1200}, {"key": "friends_stop", "label": "Zurück zur Bum Bum Welt", "value": "Zurück zur Bum Bum Welt", "max": 1200}, {"key": "friends_hide", "label": "Verstecken", "value": "Verstecken", "max": 1200}, {"key": "friends_unhide", "label": "Hervorkommen", "value": "Hervorkommen", "max": 1200}]});
 export const COPY_FIELDS = COPY_GROUPS.flatMap(group => group.fields);
 export const DEFAULT_TEXTS = Object.fromEntries(COPY_FIELDS.map(field => [field.key, field.value]));
 export function normalizeTexts(saved) {

@@ -155,3 +155,61 @@ test('the expanded meadow is reachable on both sides while indoor walls keep the
   tickFriends(friends, .05, 'world', { x: 20, y: 600 });
   assert(actor.position.x < -50, 'a fleeing animal can actually use the new left meadow');
 });
+
+test('friends enter the music house before a choice and leave only after a mode is selected', async () => {
+  const { beginFriendsMeeting, chooseFriendsMode, beginFriendsOutside, friendsPlayerLocked, friendsBlockBuildings } = await import('../friends-game.js');
+  const f=createFriends(), player={x:800,y:550};
+  beginFriendsMeeting(f,ANIMALS,'cat',player);
+  assert.equal(f.phase,'meeting');assert(friendsPlayerLocked(f));assert(friendsBlockBuildings(f));
+  assert(f.actors.every(a=>a.scene==='radio'&&a.position.y>1000));
+  let ready=false;
+  for(let i=0;i<300;i++) {
+    const events=tickFriends(f,.05,'radio',player);ready ||=events.some(e=>e.type==='choice');
+    for(const a of f.actors) assert(canStand(a.position.x,a.position.y,WORLD.radius,'radio'));
+    if(ready) break;
+  }
+  assert(ready); assert.equal(f.phase,'choice');assert(f.actors.every(a=>dist(a.position,player)<145));
+  assert(!chooseFriendsMode(f,'invalid'));assert(chooseFriendsMode(f,'catch'));
+  for(let i=0;i<100;i++) tickFriends(f,.05,'radio',player);
+  assert(f.actors.every(a=>a.position.y>1000));
+  beginFriendsOutside(f,HOUSE_DOORS.find(d=>d.id==='radio').outside);
+  for(let i=0;i<190;i++)tickFriends(f,.05,'world',player);
+  assert.equal(f.phase,'countdown');assert(friendsPlayerLocked(f));
+  for(let i=0;i<12;i++)tickFriends(f,.05,'world',player);
+  assert.equal(f.phase,'chasing');assert(!friendsPlayerLocked(f));
+});
+
+test('caught friends consume the same corners and backtracking segments with 76/114 unit gaps', () => {
+  const f=createFriends();let player={x:1000,y:800};startFriends(f,ANIMALS,'cat',player);
+  f.actors[0].position={...player};f.actors[1].position={...player};
+  tickFriends(f,.02,'world',player);assert.equal(f.caught.length,2);
+  // A tight right-angle route followed in small steps, then reversed.
+  const points=[{x:1100,y:800},{x:1100,y:1000},{x:1100,y:800},{x:1000,y:800}];
+  const path=[{...player}], followers=f.actors.slice(0,2);
+  for(const end of points) while(dist(player,end)>.1) {
+    const d=dist(player,end), step=Math.min(4,d); player={x:player.x+(end.x-player.x)*step/d,y:player.y+(end.y-player.y)*step/d};path.push({...player});
+    tickFriends(f,.02,'world',player);
+    for(const a of followers) assert(path.some(p=>dist(p,a.position)<4.1),'followers remain on an actually walked segment');
+  }
+  for(let i=0;i<100;i++)tickFriends(f,.02,'world',player);
+  assert(Math.abs(f.trail.at(-1).s-followers[0].progress-76)<.01);
+  assert(Math.abs(followers[0].progress-followers[1].progress-38)<.01);
+});
+
+test('hiding has a ten-second head start, tree-only cover, an observant faster catcher and timed results', async () => {
+  const {beginFriendsMeeting,chooseFriendsMode,beginFriendsOutside,toggleFriendsHide,friendsHidingRound}=await import('../friends-game.js');
+  const f=createFriends();beginFriendsMeeting(f,ANIMALS,'cat',{x:800,y:550});f.phase='choice';chooseFriendsMode(f,'hide');
+  let player={x:550,y:960};beginFriendsOutside(f,player);
+  assert(friendsHidingRound(f));assert(!toggleFriendsHide(f,{x:1000,y:800}));assert(toggleFriendsHide(f,player));assert(!f.hidden.known);
+  for(let i=0;i<202;i++) tickFriends(f,.05,'world',player);
+  assert.equal(f.phase,'hiding');assert(f.hidden);
+  const seeker=f.actors[0];seeker.position={x:1000,y:800};seeker.path=[];seeker.rethink=0;
+  player={x:1100,y:800};const before={...seeker.position};tickFriends(f,.05,'world',player);
+  assert(!f.hidden,'walking away reveals the player');assert(dist(before,seeker.position)>WORLD.speed*.05);
+  seeker.position={...player};assert(tickFriends(f,.05,'world',player).some(e=>e.type==='hide-lost'));assert.equal(f.phase,'hide-lost');
+  beginFriendsOutside(f,player);f.phase='hiding';seeker.position={x:500,y:960};player={x:550,y:960};
+  assert(toggleFriendsHide(f,player));assert(f.hidden.known,'a nearby watching seeker remembers the hiding place');
+  toggleFriendsHide(f,player);f.elapsed=44.99;seeker.position={x:1400,y:300};player={x:1000,y:800};
+  assert(tickFriends(f,.02,'world',player).some(e=>e.type==='hide-won'));assert.equal(f.phase,'hide-won');
+  releaseFriends(f);assert(!f.hidden);assert.equal(f.actors.length,0);
+});
