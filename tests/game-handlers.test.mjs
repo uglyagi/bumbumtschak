@@ -599,10 +599,11 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
   assert.equal(h.state.adventure.progress, flightProgress);
   h.doc.hidden = true; const sunPaused = h.state.adventure.sunTime; h.frame(++clock * 16); assert.equal(h.state.adventure.sunTime, sunPaused); h.doc.hidden = false;
   while (h.state.adventure.phase === 'sun-finale') h.frame(++clock * 16);
-  assert.equal(h.state.modal, 'space-win'); assert(h.modalContent.innerHTML.includes('Herzlichen Glückwunsch'));
+  assert(!h.modal.open);assert.equal(h.state.adventure.phase,'won');
 
   h.press(h.documentHandlers, h.event(key, code, new h.Element('replay at medium', 'button', { difficulty: 'mittel' })));
-  assert.equal(h.state.adventure.phase, 'playing'); assert.equal(h.state.adventure.progress, 0); assert(!h.modal.open);
+  assert.equal(h.state.adventure,null);assert(h.state.landing);assert(!h.modal.open);
+  h.state.landing=null;h.state.adventure=adventure.createAdventure(1200,700);adventure.startAdventure(h.state.adventure,'mittel');
   const ship = h.state.adventure.ship; h.state.adventure.meteors = [{ id: 1, x: ship.x + 1, y: ship.y, radius: 18, vx: -250, vy: 0, angle: 0, spin: 0 }];
   h.frame(++clock * 16); assert.equal(h.state.adventure, null); assert(h.state.rocket.damaged && h.state.landing);
   assert.equal(h.stored.get('bbt-rocket-damaged'), '1');
@@ -1943,4 +1944,19 @@ for(const touch of [false,true]){
  h.frame(1050);assert.equal(h.state.toilet.phase,'leaving');assert(h.get('#toilet-audio').paused);
  if(touch)releaseThumb(h);else h.state.keys.clear();
  for(let i=0;i<15;i++)h.frame(1100+i*50);assert(!h.state.toilet);assert(!h.modal.open);
+}
+
+for(const mode of ['key','touch']){
+ const h=await harness(false,'cat');h.state.adventure=adventure.createAdventure(1200,700);h.state.adventure.phase='won';h.state.adventure.completedDifficulty='profi';
+ if(mode==='key')h.press(h.windowHandlers,h.event('x','KeyX',h.game));
+ else for(const cb of h.documentHandlers.get('pointerdown')||[])cb({preventDefault(){},stopPropagation(){},pointerType:'touch'});
+ assert(!h.state.adventure);assert(h.state.landing?.success);assert(!h.modal.open);
+}
+
+{
+ const h=await harness(false,'cat');h.state.scene='world';h.state.rocket.riding=true;h.state.rocket.airborne=false;h.state.position={...h.state.rocket.position};h.renderScene();h.state.camera.y=500;h.game.focus();h.state.keys.add('ArrowUp');
+ h.frame(1000);assert.equal(h.state.camera.y,500,'takeoff at zero dt does not snap the camera');
+ h.frame(1016);assert(Math.abs(h.state.camera.y-500)<100);assert(h.state.rocket.airborne);
+ h.state.position.y=1;h.state.rocket.position={...h.state.position};h.state.camera.y=500;
+ h.frame(1032);assert.equal(h.state.scene,'sky');assert(Math.abs(h.state.camera.y-500)<100,'crossing the horizon keeps camera easing');
 }

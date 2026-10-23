@@ -115,11 +115,11 @@ export function tickAdventure(game, seconds, dx = 0, dy = 0) {
   }
   game.meteors = game.meteors.filter(m => m.x > -m.radius - 30 && m.x < game.width + m.radius + 30 && m.y > -m.radius - 30 && m.y < game.height + m.radius + 30);
   const earth = COURSE.find(planet => planet.id === 'earth'), point = adventurePlanetPosition(game, earth);
-  // Secret passage: align with the narrow centre corridor before entry,
+  // Secret passage: align roughly with the centre before approaching,
   // then release every steering control until Earth has passed completely.
-  const radius = earth.diameter / 2, corridor = earth.diameter * .12;
+  const radius = earth.diameter / 2, corridor = earth.diameter * .37, approach = radius + 35;
   const beforeX = oldShip.x - (point.x + speed * dt), afterX = game.ship.x - point.x;
-  if (!game.earthPass && beforeX < -radius && afterX >= -radius) game.earthPass = { valid: true };
+  if (!game.earthPass && beforeX < -approach && afterX >= -approach) game.earthPass = { valid: true };
   if (game.earthPass && beforeX <= radius) {
     if (dx || dy || Math.abs(oldShip.y-point.y)>corridor || Math.abs(game.ship.y-point.y)>corridor) game.earthPass.valid=false;
     if (afterX >= radius) {

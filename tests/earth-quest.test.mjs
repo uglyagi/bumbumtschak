@@ -6,14 +6,15 @@ import { earthMarkup,earthStreetMarkup,earthPeopleMarkup,earthPeopleChunkMarkup,
 import { WORLD_SPAWN,planPath,canStand } from '../game-core.js';
 import { worldMarkup } from '../art.js';
 
-test('the secret landing requires a precise complete passage with no steering input',()=>{
+test('the secret landing allows near-centre passage but requires a hands-off approach with no steering input',()=>{
  for(const [width,height] of [[1200,700],[844,390],[390,844]]) {
   const earth=COURSE.find(p=>p.id==='earth');
   const setup=(offset=0)=>{const g=createAdventure(width,height);startAdventure(g,'leicht');g.nextMeteor=Infinity;g.progress=earth.x-80;g.ship={x:width*.25,y:adventurePlanetPosition(g,earth).y+offset};return g;};
   const g=setup();const progress=g.progress;let event;
   for(let i=0;i<40&&g.phase==='playing';i++)event=tickAdventure(g,.05);
   assert.equal(event,'earth-land');assert(g.progress>progress);resumeFromEarth(g);assert(g.earthVisited);assert.equal(g.phase,'playing');
-  for(const offset of [8,-8,25]){const miss=setup(offset);for(let i=0;i<40;i++)tickAdventure(miss,.05);assert.equal(miss.phase,'playing');}
+  for(const offset of [17,-17,25]){const miss=setup(offset);for(let i=0;i<40;i++)tickAdventure(miss,.05);assert.equal(miss.phase,'playing');}
+  for(const offset of [8,-8,12,-12]){const near=setup(offset);for(let i=0;i<40&&near.phase==='playing';i++)tickAdventure(near,.05);assert.equal(near.phase,'earth');}
   for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1],[.01,0]]) {
    const moved=setup();while(!moved.earthPass)tickAdventure(moved,.01);
    tickAdventure(moved,.01,dx,dy);for(let i=0;i<80;i++)tickAdventure(moved,.05);

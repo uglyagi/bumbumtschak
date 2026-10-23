@@ -592,7 +592,8 @@ function frameChocolate(dt) {
   updateNear(); updateCamera(dt); refreshChocolateItems();
 }
 
-function renderScene() {
+function renderScene(preserveCamera = false) {
+  const previousCamera = preserveCamera ? {...state.camera} : null;
   if (state.adventure?.phase === 'intro' && state.adventure.departure) { updateAdventure(); return; }
   clearPaintPreview();
   const hat = wearsHat(state.hat, state.hatActive);
@@ -609,7 +610,7 @@ function renderScene() {
   $('#touch-pause').hidden = !(state.race?.phase === 'racing' || state.adventure?.phase === 'playing');
   game.classList.toggle('in-room', !outsideScene(state.scene));
   player.toggleAttribute('hidden', state.rocket.riding || !!state.race);
-  state.near = null; updateAnimal(); refreshCassettes(); refreshHatEffects(); refreshReceptionEffects(); resize(); updateNear(true);
+  state.near = null; updateAnimal(); refreshCassettes(); refreshHatEffects(); refreshReceptionEffects(); resize(); if(previousCamera){state.camera=previousCamera;updateCamera(0);} updateNear(true);
   player.setAttribute('transform', `translate(${state.position.x} ${state.position.y})`);
   refreshChocolateItems(); refreshFriendsWorld(true); game.classList.toggle('is-bike-race', !!state.race);
   $('#thumb-pad').hidden = !!state.race; $('#bike-touch-controls').hidden = !state.race;
@@ -617,6 +618,7 @@ function renderScene() {
   if(state.earth)updateEarthView(true);refreshQuestPaper();
 }
 function showPanel(id, focusSelector = '') {
+  if(state.adventure?.phase==='won')return;
   if (id === 'dance' && !canPlayerDance()) return;
   if (state.race && !id.startsWith('bike-')) id = state.race.phase === 'finished' ? 'bike-win' : state.race.phase === 'ready' ? 'bike-launch' : 'bike-pause';
   if (state.scene === 'chocolate') { requestChocolateExit(); return; }
@@ -924,7 +926,7 @@ function currentInteraction() {
 function boardRocket() {
   if (state.race || state.rocket.damaged || state.rocket.repair != null || state.landing || state.adventure) return;
   stopWalking(true); state.paintTarget = null; state.rocket.riding = true; state.rocket.airborne = false;
-  state.position = { ...state.rocket.position }; renderScene(); game.focus({ preventScroll: true });
+  state.position = { ...state.rocket.position }; renderScene(true); game.focus({ preventScroll: true });
   toast(text('rocket_boarded')); announce(text('rocket_boarded'));
 }
 function exitRocket() {
@@ -1095,7 +1097,7 @@ function finishAdventureTick(event) {
   if(event==='earth-land'){enterEarth();return;}
   if (event === 'ready') showPanel('space-launch');
   if (event === 'sun-arrived') { stopWalking(); renderScene(); state.adventure.sunStage = 'arrival'; announce(text('sun_story_landing')); }
-  if (event === 'win') { stopWalking(); showPanel('space-win'); announce(text('adventure_win')); }
+  if (event === 'win') { stopWalking(); game.focus({preventScroll:true}); announce(text('adventure_win')); }
   if (event === 'crash') landFromAdventure(true);
 }
 function updateAdventure() {
@@ -1334,7 +1336,17 @@ function goToTape(id) {
 }
 // Confirm buttons and links on keydown so both action keys behave alike,
 // including links whose native Space action would otherwise scroll the page.
+function finishAdventureOnKey(e) {
+  if(state.adventure?.phase!=='won' || document.hidden)return false;
+  e.preventDefault();e.stopPropagation();
+  if(!e.repeat)landFromAdventure();
+  return true;
+}
+document.addEventListener('pointerdown', e=>{
+  if(state.adventure?.phase==='won' && !document.hidden){e.preventDefault();e.stopPropagation();landFromAdventure();}
+});
 document.addEventListener('keydown', e => {
+  if(finishAdventureOnKey(e))return;
   if (!isActionKey(e)) return;
   if (modal.open && inspectionPanels.has(state.modal)) { e.preventDefault(); e.stopPropagation(); if (!e.repeat) closePanel(); return; }
   const control = e.target.closest('button:not([disabled]),a[href]');
@@ -1639,6 +1651,7 @@ game.addEventListener('keydown', e => {
 });
 const directions = new Map([['ArrowUp', [0, -1]], ['KeyW', [0, -1]], ['ArrowDown', [0, 1]], ['KeyS', [0, 1]], ['ArrowLeft', [-1, 0]], ['KeyA', [-1, 0]], ['ArrowRight', [1, 0]], ['KeyD', [1, 0]]]);
 window.addEventListener('keydown', e => {
+  if(finishAdventureOnKey(e))return;
   if (e.key === 'Escape' && screenMode.active && !modal.open) { e.preventDefault(); if (!e.repeat) void screenMode.leave(); return; }
   if (modal.open || !state.started || state.landing) return;
   if (state.race) {
@@ -1847,7 +1860,7 @@ function frame(time) {
     if (dx || dy) {
       const old = state.position, stepTime = state.path.length ? Math.min(dt, Math.hypot(dx, dy) / (state.scene === 'painting' ? 400 : state.rocket.riding ? ROCKET_SPEED : WORLD.speed * chocolateSpeed(state.chocolate))) : dt;
       if (state.rocket.riding) {
-        if (!state.rocket.airborne && dy < 0) { state.rocket.airborne = true; renderScene(); announce(text('rocket_flying')); }
+        if (!state.rocket.airborne && dy < 0) { state.rocket.airborne = true; $('#rocket-shadow')?.setAttribute('hidden',''); $('#rocket .rocket-flame')?.removeAttribute('hidden'); $('.exit-room').textContent=text('rocket_land_button'); announce(text('rocket_flying')); }
         if (state.rocket.airborne) {
           state.position = moveRocket(old, dx, dy, stepTime); state.rocket.position = { ...state.position };
           let scene = flightScene(state.position.y);
@@ -1857,7 +1870,7 @@ function frame(time) {
           }
           if (scene !== state.scene) {
             state.scene = scene; state.paintTarget = null;
-            renderScene();
+            renderScene(true);
           }
           if (dy > 0 && canLandRocket(state.position)) {
             landRocket();
