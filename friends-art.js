@@ -16,7 +16,8 @@ export function friendsWorldMarkup(friends) {
 }
 // Fixed meadow decoration: no paint targets, interactions or collision areas.
 const campFlowers = '<g id="camp-meadow-flowers" pointer-events="none" aria-hidden="true">' + Array.from({length:120},(_,i)=>{
-  const x=590+(i*137%460), y=835+(i*71%195);
+  const x=FRIEND_TENT.x-110+(i*137%460), y=FRIEND_CAMP.y-105+(i*71%195);
+  if(x<1450 && y<910)return ""; // Leave the nearby mailbox clear.
   // Reserve the entire small flower, plus a visible gap around scenery.
   const occupied=[...TREES.map(([a,b,w,h])=>[a,b,w,h]),...FLOWERS.map(([a,b,,w])=>[a,b,w,w*1.2])];
   if(occupied.some(([a,b,w,h])=>x+10>a-14 && x-10<a+w+14 && y>b-14 && y-22<b+h+14))return '';

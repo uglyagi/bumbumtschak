@@ -104,7 +104,7 @@ test('changing the player never duplicates an animal and leaving another adventu
 });
 
 test('the campsite keeps the tent clear of the water and the flame clear of every seated character', () => {
-  assert(FRIEND_TENT.x < 900 && FRIEND_TENT.y < 1025, 'the tent moves left and upward');
+  assert(FRIEND_TENT.x > 1400 && FRIEND_TENT.y < 1025, 'the tent sits at the far-right shore');
   assert(FRIEND_TENT.y + 14 < 1025, 'even the pegs stay above the water');
   const flame = { left: FRIEND_CAMP.x - 24, right: FRIEND_CAMP.x + 24, top: FRIEND_CAMP.y - 50, bottom: FRIEND_CAMP.y + 20 };
   for (const spot of [FRIEND_CAMP_PLAYER, ...FRIEND_CAMP_SPOTS]) {

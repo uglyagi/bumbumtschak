@@ -3,10 +3,10 @@ import { GROUND_ROCKET } from './sky-world.js';
 import { TREES } from './painting.js';
 
 export const FRIEND_HIDEOUTS = [{ x: 105, y: 280 }, { x: 1475, y: 270 }, { x: 550, y: 960 }];
-export const FRIEND_CAMP = { x: 875, y: 940 };
-export const FRIEND_TENT = { x: 700, y: 965 };
-export const FRIEND_CAMP_PLAYER = { x: 960, y: 1020 };
-export const FRIEND_CAMP_SPOTS = [{ x: 800, y: 980 }, { x: 870, y: 860 }, { x: 965, y: 920 }];
+export const FRIEND_CAMP = { x: 1625, y: 940 };
+export const FRIEND_TENT = { x: 1450, y: 965 };
+export const FRIEND_CAMP_PLAYER = { x: 1710, y: 1020 };
+export const FRIEND_CAMP_SPOTS = [{ x: 1550, y: 980 }, { x: 1620, y: 860 }, { x: 1715, y: 920 }];
 export const FRIEND_CAMP_FADE_SECONDS = 5;
 export const FRIEND_CATCH_RADIUS = 34;
 export const FRIEND_NOTICE_RADIUS = 125;

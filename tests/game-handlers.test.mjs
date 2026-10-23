@@ -1266,7 +1266,7 @@ try {
   assert.equal(h.state.friends.phase, 'camping'); assert(h.state.friends.unlocked); assert(JSON.parse(h.stored.get('bbt-friends-world')).tent);
   assert(h.get('#friends-world').innerHTML.includes('id="friend-tent"')); assert(!h.get('#friend-fire-flame').attrs.has('hidden')); assert(h.game.classList.contains('is-camping'));
   assert(Math.hypot(h.state.position.x - friends.FRIEND_CAMP_PLAYER.x, h.state.position.y - friends.FRIEND_CAMP_PLAYER.y) < 10, 'the player walks to the water with the friends');
-  h.state.keys.add('ArrowRight'); const leaveLimit = clock + 160;
+  h.state.keys.add('ArrowUp'); const leaveLimit = clock + 160;
   while (h.state.friends.phase === 'camping' && clock < leaveLimit) step(); h.state.keys.clear();
   assert.equal(h.state.friends.phase, 'returning'); assert(h.get('#friend-fire-flame').attrs.has('hidden')); assert(!h.game.classList.contains('is-camping'));
   const homeLimit = clock + 2000; while (h.state.friends.phase !== 'idle' && clock < homeLimit) step();

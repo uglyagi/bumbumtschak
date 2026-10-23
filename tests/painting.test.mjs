@@ -158,7 +158,7 @@ test('buckets paint plants and selected details while the mailbox stays exclusiv
   assert(!BUCKET_SURFACES.some(surface => surface.id === 'mailbox'));
   assert(!worldMarkup().includes('m212 473-15 35m200-35 15 35'));
   assert(!worldMarkup().includes('M1175 460v56m211-56v56'));
-  assert(FLOWERS[7][0] > 1481, 'the moved flower clears the email circle');
+  assert(FLOWERS[7][0] > 650 && FLOWERS[7][0] < 750 && FLOWERS[22][0] > 850 && FLOWERS[22][0] < 950, 'both former right-shore flowers now occupy the old campsite');
   const svg = worldMarkup({}, true);
   const focusable = [...svg.matchAll(/data-paint-target="([^"]+)"[^>]*tabindex="0"/g)].map(match => match[1]);
   assert.deepEqual(focusable.sort(), BUCKET_SURFACES.map(surface => surface.id).sort());
