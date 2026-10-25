@@ -173,3 +173,7 @@ body.game-fullscreen:not(.landscape-turn) #modal { max-height: calc(100dvh - 28p
 
 
 .touch-controls .game{touch-action:none}
+.game-fullscreen.landscape-turn .difficulty-only{padding:16px}
+.game-fullscreen.landscape-turn .difficulty-only .difficulty-options{gap:12px}
+.game-fullscreen.landscape-turn .difficulty-only .difficulty-options button{min-height:clamp(48px,16vw,100px);padding:12px}
+.game-fullscreen.landscape-turn .difficulty-only .difficulty-options strong{font-size:clamp(24px,5vw,36px)}
