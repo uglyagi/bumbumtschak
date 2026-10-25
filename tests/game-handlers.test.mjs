@@ -559,7 +559,7 @@ for (const [key, code] of [['Enter', 'Enter'], [' ', 'Space'], ['Enter', 'Numpad
   while (h.state.adventure.phase === 'intro' && clock < 800) h.frame(++clock * 16);
   assert(firstSpace >= 6000 && firstSpace <= 7000, String(firstSpace));
   assert.equal(h.state.adventure.phase,'ready');assert.equal(h.state.modal,'space-launch');assert(!h.state.adventure.departure);assert(h.game.innerHTML.includes('id="adventure-course" opacity="1"'));assert(h.game.innerHTML.includes('id="bum-planet-crop"'));
-  assert(h.modalContent.innerHTML.includes('Zurück zur Wiese')); assert.equal((h.modalContent.innerHTML.match(/<button\b/g) || []).length, 4); assert(!h.modalContent.innerHTML.includes('data-action="space-start"'));
+  assert(!h.modalContent.innerHTML.includes('Zurück zur Wiese')); assert.equal((h.modalContent.innerHTML.match(/<button\b/g) || []).length, 3); assert(!h.modalContent.innerHTML.includes('data-action="space-start"'));
   assert.equal(h.state.adventure.width, 1200); assert.equal(h.state.paintCan, 'yellow'); assert.equal(h.state.animal, 'monkey');
   assert(!h.get('#adventure-course').attrs.has('hidden')); assert.equal(h.get('#adventure-course').getAttribute('opacity'), '1.000'); assert(h.get('#rocket-paint').innerHTML.includes('#fff20b'));
   assert.equal(h.state.adventure.angle, 90, 'the choice already shows the sideways rocket in its starting position');
@@ -1421,15 +1421,13 @@ console.log('PASS: the mailbox requires a fresh Enter/Space/Numpad press, contai
   h.state.adventure = adventure.createAdventure(1200, 700); h.state.adventure.phase = 'ready';
   h.showPanel('space-launch');
   const choices = ['leicht', 'mittel', 'profi'].map(difficulty => new h.Element(difficulty, 'button', { difficulty }));
-  choices.push(new h.Element('land', 'button', { action: 'space-land' }));
   const originalQuery = h.modalContent.querySelectorAll;
   h.modalContent.querySelectorAll = () => choices;
   choices[0].focus();
-  for (let i = 1; i < 4; i++) {
+  for (let i = 1; i < 3; i++) {
     h.press(h.modalContent.handlers, h.event('ArrowDown', 'ArrowDown', choices[i - 1]));
     assert.equal(h.doc.activeElement, choices[i]);
   }
-  h.press(h.modalContent.handlers, h.event('ArrowUp', 'ArrowUp', choices[3]));
   assert.equal(h.doc.activeElement, choices[2]);
   assert.equal(h.state.adventure.phase, 'ready', 'arrow navigation does not launch before confirmation');
   h.press(h.documentHandlers, h.event(' ', 'Space', choices[2]));
@@ -1557,8 +1555,8 @@ levelNav.state.race.stones=[];levelNav.state.race.ramps=[];levelNav.state.race.p
 levelNav.frame(1020);assert.equal(levelNav.get('#bike-speed').textContent,'30 km/h');
 levelNav.state.race.player.x=bike.BIKE_FINISH-.5;levelNav.frame(1040);assert.equal(levelNav.state.modal,'bike-win');assert(!/Platz\s+[1-4]\s*\/\s*4/.test(levelNav.modalContent.innerHTML));assert(!levelNav.modalContent.innerHTML.includes('{platz}'));assert(levelNav.modalContent.innerHTML.includes('Bestenliste · Schwer'));
 const resultMenu=levelNav.modalContent.innerHTML.match(/<div class="difficulty-options"[^>]*>([\s\S]*?)<\/div>/)[1];
-assert.deepEqual([...resultMenu.matchAll(/data-bike-level="([^"]+)"|data-action="([^"]+)"/g)].map(m=>m[1]||m[2]),['leicht','mittel','schwer','bike-world']);
-assert(resultMenu.includes('Zurück zur BumBumWelt'));assert(!levelNav.modalContent.innerHTML.includes('data-action="bike-again"'));assert(!levelNav.modalContent.innerHTML.includes('data-action="bike-levels"'));
+assert.deepEqual([...resultMenu.matchAll(/data-bike-level="([^"]+)"|data-action="([^"]+)"/g)].map(m=>m[1]||m[2]),['leicht','mittel','schwer']);
+assert(levelNav.modalContent.innerHTML.includes('Zurück zur BumBumWelt'));assert(!levelNav.modalContent.innerHTML.includes('data-action="bike-again"'));assert(!levelNav.modalContent.innerHTML.includes('data-action="bike-levels"'));
 assert.equal(levelNav.doc.activeElement.name,'#modal-content [data-bike-level="leicht"]','finish focuses the first difficulty instead of the score form');
 new levelNav.Element('easy','button',{bikeLevel:'leicht'}).click();assert.equal(levelNav.state.race.difficulty,'leicht');
 levelNav.state.race.stones=[];levelNav.state.race.ramps=[];levelNav.state.race.player.speed=320;levelNav.frame(1060);assert.equal(levelNav.get('#bike-speed').textContent,'15 km/h');
@@ -1694,9 +1692,9 @@ console.log('PASS: keyboard controls remain available after using the thumb pad;
  startThumb(h,0,-8);for(let i=0;i<60;i++)h.frame(time+=16);assert(h.state.rocket.airborne);const flying={...h.state.position};releaseThumb(h);h.frame(time+=16);assert.deepEqual({...h.state.position},flying);
  startThumb(h,0,-8);while(!h.state.adventure && time<13000)h.frame(time+=16);assert(h.state.adventure);assert.equal(h.state.touch,null);startThumb(h,0,-8);assert.equal(h.state.touch,null);
  while(h.state.adventure.phase==='intro')h.frame(time+=16);assert(h.modal.open);new h.Element('easy space','button',{difficulty:'leicht'}).click();assert.equal(h.state.adventure.phase,'playing');assert(!h.get('#touch-pause').hidden);
- const ship={...h.state.adventure.ship};startThumb(h,8,-8);for(let i=0;i<5;i++)h.frame(time+=16);assert(h.state.adventure.ship.x>ship.x && h.state.adventure.ship.y<ship.y);releaseThumb(h);
+ const ship={...h.state.adventure.ship};startSpace(h,'horizontal',12,0);startSpace(h,'vertical',0,-12);for(let i=0;i<5;i++)h.frame(time+=16);assert(h.state.adventure.ship.x>ship.x && h.state.adventure.ship.y<ship.y);releaseSpace(h);
  const released={...h.state.adventure.ship},progress=h.state.adventure.progress;h.frame(time+=16);assert.deepEqual({...h.state.adventure.ship},released);assert(h.state.adventure.progress>progress);
- startThumb(h,8,0);new h.Element('touch pause','button',{action:'touch-pause'}).click();assert.equal(h.state.modal,'space-pause');assert.equal(h.state.touch,null);
+ startSpace(h,'horizontal',12,0);new h.Element('touch pause','button',{action:'touch-pause'}).click();assert.equal(h.state.modal,'space-pause');assert.equal(h.state.touch,null);
  const paused={...h.state.adventure.ship};h.frame(time+=100);assert.deepEqual({...h.state.adventure.ship},paused);new h.Element('continue','button',{action:'space-continue'}).click();h.frame(time+=16);assert.deepEqual({...h.state.adventure.ship},paused);
 }
 console.log('PASS: the thumb pad steers the rocket upwards into the space game, stops manual flight on release, preserves scripted transitions and works with pause/resume.');
@@ -1709,7 +1707,7 @@ function bikeTouchEvent(h,control,type,pointerId=11) {
  const track=content.TRACKS.find(t=>t.id==='fahrradfahren'),oldSrc=track.src;track.src='uploads/cycling.mp3';
  try{
   const h=await harness(false,'monkey',null,false,null,null,null,null,null,true);let time=1000;h.enterRoom('radio');h.state.tapes.loaded=track.id;h.loadRecording();h.state.position={...bike.BIKE_DOOR};h.frame(time);
-  assert(h.modalContent.innerHTML.includes('Links unten'));new h.Element('easy','button',{bikeLevel:'leicht'}).click();const race=h.state.race;race.stones=[];race.ramps=[];race.riders.slice(1).forEach(r=>{r.departed=true;r.active=false;});
+  assert.equal((h.modalContent.innerHTML.match(/data-bike-level=/g)||[]).length,3);new h.Element('easy','button',{bikeLevel:'leicht'}).click();const race=h.state.race;race.stones=[];race.ramps=[];race.riders.slice(1).forEach(r=>{r.departed=true;r.active=false;});
   assert(h.get('#thumb-pad').hidden);assert(!h.get('#bike-touch-controls').hidden);startThumb(h,12,0);assert.equal(h.state.touch,null,'the world joystick is disabled while cycling');
   const gas=bikeTouchEvent(h,'gas','pointerdown');for(let i=0;i<60;i++)h.frame(time+=16);assert(race.player.speed>80);assert(gas.hasPointerCapture(11));
   const lane=race.player.lane;bikeTouchEvent(h,'up','pointerdown',22);assert.equal(race.player.lane,lane-1);
@@ -1780,10 +1778,10 @@ console.log('PASS: a held left thumb remains usable while the right finger takes
  const before={...h.state.position};startThumb(h,0,12);h.frame(time+=16);assert(h.state.position.x>before.x);assert.equal(h.state.position.y,before.y,'a physical vertical gesture maps into landscape horizontal movement');
  const right={...h.state.position};moveThumb(h,12,0);h.frame(time+=16);assert(h.state.position.y<right.y);assert.equal(h.state.position.x,right.x);releaseThumb(h);
  h.state.adventure=adventure.createAdventure(844,390);h.state.adventure.phase='ready';h.state.scene='space';h.renderScene();h.showPanel('space-launch');new h.Element('easy','button',{difficulty:'leicht'}).click();
- assert.equal(h.state.adventure.width,844);assert.equal(h.state.adventure.height,390);assert.equal(h.get('#world-svg').getAttribute('viewBox'),'0 0 844 390');
- const ship={...h.state.adventure.ship};startThumb(h,0,12);h.frame(time+=16);assert(h.state.adventure.ship.x>ship.x);assert.equal(h.state.adventure.ship.y,ship.y);
+ assert.equal(h.state.adventure.width,1688);assert.equal(h.state.adventure.height,780);assert.equal(h.get('#world-svg').getAttribute('viewBox'),'0 0 1688 780');
+ const ship={...h.state.adventure.ship};startSpace(h,'horizontal',0,12);h.frame(time+=16);assert(h.state.adventure.ship.x>ship.x);assert.equal(h.state.adventure.ship.y,ship.y);
  h.window.innerWidth=844;h.window.innerHeight=390;h.game.getBoundingClientRect=()=>({left:8,top:20,width:844,height:390});for(const cb of h.windowHandlers.get('resize')||[])cb({});
- assert(!h.state.landscapeTurn);assert(!h.doc.body.classList.contains('landscape-turn'));assert.equal(h.state.touch,null);assert.equal(h.state.adventure.width,844);assert.equal(h.state.adventure.height,390);
+ assert(!h.state.landscapeTurn);assert(!h.doc.body.classList.contains('landscape-turn'));assert.equal(h.state.touch,null);assert.equal(h.state.adventure.width,1688);assert.equal(h.state.adventure.height,780);
  new h.Element('normal view','button',{action:'fullscreen'}).click();assert(!h.doc.body.classList.contains('game-fullscreen'));assert(!h.state.landscapeTurn);
 }
 console.log('PASS: portrait fullscreen presents a landscape game, remaps thumb axes and space dimensions correctly, switches cleanly after physical rotation and restores the normal view on exit.');
@@ -1960,3 +1958,22 @@ for(const mode of ['key','touch']){
  h.state.position.y=1;h.state.rocket.position={...h.state.position};h.state.camera.y=500;
  h.frame(1032);assert.equal(h.state.scene,'sky');assert(Math.abs(h.state.camera.y-500)<100,'crossing the horizon keeps camera easing');
 }
+
+function startSpace(h,axis,dx,dy){const pad=h.get('#space-'+axis+'-pad'),pointerId=axis==='vertical'?31:32;for(const [type,x,y]of [['pointerdown',100,100],['pointermove',100+dx,100+dy]])for(const cb of pad.handlers.get(type)||[])cb({pointerId,clientX:x,clientY:y,button:0,preventDefault(){}});}
+function releaseSpace(h){for(const axis of ['vertical','horizontal'])for(const cb of h.get('#space-'+axis+'-pad').handlers.get('pointerup')||[])cb({pointerId:axis==='vertical'?31:32,preventDefault(){}});}
+
+{
+ const h=await harness(false,'cat',null,false,null,null,null,null,null,true);
+ new h.Element('settings','button',{action:'control-settings'}).click();assert.equal(h.state.modal,'control-settings');
+ new h.Element('touch mode','button',{controlMode:'touch'}).click();assert.equal(h.state.controlMode,'touch');assert.equal(h.stored.get('bbt-control-mode'),'touch');assert(h.get('#thumb-pad').hidden);h.closePanel();
+ h.state.position={x:650,y:650};
+ const tap=(x,y,target=h.game)=>{for(const cb of h.game.handlers.get('pointerdown')||[])cb({clientX:x,clientY:y,pointerId:88,pointerType:'touch',target,preventDefault(){}});};
+ tap(300,400);assert(h.state.path.length,'an obstructed house tap gets a reachable path');const end=h.state.path.at(-1);assert(core.canStand(end.x,end.y,core.WORLD.radius,'world',h.state.rocket.position));assert(Math.hypot(end.x-300,end.y-400)<160);
+ for(const cb of h.game.handlers.get('pointerup')||[])cb({pointerId:88});assert(h.state.path.length,'tap-to-walk continues on finger release');
+ h.showPanel('control-settings');new h.Element('thumb','button',{controlMode:'thumb'}).click();h.closePanel();assert(!h.get('#thumb-pad').hidden);
+ h.state.scene='painting';h.state.studio={color:null,page:0};h.state.position={x:600,y:600};h.renderScene();tap(850,500);assert.equal(h.state.path.at(-1).x,850);assert.equal(h.state.path.at(-1).y,500,'brush accepts a tap while thumb mode is selected');
+ h.state.adventure=adventure.createAdventure(1200,700);h.state.adventure.phase='ready';h.state.scene='space';h.renderScene();h.showPanel('space-launch');assert.equal((h.modalContent.innerHTML.match(/<button\b/g)||[]).length,3);new h.Element('start','button',{difficulty:'leicht'}).click();
+ assert(h.get('#thumb-pad').hidden);assert(!h.get('#space-vertical-pad').hidden);assert(!h.get('#space-horizontal-pad').hidden);
+ startSpace(h,'horizontal',12,0);startSpace(h,'vertical',0,-12);assert.equal(h.state.spaceTouch.size,2);h.showPanel('control-settings');assert.equal(h.state.spaceTouch.size,0);assert(!h.get('#space-horizontal-pad').hasPointerCapture(32));h.closePanel();assert.equal(h.state.adventure.phase,'playing');
+}
+console.log('PASS: settings persist mode, blocked taps resolve nearby, brush taps work in thumb mode, and two space sticks release safely when a dialog opens.');

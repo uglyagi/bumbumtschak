@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { thumbDirection, thumbOffset, THUMB_TRAVEL, THUMB_DEAD_ZONE, landscapeSize, screenPointInGame } from '../touch-controls.js';
+import { thumbDirection, thumbOffset, THUMB_TRAVEL, THUMB_DEAD_ZONE, landscapeSize, screenPointInGame, axisThumbDirection, adventureViewport } from '../touch-controls.js';
 
 test('the larger thumb dead zone ignores jitter and deliberately moving past it steers', () => {
  const origin={x:160,y:220};assert.equal(THUMB_DEAD_ZONE,8);
@@ -40,3 +40,14 @@ test('logical game sizes and pixel coordinates stay correct in portrait fullscre
  for(const [logical,screen]of [[{x:0,y:0},{x:398,y:20}],[{x:844,y:390},{x:8,y:864}],[{x:300,y:140},{x:258,y:320}]])assert.deepEqual(screenPointInGame(screen,rect,true),logical);
  assert.deepEqual(screenPointInGame({x:200,y:100},rect),{x:192,y:80});
 });
+
+ test('space sticks ignore the other axis and preserve landscape rotation',()=>{
+ const origin={x:100,y:100};
+ assert.equal(axisThumbDirection({clientX:140,clientY:104},origin,'y'),0);
+ assert.equal(axisThumbDirection({clientX:104,clientY:80},origin,'y'),-1);
+ assert.equal(axisThumbDirection({clientX:140,clientY:104},origin,'x'),1);
+ assert.equal(axisThumbDirection({clientX:100,clientY:120},origin,'x',true),1);
+ });
+ test('only phones get a doubled logical space viewport for half-size artwork',()=>{
+ for(const [w,h,touch,scale]of [[390,844,true,2],[844,390,true,2],[768,1024,true,1],[1024,768,true,1],[390,844,false,1]])assert.deepEqual(adventureViewport({width:844,height:390},touch,w,h),{width:844*scale,height:390*scale,scale});
+ });

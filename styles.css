@@ -159,3 +159,17 @@ body.game-fullscreen:not(.landscape-turn) #modal { max-height: calc(100dvh - 28p
   .touch-controls .main { padding-top: 5px; }
   .touch-controls .footer { min-height: 24px; padding-top: 4px; padding-bottom: 4px; }
 }
+
+.control-settings{display:none;position:absolute;right:max(70px,calc(var(--game-safe-right) + 56px));top:max(14px,var(--game-safe-top));z-index:4;background:var(--cream);font-size:24px;width:44px;height:44px}
+.touch-controls .control-settings{display:grid}
+.control-options{display:grid;gap:14px;margin-top:24px}.control-options [aria-pressed=true]{background:var(--yellow);outline:3px solid var(--ink)}
+.space-stick-right{left:auto;right:max(14px,var(--game-safe-right))}.stick-label{position:absolute;inset:0;display:grid;place-items:center;font-size:26px;font-weight:900;pointer-events:none;opacity:.65}
+#modal.large-difficulty{width:min(720px,calc(100% - 24px));max-height:calc(100% - 24px);margin:auto}
+.difficulty-only{padding:clamp(16px,4vh,40px)}.difficulty-only .difficulty-options{display:grid;gap:clamp(12px,3vh,24px)}
+.difficulty-only .difficulty-options button{min-height:clamp(60px,16vh,130px);padding:16px;text-align:center;display:grid;place-items:center;border-width:3px;border-radius:18px;box-shadow:4px 4px 0 var(--ink)}
+.difficulty-only .difficulty-options strong{font-size:clamp(24px,5vh,42px)}
+
+.touch-controls .thumb-pad[hidden]{display:none!important}
+
+
+.touch-controls .game{touch-action:none}

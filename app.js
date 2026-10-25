@@ -1,4 +1,4 @@
-import { WORLD, WORLD_SPAWN, STATIONS, clamp, move, planPath, isActionKey, HOUSE_DOORS, worldTouch, canLandRocket, rocketExitPosition, touchingHomePicture, sceneHorizontalBounds, canStand } from './game-core.js';
+import { WORLD, WORLD_SPAWN, STATIONS, clamp, move, planPath, isActionKey, HOUSE_DOORS, worldTouch, canLandRocket, rocketExitPosition, touchingHomePicture, sceneHorizontalBounds, canStand, nearestWalkPath } from './game-core.js';
 import { ANIMALS, BAND, TRACKS, CONCERTS, CONTACT, INFO, PALETTE, loadContent, text } from './content.js';
 import { PAINT_SURFACES, BUCKET_SURFACES, PAINT_NEXT, paintSlots, paintPages, bucketColors, nearbyPaintSurface, canPaintSurface, cleanPaint, paintCanMarkup, createPaintPreview } from './painting.js';
 import { icon, avatar, memberArt, worldMarkup } from './art.js';
@@ -23,7 +23,7 @@ import { friendsRoomMarkup, friendsRoundMarkup, friendsHiddenMarkup, friendsWorl
 import { BIKE_WIDTH, BIKE_HEIGHT, BIKE_FINISH, BIKE_LEVELS, BIKE_DOOR, BIKE_RETURN, isBikeTrack, touchingBikeDoor, bikeTime, bikeKmh, bikeEncounterCount, createBikeRace, startBikeRace, changeBikeLane, tickBikeRace, cleanBikeScores, addBikeScore } from './bike-race.js';
 import { bikeRaceMarkup, bikeTerrainMarkup, bikeObstaclesMarkup, bikeRiderPose } from './bike-art.js';
 import { movementFacing } from './animal-views.js';
-import { thumbDirection, thumbOffset, landscapeSize, screenPointInGame } from './touch-controls.js';
+import { thumbDirection, thumbOffset, landscapeSize, screenPointInGame, axisThumbDirection, adventureViewport } from './touch-controls.js';
 import { createFullscreenMode } from './fullscreen.js';
 import { createGameDialog } from './game-dialog.js';
 
@@ -73,6 +73,7 @@ const state = {
   camera: { x: 800, y: 520 },
   viewport: { w: 1480, h: 850 },
   keys: new Set(), pad: new Map(), path: [], destination: null,
+  controlMode: storage.get('control-mode','thumb')==='touch'?'touch':'thumb', spaceTouch:new Map(), tapPointer:null,
   touch: null, touchMode: window.matchMedia('(any-pointer: coarse)').matches, landscapeTurn: false, bikeTouch: new Map(),
   near: null, modal: null, playing: false, memberMelody: null, boostMusic: null,
   paint: savedPaint, paintCan: null, paintPage: 0, paintTarget: null,
@@ -192,6 +193,7 @@ function helpPanel() {
   return wrap(`${icon('help')} ${T('help_kicker')}`, text('help_title'), `<div class="help-board"><div class="help-list">${[1, 2, 3].map(i => `<div class="help-row"><span class="help-number">${i}</span><div><strong>${T('help_step' + i + '_title')}</strong><p class="editable-prose">${T('help_step' + i + '_body')}</p></div></div>`).join('')}</div></div>`, 'help-sign-view');
 }
 function renderPanel(id) {
+  if(id==='control-settings')return wrap('⚙',text('control_settings'),`<p>${T('control_description')}</p><div class="control-options">${['thumb','touch'].map(mode=>`<button class="primary-button" data-control-mode="${mode}" aria-pressed="${state.controlMode===mode}">${T('control_'+mode)}</button>`).join('')}</div>`);
   if(id==='earth-pause')return earthPanel();
   if(id==='toilet-audio')return wrap('',text('toilet_audio_title'),`<div class="modal-actions"><button class="primary-button" data-action="toilet-play">${T('toilet_audio_play')}</button><button class="secondary-button" data-action="toilet-exit">${T('toilet_exit')}</button></div>`);
   if (id.startsWith('friends-')) return friendsPanel(id);
@@ -210,14 +212,20 @@ function renderPanel(id) {
 }
 function adventurePanel(id) {
   const win = id === 'space-win', pause = id === 'space-pause';
+  if(!pause)return difficultyPanel('space');
   const difficulty = pause ? '' : `<div class="difficulty-picker"><p>${T('adventure_difficulty')}</p><div class="difficulty-options" role="group" aria-label="${T('adventure_difficulty')}">${Object.keys(DIFFICULTIES).map(level => `<button data-difficulty="${level}"><strong>${T('difficulty_' + level)}</strong><small>${T('difficulty_' + level + '_hint')}</small></button>`).join('')}</div></div>`;
   return `<div class="modal-wrap adventure-dialog"><div class="modal-kicker">✦ ${T('adventure_title')}</div><h2 id="modal-title">${T(win ? 'adventure_win' : pause ? 'adventure_pause' : 'adventure_ready')}</h2><p class="modal-intro editable-prose" ${win ? '' : 'data-game-hint'}>${T(win ? 'adventure_win_body' : pause ? 'adventure_keys' : 'adventure_choice_hint')}</p>${difficulty}<div class="modal-actions">${pause ? `<button class="primary-button" data-action="space-continue">${T('adventure_continue')} ${icon('arrow')}</button>` : ''}<button class="secondary-button" data-action="space-land">${T(win ? 'adventure_back' : 'adventure_land')}</button></div></div>`;
+}
+function difficultyPanel(kind) {
+  const space=kind==='space', levels=Object.keys(space?DIFFICULTIES:BIKE_LEVELS);
+  return `<div class="modal-wrap difficulty-only"><h2 id="modal-title" class="sr-only">${T(space?'adventure_difficulty':'bike_choose')}</h2><div class="difficulty-options" role="group">${levels.map(level=>`<button type="button" ${space?'data-difficulty':'data-bike-level'}="${level}"><strong>${T((space?'difficulty_':'bike_level_')+level)}</strong></button>`).join('')}</div></div>`;
 }
 function bicyclePanel(id) {
   const race = state.race, won = id === 'bike-win', pause = id === 'bike-pause';
   if (!race) return '';
+  if(id==='bike-launch')return difficultyPanel('bike');
   const level = text('bike_level_' + race.difficulty), scores = state.bikeScores[race.difficulty];
-  const choices = !pause ? '<div class="difficulty-picker"><p>' + T('bike_choose') + '</p><div class="difficulty-options" role="group" aria-label="' + T('bike_choose') + '">' + Object.keys(BIKE_LEVELS).map(difficulty => '<button type="button" data-bike-level="' + difficulty + '"><strong>' + T('bike_level_' + difficulty) + '</strong><small>' + T('bike_hint_' + difficulty) + '</small></button>').join('') + '<button type="button" class="secondary-button" data-action="' + (won ? 'bike-world' : 'bike-exit') + '">' + T(won ? 'bike_back_world' : 'bike_back') + '</button></div></div>' : '';
+  const choices = !pause ? difficultyPanel('bike').replace('id="modal-title"','id="bike-retry-title"') + '<div class="modal-actions"><button type="button" class="secondary-button" data-action="bike-world">' + T('bike_back_world') + '</button></div>' : '';
   const board = '<h3>' + T('bike_board', { stufe: level }) + '</h3><p class="bike-board-local">' + T('bike_board_local') + '</p>'
     + (scores.length ? '<ol class="bike-board">' + scores.map(item => '<li>' + escape(item.name) + '<strong>' + bikeTime(item.time / 10) + '</strong></li>').join('') + '</ol>' : '<p>' + T('bike_board_empty') + '</p>');
   const result = won ? '<div class="bike-results"><strong>' + T('bike_result', { stufe: level, zeit: bikeTime(race.elapsed), anzahl: race.falls, spruenge: race.jumps }) + '</strong></div>'
@@ -291,7 +299,18 @@ function clearBikeTouchInput() {
     if (button.hasPointerCapture?.(id)) button.releasePointerCapture(id);
   }
 }
-function clearInput(keepThumb = false) { if (keepThumb !== true) clearTouchInput(); clearBikeTouchInput(); state.keys.clear(); state.pad.clear(); $('#dpad').querySelectorAll('button').forEach(b => b.classList.remove('pressed')); }
+function clearSpaceInput() {
+  for(const [axis,touch] of state.spaceTouch){const pad=$('#space-'+axis+'-pad');if(pad.hasPointerCapture?.(touch.id))pad.releasePointerCapture(touch.id);}
+  state.spaceTouch.clear();
+  for(const axis of ['vertical','horizontal'])$('#space-'+axis+'-knob').style.transform='translate(0px,0px)';
+}
+function refreshMobileControls(){
+  const space=!!state.adventure && !state.earth;
+  $('#thumb-pad').hidden=!!state.race || space || state.controlMode==='touch';
+  $('#bike-touch-controls').hidden=!state.race;
+  for(const axis of ['vertical','horizontal'])$('#space-'+axis+'-pad').hidden=!space || state.adventure.phase!=='playing';
+}
+function clearInput(keepThumb = false) { clearSpaceInput();state.tapPointer=null; if (keepThumb !== true) clearTouchInput(); clearBikeTouchInput(); state.keys.clear(); state.pad.clear(); $('#dpad').querySelectorAll('button').forEach(b => b.classList.remove('pressed')); }
 function stopWalking(keepThumb = false) { clearInput(keepThumb); state.path = []; state.destination = null; marker?.setAttribute('hidden', ''); }
 function refreshCassettes() {
   if (state.scene === 'radio') for (const slot of slotsOnPage(state.shelfPage)) {
@@ -613,19 +632,20 @@ function renderScene(preserveCamera = false) {
   state.near = null; updateAnimal(); refreshCassettes(); refreshHatEffects(); refreshReceptionEffects(); resize(); if(previousCamera){state.camera=previousCamera;updateCamera(0);} updateNear(true);
   player.setAttribute('transform', `translate(${state.position.x} ${state.position.y})`);
   refreshChocolateItems(); refreshFriendsWorld(true); game.classList.toggle('is-bike-race', !!state.race);
-  $('#thumb-pad').hidden = !!state.race; $('#bike-touch-controls').hidden = !state.race;
+  refreshMobileControls();
   bikeTerrainStep = -1; if (state.race) updateBicycleRace();
   if(state.earth)updateEarthView(true);refreshQuestPaper();
 }
 function showPanel(id, focusSelector = '') {
   if(state.adventure?.phase==='won')return;
   if (id === 'dance' && !canPlayerDance()) return;
-  if (state.race && !id.startsWith('bike-')) id = state.race.phase === 'finished' ? 'bike-win' : state.race.phase === 'ready' ? 'bike-launch' : 'bike-pause';
-  if (state.scene === 'chocolate') { requestChocolateExit(); return; }
+  if (id!=='control-settings' && state.race && !id.startsWith('bike-')) id = state.race.phase === 'finished' ? 'bike-win' : state.race.phase === 'ready' ? 'bike-launch' : 'bike-pause';
+  if (id!=='control-settings' && state.scene === 'chocolate') { requestChocolateExit(); return; }
   if (state.landing || ['intro', 'sun-finale'].includes(state.adventure?.phase)) return;
-  if (state.earth && id!=='earth-pause') id='earth-pause';
-  if (state.adventure && !state.earth && !id.startsWith('space-')) id = state.adventure.phase === 'won' ? 'space-win' : state.adventure.phase === 'playing' ? 'space-pause' : 'space-launch';
+  if (state.earth && id!=='earth-pause' && id!=='control-settings') id='earth-pause';
+  if (id!=='control-settings' && state.adventure && !state.earth && !id.startsWith('space-')) id = state.adventure.phase === 'won' ? 'space-win' : state.adventure.phase === 'playing' ? 'space-pause' : 'space-launch';
   stopWalking(); clearPaintPreview(); state.modal = id; game.classList.add('paused');
+  modal.classList.toggle('large-difficulty', ['space-launch','bike-launch'].includes(id));
   modal.classList.toggle('space-choice', id.startsWith('space-') || id.startsWith('bike-'));
   modalContent.innerHTML = renderPanel(id);
   if (BAND.some(member => member.id === id)) playMemberMelody(id); else stopMemberMelody();
@@ -637,6 +657,7 @@ function showPanel(id, focusSelector = '') {
   else modalContent.querySelector('button:not(.modal-close):not([disabled]), a[href], .modal-close')?.focus();
 }
 function closePanel() {
+  if(state.modal==='control-settings'){if(modal.open)modal.close();if(state.race?.phase==='ready')showPanel('bike-launch');else if(state.adventure?.phase==='ready')showPanel('space-launch');return;}
   if (state.modal?.startsWith('friends-') && ['choice', 'hide-won', 'hide-lost'].includes(state.friends.phase)) { releaseFriends(state.friends); state.friendsExit = null; refreshFriendsWorld(true); }
   if (state.race && ['ready', 'finished'].includes(state.race.phase)) { exitBicycleRace(); return; }
   if (state.adventure && ['intro', 'ready', 'won'].includes(state.adventure.phase)) { landFromAdventure(); return; }
@@ -1068,10 +1089,10 @@ $('#toilet-audio').addEventListener('error',()=>{if(state.toilet){state.toilet.s
 
 function enterSpaceAdventure() {
   stopWalking(); state.paintTarget = null;
-  const r = gameSize(), matrix = world.getScreenCTM();
+  const r = spaceSize(), matrix = world.getScreenCTM();
   const point = matrix ? new DOMPoint(state.position.x, state.position.y - 86).matrixTransform(matrix) : null;
   const local = point ? screenPointInGame(point, game.getBoundingClientRect(), state.landscapeTurn) : null;
-  const entry = point ? { x: clamp(local.x, 0, r.width), y: clamp(local.y, 0, r.height), scale: Math.hypot(matrix.a, matrix.b) || .8 } : null;
+  const entry = point ? { x: clamp(local.x*r.scale, 0, r.width), y: clamp(local.y*r.scale, 0, r.height), scale: (Math.hypot(matrix.a, matrix.b) || .8)*r.scale } : null;
   state.adventure = createAdventure(r.width || 1200, r.height || 700, Date.now(), entry, bucketColors(PALETTE).find(color => color.id === state.paintCan)?.color);
   state.adventure.departure = { x: state.position.x, y: state.position.y };
   state.adventure.reduced = state.reduced;
@@ -1101,6 +1122,7 @@ function finishAdventureTick(event) {
   if (event === 'crash') landFromAdventure(true);
 }
 function updateAdventure() {
+  refreshMobileControls();
   const adventure = state.adventure; if (!adventure || state.earth) return;
   if (adventure.departure) {
     if (adventure.phase === 'intro') {
@@ -1308,7 +1330,7 @@ function navigateTo(x, y, destination = null) {
 function goToStation(id) {
   if(state.earth){showPanel('earth-pause');return;}
   if (state.race) { showPanel('bike-pause'); return; }
-  if (state.scene === 'chocolate') { requestChocolateExit(); return; }
+  if (id!=='control-settings' && state.scene === 'chocolate') { requestChocolateExit(); return; }
   const station = STATIONS.find(s => s.id === id); if (!station) return;
   if (state.rocket.riding) { closePanel(); toast(text('rocket_land_first')); return; }
   const s = id === 'rocket' ? { ...station, ...state.rocket.position } : station;
@@ -1360,6 +1382,8 @@ document.addEventListener('click', e => {
   if(action==='earth-return'){leaveRoom();return;}
   if(action==='toilet-exit'){leaveOuthouse();return;}
   if(action==='toilet-play'){closePanel();if(state.toilet)state.toilet.blocked=false;playToiletAudio();return;}
+  if(action==='control-settings'){showPanel('control-settings');return;}
+  if(btn.dataset.controlMode && ['thumb','touch'].includes(btn.dataset.controlMode)){state.controlMode=btn.dataset.controlMode;storage.set('control-mode',state.controlMode);clearInput();state.path=[];refreshMobileControls();modalContent.innerHTML=renderPanel('control-settings');modalContent.querySelector('[data-control-mode="'+state.controlMode+'"]')?.focus();return;}
   if (action === 'fullscreen') { void screenMode.toggle(); return; }
   if (state.landing) return;
   if (action === 'dance-picker') { if (canPlayerDance()) showPanel('dance'); return; }
@@ -1564,13 +1588,27 @@ game.addEventListener('pointerdown', e => {
   if(state.scene==='painting' && state.started && !modal.open){
     const swatch=e.target?.closest('[data-studio-color]');
     const color=swatch && studioColors(PALETTE,state.studio.page).find(c=>c.id===swatch.dataset.studioColor);
-    if(color){e.preventDefault();state.studio.color=color.id;clearPaintPreview();renderScene();game.focus({preventScroll:true});}
+    if(color){e.preventDefault();state.studio.color=color.id;clearPaintPreview();renderScene();game.focus({preventScroll:true});return;}
+    const control=e.target?.closest('[data-studio-control]');if(control){e.preventDefault();studioAction({kind:'studio-control',id:control.dataset.studioControl});return;}
   }
+  if(!state.started || modal.open || state.race || state.landing || state.adventure && !state.earth || friendsPlayerLocked(state.friends))return;
+  if(state.toilet){leaveOuthouse();return;}
+  if(state.controlMode==='touch' || state.scene==='painting'){e.preventDefault();state.tapPointer=e.pointerId;touchWalkTo(e);}
 });
+function touchWalkTo(e){
+  const matrix=world.getScreenCTM();if(!matrix)return;
+  const point=new DOMPoint(e.clientX,e.clientY).matrixTransform(matrix.inverse());
+  if(state.scene==='painting' || state.earth || state.rocket.riding){navigateTo(point.x,point.y);return;}
+  const path=nearestWalkPath(state.position,point,state.scene,state.rocket.position);
+  if(!path.length)return;
+  state.path=path;state.destination=null;stuckTime=0;const end=path.at(-1);marker.removeAttribute('hidden');marker.setAttribute('transform',`translate(${end.x} ${end.y})`);game.focus({preventScroll:true});
+}
+game.addEventListener('pointermove',e=>{if(state.tapPointer!==e.pointerId || modal.open || state.race || state.adventure && !state.earth)return;e.preventDefault();touchWalkTo(e);});
+for(const name of ['pointerup','pointercancel'])game.addEventListener(name,e=>{if(state.tapPointer===e.pointerId)state.tapPointer=null;});
 const thumbPad = $('#thumb-pad');
 thumbPad.addEventListener('pointerdown', e => {
   enableTouchControls();
-  if (!canUseThumb() || state.touch || e.button > 0) return;
+  if (!canUseThumb() || thumbPad.hidden || state.touch || e.button > 0) return;
   e.preventDefault(); stopWalking();
   state.touch = { id: e.pointerId, clientX: e.clientX, clientY: e.clientY, origin: { x: e.clientX, y: e.clientY } };
   ignoreGameClickUntil = Date.now() + 900;
@@ -1591,8 +1629,20 @@ game.addEventListener('contextmenu', e => { if (state.touchMode) e.preventDefaul
 window.addEventListener('orientationchange', () => { clearInput(); resize(); });
 window.addEventListener('resize', resize);
 function thumbMovement() {
-  if (!state.touch || !canUseThumb()) return { x: 0, y: 0 };
+  if (!state.touch || !canUseThumb() || state.adventure && !state.earth || state.controlMode==='touch') return { x: 0, y: 0 };
   return thumbDirection(state.touch, state.touch.origin, state.landscapeTurn);
+}
+for(const axis of ['vertical','horizontal']){
+  const pad=$('#space-'+axis+'-pad'), knob=$('#space-'+axis+'-knob');
+  const update=e=>{const finger=state.spaceTouch.get(axis);if(!finger || finger.id!==e.pointerId)return;e.preventDefault();finger.clientX=e.clientX;finger.clientY=e.clientY;const offset=thumbOffset(finger,finger.origin,state.landscapeTurn);knob.style.transform=`translate(${axis==='horizontal'?offset.x:0}px,${axis==='vertical'?offset.y:0}px)`;};
+  pad.addEventListener('pointerdown',e=>{if(state.adventure?.phase!=='playing'||state.earth||modal.open||document.hidden||state.spaceTouch.has(axis)||e.button>0)return;e.preventDefault();enableTouchControls();state.spaceTouch.set(axis,{id:e.pointerId,clientX:e.clientX,clientY:e.clientY,origin:{x:e.clientX,y:e.clientY}});pad.setPointerCapture?.(e.pointerId);});
+  pad.addEventListener('pointermove',update);
+  for(const name of ['pointerup','pointercancel','lostpointercapture'])pad.addEventListener(name,e=>{if(state.spaceTouch.get(axis)?.id!==e.pointerId)return;state.spaceTouch.delete(axis);knob.style.transform='translate(0px,0px)';if(pad.hasPointerCapture?.(e.pointerId))pad.releasePointerCapture(e.pointerId);});
+}
+function spaceStickMovement(){
+  if(state.adventure?.phase!=='playing'||state.earth||modal.open||document.hidden)return {x:0,y:0};
+  const x=state.spaceTouch.get('horizontal'),y=state.spaceTouch.get('vertical');
+  return {x:x?axisThumbDirection(x,x.origin,'x',state.landscapeTurn):0,y:y?axisThumbDirection(y,y.origin,'y',state.landscapeTurn):0};
 }
 for (const control of ['up', 'down', 'gas', 'brake']) {
   const button = $('#bike-touch-' + control);
@@ -1621,7 +1671,7 @@ function movementInput() {
   let x = 0, y = 0;
   for (const code of state.keys) { const v = directions.get(code); if (v) { x += v[0]; y += v[1]; } }
   for (const direction of state.pad.values()) { const v = padVectors[direction]; if (v) { x += v[0]; y += v[1]; } }
-  const thumb = thumbMovement(); return { x: x + thumb.x, y: y + thumb.y };
+  const thumb = thumbMovement(), sticks=spaceStickMovement(); return { x: x + thumb.x+sticks.x, y: y + thumb.y+sticks.y };
 }
 game.addEventListener('keydown', e => {
   if (state.race || state.adventure || state.landing) return;
@@ -1708,6 +1758,7 @@ function refreshLandscapeLayout() {
   state.landscapeTurn = turned; clearInput();
   if (turned) document.body.classList.add('landscape-turn'); else document.body.classList.remove('landscape-turn');
 }
+function spaceSize(){return adventureViewport(gameSize(),state.touchMode,window.innerWidth,window.innerHeight);}
 function gameSize() { return landscapeSize(game.getBoundingClientRect(), state.landscapeTurn); }
 function resize() {
   refreshLandscapeLayout();
@@ -1715,17 +1766,19 @@ function resize() {
   if(state.earth){updateEarthView(true);return;}
   if (state.race) { world.setAttribute('viewBox', `0 0 ${BIKE_WIDTH} ${BIKE_HEIGHT}`); return; }
   if (state.adventure?.phase === 'intro' && state.adventure.departure) {
+    const r=spaceSize();
     const adventure = state.adventure, origin = adventure.departure;
     resizeAdventure(adventure, r.width, r.height);
     const matrix = world.getScreenCTM();
     if (matrix) {
       const point = new DOMPoint(origin.x, origin.y - 86).matrixTransform(matrix);
       const local = screenPointInGame(point, game.getBoundingClientRect(), state.landscapeTurn);
-      adventure.entry = { ...local, scale: Math.hypot(matrix.a, matrix.b) || .8 };
+      adventure.entry = { x:local.x*r.scale,y:local.y*r.scale, scale: (Math.hypot(matrix.a, matrix.b) || .8)*r.scale };
     }
     updateAdventure(); return;
   }
   if (state.adventure) {
+    const r=spaceSize();
     if (state.adventure.width !== r.width || state.adventure.height !== r.height) { resizeAdventure(state.adventure, r.width, r.height); renderScene(); }
     world.setAttribute('viewBox', `0 0 ${r.width} ${r.height}`); return;
   }

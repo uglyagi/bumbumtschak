@@ -23,3 +23,14 @@ export function screenPointInGame(point, rect, turned = false) {
   const x = point.x - (rect.left || 0), y = point.y - (rect.top || 0);
   return turned ? { x: y, y: rect.width - x } : { x, y };
 }
+
+// One-dimensional sticks ignore the other axis, including in rotated fullscreen.
+export function axisThumbDirection(finger, origin, axis, turned=false) {
+  const delta=thumbDelta(finger,origin,turned)[axis];
+  return Math.abs(delta)<THUMB_DEAD_ZONE ? 0 : Math.sign(delta);
+}
+export function adventureViewport(rect, touchMode, screenWidth, screenHeight) {
+  const phone=touchMode && Math.min(screenWidth||rect.width,screenHeight||rect.height)<=600;
+  const scale=phone?2:1;
+  return {width:rect.width*scale,height:rect.height*scale,scale};
+}

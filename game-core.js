@@ -162,3 +162,22 @@ export function planPath(start, end, scene = 'world', parkedRocket = GROUND_ROCK
   simplified.push({ ...end });
   return simplified;
 }
+
+// A tap inside scenery resolves to the closest reachable point on the ground.
+export function nearestWalkPath(start, target, scene='world', parkedRocket=GROUND_ROCKET) {
+  if(![start.x,start.y,target.x,target.y].every(Number.isFinite) || !canStand(start.x,start.y,WORLD.radius,scene,parkedRocket))return [];
+  const direct=planPath(start,target,scene,parkedRocket);
+  if(direct.length)return direct;
+  const bounds=sceneHorizontalBounds(scene);
+  const x=clamp(target.x,bounds.left+WORLD.radius,bounds.right-WORLD.radius);
+  const y=clamp(target.y,scene==='sky'?SKY.top+WORLD.radius:WORLD.radius,WORLD.height-WORLD.radius);
+  for(let radius=0;radius<=850;radius+=8){
+    const count=radius?Math.min(96,Math.max(8,Math.ceil(radius*Math.PI/6))):1;
+    for(let i=0;i<count;i++){
+      const a=i*Math.PI*2/count, point={x:x+Math.cos(a)*radius,y:y+Math.sin(a)*radius};
+      if(!canStand(point.x,point.y,WORLD.radius,scene,parkedRocket))continue;
+      const path=planPath(start,point,scene,parkedRocket);if(path.length)return path;
+    }
+  }
+  return [];
+}
